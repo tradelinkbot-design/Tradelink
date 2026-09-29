@@ -1,0 +1,467 @@
+{% extends "base.html" %}
+{% block title %}{{ form_title }} — TradeLink NG{% endblock %}
+{% block nav_contacts %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ═══════════════════════════════════════════════
+     CONTACT FORM PAGE
+  ═══════════════════════════════════════════════ */
+  .form-page {
+    padding-top: calc(var(--nav-h) + 40px);
+    min-height: 100vh; position: relative; z-index: 1;
+    padding-bottom: 80px;
+  }
+
+  /* ── BREADCRUMB ── */
+  .breadcrumb {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.82rem; color: var(--text-3);
+    margin-bottom: 28px; flex-wrap: wrap;
+  }
+  .breadcrumb a { color: var(--text-3); text-decoration: none; transition: var(--t); }
+  .breadcrumb a:hover { color: var(--amber); }
+  .breadcrumb i { font-size: 0.65rem; }
+
+  /* ── PAGE TITLE ── */
+  .form-page-title {
+    margin-bottom: 32px;
+  }
+  .form-page-title h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.5rem, 3vw, 2.2rem);
+    font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px;
+  }
+  .form-page-title p { color: var(--text-2); font-size: 0.92rem; }
+
+  /* ── FORM LAYOUT ── */
+  .contact-form-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 28px;
+    align-items: start;
+  }
+
+  /* ── FORM SECTIONS ── */
+  .form-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl); overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .form-section:last-of-type { margin-bottom: 0; }
+  .form-section-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(245,158,11,0.04);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .form-section-header i {
+    width: 32px; height: 32px; border-radius: var(--r-md);
+    background: var(--surface-2); border: 1px solid var(--border-strong);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--amber); font-size: 0.82rem; flex-shrink: 0;
+  }
+  .form-section-title {
+    font-family: 'Fraunces', serif; font-weight: 700; font-size: 0.95rem;
+  }
+  .form-section-body { padding: 24px; }
+
+  /* ── FORM GRID ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-grid .full { grid-column: 1 / -1; }
+
+  /* ── FIELD STYLES ── */
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  .field-label {
+    font-size: 0.8rem; font-weight: 600; color: var(--text-2);
+    letter-spacing: 0.2px;
+  }
+  .field-label .req { color: var(--amber); margin-left: 2px; }
+  .field-input, .field-select, .field-textarea {
+    width: 100%; padding: 11px 14px;
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg); color: var(--text-1);
+    font-family: 'Outfit', sans-serif; font-size: 0.9rem;
+    transition: var(--t); outline: none;
+  }
+  .field-input:focus, .field-select:focus, .field-textarea:focus {
+    border-color: var(--amber); background: rgba(245,158,11,0.04);
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.10);
+  }
+  .field-input::placeholder, .field-textarea::placeholder { color: var(--text-3); }
+  .field-select option { background: var(--bg-card); }
+  .field-textarea { resize: vertical; min-height: 100px; }
+  .field-error {
+    font-size: 0.78rem; color: #F87171;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .field-help { font-size: 0.75rem; color: var(--text-3); }
+
+  /* ── CHECKBOX ── */
+  .field-checkbox {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; border-radius: var(--r-lg);
+    border: 1px solid var(--border-subtle); background: rgba(255,255,255,0.02);
+    cursor: pointer; transition: var(--t);
+  }
+  .field-checkbox:hover { border-color: var(--border-strong); background: var(--surface-1); }
+  .field-checkbox input { accent-color: var(--amber); width: 16px; height: 16px; cursor: pointer; }
+  .field-checkbox span { font-size: 0.88rem; color: var(--text-2); font-weight: 500; }
+
+  /* ── AVATAR UPLOAD ── */
+  .avatar-upload-zone {
+    border: 2px dashed var(--border-strong);
+    border-radius: var(--r-xl); padding: 28px 20px; text-align: center;
+    cursor: pointer; transition: var(--t); position: relative;
+    background: rgba(245,158,11,0.02);
+  }
+  .avatar-upload-zone:hover { border-color: var(--amber); background: rgba(245,158,11,0.04); }
+  .avatar-upload-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .avatar-upload-icon {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; color: #0C0A08; margin: 0 auto 14px;
+  }
+  .avatar-upload-zone h4 { font-weight: 700; margin-bottom: 6px; font-size: 0.95rem; }
+  .avatar-upload-zone p { color: var(--text-3); font-size: 0.8rem; }
+
+  /* ── SIDEBAR CARD ── */
+  .form-sidebar { display: flex; flex-direction: column; gap: 16px; }
+  .sidebar-card {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl); padding: 20px 20px;
+    position: sticky; top: calc(var(--nav-h) + 20px);
+  }
+  .sidebar-card h4 {
+    font-family: 'Fraunces', serif; font-weight: 700; font-size: 0.95rem;
+    margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .sidebar-card h4 i { color: var(--amber); }
+  .sidebar-actions { display: flex; flex-direction: column; gap: 10px; }
+  .sidebar-actions .btn { justify-content: center; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 860px) {
+    .contact-form-layout { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid .full { grid-column: 1; }
+    .sidebar-card { position: static; }
+  }
+  @media (max-width: 480px) {
+    .form-section-body { padding: 16px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-page">
+  <div class="container">
+
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a href="{% url 'contacts:contact_list' %}"><i class="fas fa-address-book"></i> Contacts</a>
+      <i class="fas fa-chevron-right"></i>
+      {% if not is_create %}
+        <a href="{% url 'contacts:contact_detail' contact.pk %}">{{ contact.full_name }}</a>
+        <i class="fas fa-chevron-right"></i>
+      {% endif %}
+      <span>{{ form_title }}</span>
+    </div>
+
+    <!-- Page Title -->
+    <div class="form-page-title fade-up">
+      <span class="eyebrow">
+        <i class="fas fa-{% if is_create %}plus{% else %}pen{% endif %}"></i>
+        {% if is_create %}New Contact{% else %}Edit Contact{% endif %}
+      </span>
+      <h1>{{ form_title }}</h1>
+      <p>
+        {% if is_create %}
+          Fill in the details below to add a new contact to your address book.
+        {% else %}
+          Update the information for this contact.
+        {% endif %}
+      </p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      <div class="contact-form-layout">
+
+        <!-- ════ MAIN FORM COLUMNS ════ -->
+        <div>
+
+          <!-- SECTION: Personal Info -->
+          <div class="form-section fade-up d1">
+            <div class="form-section-header">
+              <i class="fas fa-user"></i>
+              <span class="form-section-title">Personal Information</span>
+            </div>
+            <div class="form-section-body">
+              <div class="form-grid">
+
+                <div class="field-group">
+                  <label class="field-label">First Name <span class="req">*</span></label>
+                  {{ form.first_name }}
+                  {% for e in form.first_name.errors %}<span class="field-error"><i class="fas fa-exclamation-circle"></i> {{ e }}</span>{% endfor %}
+                </div>
+
+                <div class="field-group">
+                  <label class="field-label">Last Name</label>
+                  {{ form.last_name }}
+                  {% for e in form.last_name.errors %}<span class="field-error"><i class="fas fa-exclamation-circle"></i> {{ e }}</span>{% endfor %}
+                </div>
+
+                <div class="field-group full">
+                  <label class="field-label">Display Name / Nickname</label>
+                  {{ form.display_name }}
+                  <span class="field-help">Leave blank to auto-fill from first + last name</span>
+                </div>
+
+                <div class="field-group full">
+                  <label class="field-label">Group</label>
+                  {{ form.group }}
+                </div>
+
+                <div class="field-group full">
+                  <label class="field-checkbox">
+                    {{ form.is_favorite }}
+                    <span><i class="fas fa-star" style="color:var(--amber);"></i> Mark as Favourite</span>
+                  </label>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION: Contact Details -->
+          <div class="form-section fade-up d2">
+            <div class="form-section-header">
+              <i class="fas fa-phone"></i>
+              <span class="form-section-title">Contact Details</span>
+            </div>
+            <div class="form-section-body">
+              <div class="form-grid">
+
+                <div class="field-group">
+                  <label class="field-label">Primary Phone</label>
+                  {{ form.phone_primary }}
+                  {% for e in form.phone_primary.errors %}<span class="field-error"><i class="fas fa-exclamation-circle"></i> {{ e }}</span>{% endfor %}
+                </div>
+
+                <div class="field-group">
+                  <label class="field-label">Secondary Phone</label>
+                  {{ form.phone_secondary }}
+                </div>
+
+                <div class="field-group">
+                  <label class="field-label">Email Address</label>
+                  {{ form.email }}
+                  {% for e in form.email.errors %}<span class="field-error"><i class="fas fa-exclamation-circle"></i> {{ e }}</span>{% endfor %}
+                </div>
+
+                <div class="field-group">
+                  <label class="field-label">Website</label>
+                  {{ form.website }}
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION: Address -->
+          <div class="form-section fade-up d3">
+            <div class="form-section-header">
+              <i class="fas fa-map-marker-alt"></i>
+              <span class="form-section-title">Address</span>
+            </div>
+            <div class="form-section-body">
+              <div class="form-grid">
+
+                <div class="field-group full">
+                  <label class="field-label">Street Address</label>
+                  {{ form.address }}
+                </div>
+
+                <div class="field-group">
+                  <label class="field-label">City</label>
+                  {{ form.city }}
+                </div>
+
+                <div class="field-group">
+                  <label class="field-label">State</label>
+                  {{ form.state }}
+                </div>
+
+                <div class="field-group full">
+                  <label class="field-label">Country</label>
+                  {{ form.country }}
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION: Professional -->
+          <div class="form-section fade-up d4">
+            <div class="form-section-header">
+              <i class="fas fa-briefcase"></i>
+              <span class="form-section-title">Professional</span>
+            </div>
+            <div class="form-section-body">
+              <div class="form-grid">
+
+                <div class="field-group">
+                  <label class="field-label">Company / Organisation</label>
+                  {{ form.company }}
+                </div>
+
+                <div class="field-group">
+                  <label class="field-label">Job Title / Role</label>
+                  {{ form.job_title }}
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION: Social -->
+          <div class="form-section fade-up d5">
+            <div class="form-section-header">
+              <i class="fas fa-share-alt"></i>
+              <span class="form-section-title">Social & Messaging</span>
+            </div>
+            <div class="form-section-body">
+              <div class="form-grid">
+
+                <div class="field-group">
+                  <label class="field-label"><i class="fab fa-whatsapp" style="color:#25D366;"></i> WhatsApp</label>
+                  {{ form.whatsapp }}
+                </div>
+
+                <div class="field-group">
+                  <label class="field-label"><i class="fab fa-x-twitter"></i> Twitter / X</label>
+                  {{ form.twitter }}
+                </div>
+
+                <div class="field-group">
+                  <label class="field-label"><i class="fab fa-instagram" style="color:#E1306C;"></i> Instagram</label>
+                  {{ form.instagram }}
+                </div>
+
+                <div class="field-group">
+                  <label class="field-label"><i class="fab fa-linkedin" style="color:#0A66C2;"></i> LinkedIn URL</label>
+                  {{ form.linkedin }}
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION: Notes -->
+          <div class="form-section fade-up d6">
+            <div class="form-section-header">
+              <i class="fas fa-sticky-note"></i>
+              <span class="form-section-title">Private Notes</span>
+            </div>
+            <div class="form-section-body">
+              <div class="field-group">
+                <label class="field-label">Notes</label>
+                {{ form.notes }}
+                <span class="field-help">Private — only you can see these notes</span>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /form main -->
+
+        <!-- ════ SIDEBAR ════ -->
+        <div class="form-sidebar">
+          <div class="sidebar-card fade-up d2">
+            <h4><i class="fas fa-image"></i> Profile Photo</h4>
+            <div class="avatar-upload-zone" id="avatarZone">
+              <input type="file" name="avatar" accept="image/*" id="avatarInput">
+              <div class="avatar-upload-icon" id="avatarPreviewWrap">
+                <i class="fas fa-camera"></i>
+              </div>
+              <h4>Upload Photo</h4>
+              <p>Click to browse or drag & drop<br>JPG, PNG or WebP · Max 5MB</p>
+            </div>
+            {% if not is_create and contact.avatar %}
+            <div style="margin-top:12px; text-align:center;">
+              <img src="{{ contact.avatar.url }}" alt="Current"
+                   style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border-strong);">
+              <p style="font-size:0.76rem; color:var(--text-3); margin-top:6px;">Current photo</p>
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="sidebar-card fade-up d3">
+            <h4><i class="fas fa-paper-plane"></i> Save</h4>
+            <div class="sidebar-actions">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i>
+                {% if is_create %}Create Contact{% else %}Save Changes{% endif %}
+              </button>
+              {% if not is_create %}
+              <a href="{% url 'contacts:contact_detail' contact.pk %}" class="btn btn-ghost">
+                <i class="fas fa-times"></i> Cancel
+              </a>
+              {% else %}
+              <a href="{% url 'contacts:contact_list' %}" class="btn btn-ghost">
+                <i class="fas fa-times"></i> Cancel
+              </a>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if not is_create %}
+          <div class="sidebar-card" style="border-color:rgba(239,68,68,0.18); background:rgba(239,68,68,0.04);">
+            <h4 style="color:#F87171;"><i class="fas fa-trash-alt"></i> Delete</h4>
+            <p style="font-size:0.82rem; color:var(--text-3); margin-bottom:12px;">
+              Permanently remove this contact and all their data.
+            </p>
+            <a href="{% url 'contacts:contact_delete' contact.pk %}"
+               class="btn btn-sm"
+               style="background:rgba(239,68,68,0.12); color:#F87171; border:1px solid rgba(239,68,68,0.25); justify-content:center; width:100%;">
+              <i class="fas fa-trash-alt"></i> Delete Contact
+            </a>
+          </div>
+          {% endif %}
+        </div><!-- /sidebar -->
+
+      </div><!-- /layout -->
+    </form>
+
+  </div><!-- /container -->
+</div><!-- /form-page -->
+
+<script>
+  // Apply base styles to all form fields
+  document.querySelectorAll('.contact-form-layout input:not([type=checkbox]):not([type=file]), .contact-form-layout select, .contact-form-layout textarea').forEach(el => {
+    el.classList.add(el.tagName === 'SELECT' ? 'field-select' : el.tagName === 'TEXTAREA' ? 'field-textarea' : 'field-input');
+  });
+
+  // Avatar preview
+  const input = document.getElementById('avatarInput');
+  const wrap  = document.getElementById('avatarPreviewWrap');
+  input.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      wrap.innerHTML = `<img src="${ev.target.result}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;">`;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Drag & drop highlight
+  const zone = document.getElementById('avatarZone');
+  ['dragover','dragenter'].forEach(evt => zone.addEventListener(evt, e => { e.preventDefault(); zone.style.borderColor='var(--amber)'; }));
+  ['dragleave','drop'].forEach(evt => zone.addEventListener(evt, () => zone.style.borderColor=''));
+</script>
+{% endblock %}

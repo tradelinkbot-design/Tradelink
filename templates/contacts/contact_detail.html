@@ -1,0 +1,574 @@
+{% extends "base.html" %}
+{% block title %}{{ contact.full_name }} — Contacts — TradeLink NG{% endblock %}
+{% block nav_contacts %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ═══════════════════════════════════════════════
+     CONTACT DETAIL PAGE
+  ═══════════════════════════════════════════════ */
+  .detail-page {
+    padding-top: calc(var(--nav-h) + 40px);
+    min-height: 100vh; position: relative; z-index: 1;
+  }
+
+  /* ── BREADCRUMB ── */
+  .breadcrumb {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.82rem; color: var(--text-3);
+    margin-bottom: 24px; flex-wrap: wrap;
+  }
+  .breadcrumb a { color: var(--text-3); text-decoration: none; transition: var(--t); }
+  .breadcrumb a:hover { color: var(--amber); }
+  .breadcrumb i { font-size: 0.65rem; }
+
+  /* ── LAYOUT ── */
+  .detail-layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+
+  /* ── PROFILE CARD (left) ── */
+  .profile-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    position: sticky; top: calc(var(--nav-h) + 20px);
+  }
+  .profile-card-banner {
+    height: 100px;
+    background: linear-gradient(135deg, rgba(245,158,11,0.25) 0%, rgba(249,115,22,0.18) 100%);
+    position: relative;
+  }
+  .profile-card-avatar-wrap {
+    position: absolute; bottom: -36px; left: 24px;
+  }
+  .profile-avatar-lg {
+    width: 72px; height: 72px; border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--bg-card);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .profile-avatar-placeholder-lg {
+    width: 72px; height: 72px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif; font-size: 1.5rem; font-weight: 800;
+    color: #0C0A08;
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    border: 3px solid var(--bg-card);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .profile-card-body { padding: 48px 24px 24px; }
+  .profile-name {
+    font-family: 'Fraunces', serif; font-size: 1.4rem; font-weight: 800;
+    margin-bottom: 4px; line-height: 1.2;
+  }
+  .profile-role {
+    color: var(--text-3); font-size: 0.85rem; margin-bottom: 12px;
+  }
+  .profile-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+
+  /* ── QUICK ACTIONS ── */
+  .quick-actions {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    margin-bottom: 24px; padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .qa-btn {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 5px; padding: 12px 8px; border-radius: var(--r-lg);
+    font-size: 0.72rem; font-weight: 600; text-decoration: none;
+    border: 1px solid var(--border-subtle); background: var(--surface-1);
+    color: var(--text-2); transition: var(--t); cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+  }
+  .qa-btn i { font-size: 1.1rem; color: var(--amber); }
+  .qa-btn:hover { background: var(--surface-2); border-color: var(--border-strong); color: var(--text-1); }
+
+  /* ── PROFILE INFO ROWS ── */
+  .profile-info-row {
+    display: flex; gap: 12px; padding: 10px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    align-items: flex-start;
+  }
+  .profile-info-row:last-child { border-bottom: none; }
+  .pi-icon {
+    width: 32px; height: 32px; border-radius: var(--r-md);
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--amber); font-size: 0.82rem; flex-shrink: 0; margin-top: 2px;
+  }
+  .pi-content { flex: 1; min-width: 0; }
+  .pi-label { font-size: 0.72rem; color: var(--text-3); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+  .pi-value {
+    font-size: 0.9rem; color: var(--text-1); font-weight: 500;
+    word-break: break-word;
+  }
+  .pi-value a { color: var(--amber); text-decoration: none; }
+  .pi-value a:hover { text-decoration: underline; }
+
+  /* ── PROFILE ACTIONS (bottom of card) ── */
+  .profile-card-actions { display: flex; gap: 8px; padding-top: 20px; flex-wrap: wrap; }
+  .profile-card-actions .btn { flex: 1; justify-content: center; min-width: 90px; }
+
+  /* ── RIGHT PANEL ── */
+  .detail-right { display: flex; flex-direction: column; gap: 24px; }
+
+  /* ── SECTION CARD ── */
+  .section-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl); overflow: hidden;
+  }
+  .section-card-header {
+    padding: 18px 24px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .section-card-title {
+    font-family: 'Fraunces', serif; font-weight: 700; font-size: 1rem;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-card-title i { color: var(--amber); font-size: 0.9rem; }
+  .section-card-body { padding: 20px 24px; }
+
+  /* ── INFO GRID ── */
+  .info-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  }
+  .info-cell .ic-label {
+    font-size: 0.72rem; color: var(--text-3); font-weight: 600;
+    letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px;
+  }
+  .info-cell .ic-value {
+    font-size: 0.92rem; color: var(--text-1); font-weight: 500;
+  }
+  .info-cell .ic-value a { color: var(--amber); text-decoration: none; }
+  .info-cell .ic-value a:hover { text-decoration: underline; }
+  .info-cell .ic-empty { color: var(--text-3); font-size: 0.85rem; font-style: italic; }
+
+  /* ── NOTES ── */
+  .notes-block {
+    background: rgba(245,158,11,0.04); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg); padding: 16px 20px;
+    font-size: 0.92rem; color: var(--text-2); line-height: 1.7;
+    white-space: pre-wrap;
+  }
+
+  /* ── INTERACTION TIMELINE ── */
+  .timeline { display: flex; flex-direction: column; gap: 0; }
+  .timeline-item {
+    display: flex; gap: 16px; padding: 16px 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .timeline-item:last-child { border-bottom: none; }
+  .timeline-dot {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+  }
+  .timeline-dot.call    { color: #10B981; border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.1); }
+  .timeline-dot.email   { color: #38BDF8; border-color: rgba(56,189,248,0.3); background: rgba(56,189,248,0.1); }
+  .timeline-dot.meeting { color: #F59E0B; border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.1); }
+  .timeline-dot.chat    { color: #8B5CF6; border-color: rgba(139,92,246,0.3); background: rgba(139,92,246,0.1); }
+  .timeline-dot.note    { color: #6B7280; border-color: rgba(107,114,128,0.3); background: rgba(107,114,128,0.1); }
+  .timeline-content { flex: 1; }
+  .timeline-type {
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.8px; color: var(--amber); margin-bottom: 3px;
+  }
+  .timeline-summary { font-size: 0.9rem; color: var(--text-1); font-weight: 500; margin-bottom: 4px; }
+  .timeline-details { font-size: 0.82rem; color: var(--text-3); line-height: 1.55; }
+  .timeline-date { font-size: 0.76rem; color: var(--text-3); margin-top: 4px; }
+
+  /* ── LOG INTERACTION FORM ── */
+  .log-form { display: flex; flex-direction: column; gap: 14px; }
+  .log-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .log-form select, .log-form input, .log-form textarea {
+    width: 100%; padding: 11px 14px;
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg); color: var(--text-1);
+    font-family: 'Outfit', sans-serif; font-size: 0.9rem;
+    transition: var(--t); outline: none;
+  }
+  .log-form select option { background: var(--bg-card); }
+  .log-form textarea { resize: vertical; min-height: 80px; }
+  .log-form select:focus, .log-form input:focus, .log-form textarea:focus {
+    border-color: var(--amber); background: rgba(245,158,11,0.04);
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.10);
+  }
+
+  /* ── SOCIAL LINKS ── */
+  .social-links { display: flex; gap: 10px; flex-wrap: wrap; }
+  .social-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: var(--r-pill);
+    text-decoration: none; font-size: 0.8rem; font-weight: 600;
+    border: 1px solid var(--border-subtle); background: var(--surface-1);
+    color: var(--text-2); transition: var(--t);
+  }
+  .social-link:hover { color: var(--amber); border-color: var(--border-strong); }
+
+  /* ── DANGER ZONE ── */
+  .danger-zone {
+    background: rgba(239,68,68,0.05);
+    border: 1px solid rgba(239,68,68,0.18);
+    border-radius: var(--r-xl); padding: 20px 24px;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 14px;
+  }
+  .danger-zone-text h4 { color: #EF4444; font-weight: 700; margin-bottom: 4px; }
+  .danger-zone-text p  { color: var(--text-3); font-size: 0.85rem; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .detail-layout { grid-template-columns: 1fr; }
+    .profile-card { position: static; }
+    .info-grid { grid-template-columns: 1fr; }
+    .log-form-row { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 600px) {
+    .quick-actions { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="detail-page">
+  <div class="container">
+
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a href="{% url 'contacts:contact_list' %}"><i class="fas fa-address-book"></i> Contacts</a>
+      <i class="fas fa-chevron-right"></i>
+      <span>{{ contact.full_name }}</span>
+    </div>
+
+    <!-- Messages -->
+    {% for msg in messages %}
+    <div style="padding:12px 18px; border-radius:var(--r-lg); margin-bottom:16px;
+                background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.25);
+                color:#6EE7B7; font-size:0.9rem;">
+      <i class="fas fa-check-circle"></i> {{ msg }}
+    </div>
+    {% endfor %}
+
+    <div class="detail-layout">
+
+      <!-- ════ LEFT: PROFILE CARD ════ -->
+      <aside>
+        <div class="profile-card">
+          <div class="profile-card-banner"></div>
+          <div class="profile-card-avatar-wrap">
+            {% if contact.avatar %}
+              <img src="{{ contact.avatar.url }}" class="profile-avatar-lg" alt="{{ contact.full_name }}">
+            {% else %}
+              <div class="profile-avatar-placeholder-lg">{{ contact.initials }}</div>
+            {% endif %}
+          </div>
+          <div class="profile-card-body">
+            <h2 class="profile-name">{{ contact.full_name }}</h2>
+            {% if contact.job_title or contact.company %}
+            <p class="profile-role">
+              {% if contact.job_title %}{{ contact.job_title }}{% endif %}
+              {% if contact.job_title and contact.company %} · {% endif %}
+              {% if contact.company %}{{ contact.company }}{% endif %}
+            </p>
+            {% endif %}
+
+            <div class="profile-badges">
+              {% if contact.is_favorite %}
+              <span class="badge badge-amber"><i class="fas fa-star"></i> Favourite</span>
+              {% endif %}
+              {% if contact.group %}
+              <span class="badge" style="background:{{ contact.group.color }}18; color:{{ contact.group.color }}; border:1px solid {{ contact.group.color }}33;">
+                <i class="fas {{ contact.group.icon }}"></i> {{ contact.group.name }}
+              </span>
+              {% endif %}
+              {% if contact.linked_user %}
+              <span class="badge badge-sky"><i class="fas fa-link"></i> Platform User</span>
+              {% endif %}
+              {% if contact.is_blocked %}
+              <span class="badge" style="background:rgba(239,68,68,0.12);color:#F87171;border:1px solid rgba(239,68,68,0.25);">
+                <i class="fas fa-ban"></i> Blocked
+              </span>
+              {% endif %}
+            </div>
+
+            <!-- Quick Action Buttons -->
+            <div class="quick-actions">
+              {% if contact.phone_primary %}
+              <a href="tel:{{ contact.phone_primary }}" class="qa-btn">
+                <i class="fas fa-phone"></i> Call
+              </a>
+              {% endif %}
+              {% if contact.email %}
+              <a href="mailto:{{ contact.email }}" class="qa-btn">
+                <i class="fas fa-envelope"></i> Email
+              </a>
+              {% endif %}
+              {% if contact.whatsapp %}
+              <a href="https://wa.me/{{ contact.whatsapp|cut:'+' }}" target="_blank" class="qa-btn">
+                <i class="fab fa-whatsapp"></i> WhatsApp
+              </a>
+              {% endif %}
+              {% if contact.linked_user %}
+              <a href="{% url 'chats:conversation_list' %}" class="qa-btn">
+                <i class="fas fa-comment-dots"></i> Message
+              </a>
+              {% endif %}
+              <a href="{% url 'contacts:contact_edit' contact.pk %}" class="qa-btn">
+                <i class="fas fa-pen"></i> Edit
+              </a>
+              <form method="post" action="{% url 'contacts:contact_toggle_favorite' contact.pk %}" style="margin:0; display:contents;">
+                {% csrf_token %}
+                <button type="submit" class="qa-btn">
+                  <i class="{% if contact.is_favorite %}fas{% else %}far{% endif %} fa-star"></i>
+                  {% if contact.is_favorite %}Unfav{% else %}Fav{% endif %}
+                </button>
+              </form>
+            </div>
+
+            <!-- Contact Info -->
+            {% if contact.phone_primary %}
+            <div class="profile-info-row">
+              <div class="pi-icon"><i class="fas fa-phone"></i></div>
+              <div class="pi-content">
+                <div class="pi-label">Phone</div>
+                <div class="pi-value"><a href="tel:{{ contact.phone_primary }}">{{ contact.phone_primary }}</a></div>
+                {% if contact.phone_secondary %}
+                <div class="pi-value" style="margin-top:2px;"><a href="tel:{{ contact.phone_secondary }}">{{ contact.phone_secondary }}</a></div>
+                {% endif %}
+              </div>
+            </div>
+            {% endif %}
+
+            {% if contact.email %}
+            <div class="profile-info-row">
+              <div class="pi-icon"><i class="fas fa-envelope"></i></div>
+              <div class="pi-content">
+                <div class="pi-label">Email</div>
+                <div class="pi-value"><a href="mailto:{{ contact.email }}">{{ contact.email }}</a></div>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if contact.city or contact.state %}
+            <div class="profile-info-row">
+              <div class="pi-icon"><i class="fas fa-map-marker-alt"></i></div>
+              <div class="pi-content">
+                <div class="pi-label">Location</div>
+                <div class="pi-value">
+                  {% if contact.address %}{{ contact.address }}, {% endif %}
+                  {{ contact.city }}{% if contact.state %}, {{ contact.state }}{% endif %}{% if contact.country %}, {{ contact.country }}{% endif %}
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if contact.website %}
+            <div class="profile-info-row">
+              <div class="pi-icon"><i class="fas fa-globe"></i></div>
+              <div class="pi-content">
+                <div class="pi-label">Website</div>
+                <div class="pi-value"><a href="{{ contact.website }}" target="_blank">{{ contact.website }}</a></div>
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- Bottom actions -->
+            <div class="profile-card-actions">
+              <a href="{% url 'contacts:contact_edit' contact.pk %}" class="btn btn-outline btn-sm">
+                <i class="fas fa-pen"></i> Edit
+              </a>
+              <a href="{% url 'contacts:contact_list' %}" class="btn btn-ghost btn-sm">
+                <i class="fas fa-arrow-left"></i> Back
+              </a>
+            </div>
+
+          </div>
+        </div>
+      </aside>
+
+      <!-- ════ RIGHT: DETAIL PANELS ════ -->
+      <div class="detail-right">
+
+        <!-- Professional Info -->
+        <div class="section-card">
+          <div class="section-card-header">
+            <h3 class="section-card-title"><i class="fas fa-briefcase"></i> Professional Details</h3>
+          </div>
+          <div class="section-card-body">
+            <div class="info-grid">
+              <div class="info-cell">
+                <div class="ic-label">Company</div>
+                <div class="ic-value">{{ contact.company|default:"—" }}</div>
+              </div>
+              <div class="info-cell">
+                <div class="ic-label">Job Title</div>
+                <div class="ic-value">{{ contact.job_title|default:"—" }}</div>
+              </div>
+              <div class="info-cell">
+                <div class="ic-label">Primary Phone</div>
+                <div class="ic-value">
+                  {% if contact.phone_primary %}<a href="tel:{{ contact.phone_primary }}">{{ contact.phone_primary }}</a>{% else %}—{% endif %}
+                </div>
+              </div>
+              <div class="info-cell">
+                <div class="ic-label">Secondary Phone</div>
+                <div class="ic-value">
+                  {% if contact.phone_secondary %}<a href="tel:{{ contact.phone_secondary }}">{{ contact.phone_secondary }}</a>{% else %}—{% endif %}
+                </div>
+              </div>
+              <div class="info-cell">
+                <div class="ic-label">Email</div>
+                <div class="ic-value">
+                  {% if contact.email %}<a href="mailto:{{ contact.email }}">{{ contact.email }}</a>{% else %}—{% endif %}
+                </div>
+              </div>
+              <div class="info-cell">
+                <div class="ic-label">Website</div>
+                <div class="ic-value">
+                  {% if contact.website %}<a href="{{ contact.website }}" target="_blank">{{ contact.website }}</a>{% else %}—{% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Social Links -->
+        {% if contact.whatsapp or contact.twitter or contact.instagram or contact.linkedin %}
+        <div class="section-card">
+          <div class="section-card-header">
+            <h3 class="section-card-title"><i class="fas fa-share-alt"></i> Social & Messaging</h3>
+          </div>
+          <div class="section-card-body">
+            <div class="social-links">
+              {% if contact.whatsapp %}
+              <a href="https://wa.me/{{ contact.whatsapp|cut:'+' }}" target="_blank" class="social-link">
+                <i class="fab fa-whatsapp" style="color:#25D366;"></i> WhatsApp
+              </a>
+              {% endif %}
+              {% if contact.twitter %}
+              <a href="https://twitter.com/{{ contact.twitter|cut:'@' }}" target="_blank" class="social-link">
+                <i class="fab fa-x-twitter"></i> {{ contact.twitter }}
+              </a>
+              {% endif %}
+              {% if contact.instagram %}
+              <a href="https://instagram.com/{{ contact.instagram|cut:'@' }}" target="_blank" class="social-link">
+                <i class="fab fa-instagram" style="color:#E1306C;"></i> {{ contact.instagram }}
+              </a>
+              {% endif %}
+              {% if contact.linkedin %}
+              <a href="{{ contact.linkedin }}" target="_blank" class="social-link">
+                <i class="fab fa-linkedin" style="color:#0A66C2;"></i> LinkedIn
+              </a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Notes -->
+        {% if contact.notes %}
+        <div class="section-card">
+          <div class="section-card-header">
+            <h3 class="section-card-title"><i class="fas fa-sticky-note"></i> Notes</h3>
+          </div>
+          <div class="section-card-body">
+            <div class="notes-block">{{ contact.notes }}</div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Interaction Timeline -->
+        <div class="section-card">
+          <div class="section-card-header">
+            <h3 class="section-card-title">
+              <i class="fas fa-history"></i> Interaction History
+            </h3>
+            <span class="badge badge-amber">{{ interactions.count }} logged</span>
+          </div>
+          <div class="section-card-body">
+            <!-- Log new interaction form -->
+            <details style="margin-bottom:20px;">
+              <summary style="cursor:pointer; color:var(--amber); font-size:0.88rem; font-weight:600; padding:8px 0; list-style:none;">
+                <i class="fas fa-plus-circle"></i> Log New Interaction
+              </summary>
+              <form method="post" class="log-form" style="margin-top:14px;">
+                {% csrf_token %}
+                <div class="log-form-row">
+                  {{ interaction_form.type }}
+                  {{ interaction_form.occurred_at }}
+                </div>
+                {{ interaction_form.summary }}
+                {{ interaction_form.details }}
+                <button type="submit" class="btn btn-primary btn-sm">
+                  <i class="fas fa-save"></i> Log Interaction
+                </button>
+              </form>
+            </details>
+
+            <!-- Timeline -->
+            {% if interactions %}
+            <div class="timeline">
+              {% for item in interactions %}
+              <div class="timeline-item">
+                <div class="timeline-dot {{ item.type }}">
+                  {% if item.type == "call" %}<i class="fas fa-phone"></i>
+                  {% elif item.type == "email" %}<i class="fas fa-envelope"></i>
+                  {% elif item.type == "meeting" %}<i class="fas fa-handshake"></i>
+                  {% elif item.type == "chat" %}<i class="fas fa-comment-dots"></i>
+                  {% else %}<i class="fas fa-sticky-note"></i>{% endif %}
+                </div>
+                <div class="timeline-content">
+                  <div class="timeline-type">{{ item.get_type_display }}</div>
+                  <div class="timeline-summary">{{ item.summary }}</div>
+                  {% if item.details %}
+                  <div class="timeline-details">{{ item.details }}</div>
+                  {% endif %}
+                  <div class="timeline-date">
+                    <i class="fas fa-clock"></i>
+                    {{ item.occurred_at|date:"N j, Y · g:i A" }}
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <p style="color:var(--text-3); font-size:0.88rem; text-align:center; padding:20px 0;">
+              No interactions logged yet. Use the form above to record your first one.
+            </p>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Meta info -->
+        <div style="display:flex; gap:16px; font-size:0.8rem; color:var(--text-3); flex-wrap:wrap;">
+          <span><i class="fas fa-calendar-plus"></i> Added {{ contact.created_at|date:"N j, Y" }}</span>
+          <span><i class="fas fa-clock"></i> Updated {{ contact.updated_at|date:"N j, Y" }}</span>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="danger-zone">
+          <div class="danger-zone-text">
+            <h4><i class="fas fa-exclamation-triangle"></i> Danger Zone</h4>
+            <p>Permanently delete this contact and all their interaction history.</p>
+          </div>
+          <a href="{% url 'contacts:contact_delete' contact.pk %}"
+             class="btn btn-sm"
+             style="background:rgba(239,68,68,0.12); color:#F87171; border:1px solid rgba(239,68,68,0.25);">
+            <i class="fas fa-trash-alt"></i> Delete Contact
+          </a>
+        </div>
+
+      </div><!-- /detail-right -->
+    </div><!-- /detail-layout -->
+
+  </div><!-- /container -->
+</div><!-- /detail-page -->
+{% endblock %}

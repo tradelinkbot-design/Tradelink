@@ -1,0 +1,478 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}My Professional Profile — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  .profile-hub {
+    min-height: 100vh;
+    padding: calc(var(--nav-h) + 40px) clamp(16px, 5vw, 64px) 80px;
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hub-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 36px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border-subtle);
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  .hub-title-box h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+  .hub-title-box p {
+    color: var(--text-2);
+    font-size: 0.95rem;
+  }
+  .hub-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  /* 2-Col Grid */
+  .hub-grid {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 32px;
+    align-items: flex-start;
+  }
+  @media (max-width: 960px) {
+    .hub-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Left summary card */
+  .hub-sidebar {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 32px 24px;
+    text-align: center;
+    position: sticky;
+    top: calc(var(--nav-h) + 20px);
+    box-shadow: var(--shadow-md);
+  }
+  .hub-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    margin: 0 auto 16px;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--surface-2), var(--surface-1));
+    border: 3px solid var(--amber);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--amber);
+  }
+  .hub-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .hub-name {
+    font-family: 'Fraunces', serif;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--text-1);
+    margin-bottom: 2px;
+  }
+  .hub-trade {
+    color: var(--amber);
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .hub-loc {
+    color: var(--text-3);
+    font-size: 0.82rem;
+    margin-bottom: 16px;
+  }
+
+  .status-toggle-box {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    padding: 14px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .pref-summary {
+    text-align: left;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    padding: 16px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 0.85rem;
+  }
+  .pref-item {
+    display: flex;
+    justify-content: space-between;
+  }
+  .pref-label {
+    color: var(--text-3);
+  }
+  .pref-val {
+    color: var(--text-1);
+    font-weight: 600;
+  }
+
+  /* Right sections */
+  .section-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 32px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-sm);
+  }
+  .section-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .section-card-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-card-title i {
+    color: var(--amber);
+  }
+
+  /* Item list */
+  .hub-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .hub-item {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-subtle);
+    border-left: 3px solid var(--amber);
+    border-radius: var(--r-lg);
+    padding: 18px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .hub-item-info h4 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-1);
+    margin-bottom: 2px;
+  }
+  .hub-item-company {
+    color: var(--amber);
+    font-size: 0.88rem;
+    margin-bottom: 4px;
+  }
+  .hub-item-dates {
+    color: var(--text-3);
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+  }
+  .hub-item-desc {
+    color: var(--text-2);
+    font-size: 0.88rem;
+    line-height: 1.6;
+    white-space: pre-line;
+  }
+
+  .hub-item-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  /* Empty box */
+  .empty-section {
+    text-align: center;
+    padding: 32px 16px;
+    background: rgba(255, 255, 255, 0.01);
+    border: 1px dashed var(--border-subtle);
+    border-radius: var(--r-lg);
+    color: var(--text-3);
+    font-size: 0.9rem;
+  }
+
+  /* Endorsements */
+  .endorse-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .endorse-tag {
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    padding: 8px 16px;
+    border-radius: var(--r-pill);
+    font-size: 0.88rem;
+    color: var(--text-1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .endorse-badge {
+    background: var(--surface-2);
+    color: var(--amber);
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.76rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-hub">
+
+  {# ── Hub Header ── #}
+  <div class="hub-header">
+    <div class="hub-title-box">
+      <div class="eyebrow">My Career Profile</div>
+      <h1 class="section-title">Professional <span class="amber-text">Identity Hub</span></h1>
+      <p>Manage your employment credentials, verified certificates, and permanent hiring preferences.</p>
+    </div>
+    <div class="hub-actions">
+      <a href="{% url 'hiring:worker_detail' worker.pk %}" class="btn btn-ghost" target="_blank">
+        <i class="fas fa-external-link-alt"></i> View Public Profile
+      </a>
+      <a href="{% url 'hiring:cv_download' %}" class="btn btn-outline">
+        <i class="fas fa-file-pdf"></i> Download CV (PDF)
+      </a>
+      <a href="{% url 'hiring:worker_inbox' %}" class="btn btn-primary">
+        <i class="fas fa-inbox"></i> Hiring Inbox
+        {% if inbox_count > 0 %}
+          <span class="badge badge-amber" style="background: #0C0A08; color: var(--amber); margin-left: 6px;">{{ inbox_count }}</span>
+        {% endif %}
+      </a>
+    </div>
+  </div>
+
+  {# ── Hub Grid ── #}
+  <div class="hub-grid">
+
+    {# ── Left Sidebar Summary ── #}
+    <div class="hub-sidebar">
+      <div class="hub-avatar">
+        {% if worker.user.image %}
+          <img src="{{ worker.user.image.url }}" alt="{{ worker.user.username }}">
+        {% else %}
+          {{ worker.user.username|first|upper }}
+        {% endif %}
+      </div>
+
+      <div class="hub-name">{{ worker.user.get_full_name|default:worker.user.username }}</div>
+      <div class="hub-trade">{{ worker.trade_category.name|default:"Trade Category Not Set" }}</div>
+      <div class="hub-loc">
+        <i class="fas fa-map-marker-alt"></i>
+        {{ worker.get_state_display|default:worker.state|title }}{% if worker.lga %}, {{ worker.lga }}{% endif %}
+      </div>
+
+      <div class="status-toggle-box">
+        <div style="text-align: left;">
+          <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-1);">Open to Work</div>
+          <div style="font-size: 0.75rem; color: var(--text-3);">Show in employer searches</div>
+        </div>
+        {% if worker.open_to_employment %}
+          <span class="badge badge-green"><i class="fas fa-check"></i> Active</span>
+        {% else %}
+          <span class="badge badge-amber" style="opacity: 0.6;">Inactive</span>
+        {% endif %}
+      </div>
+
+      <div class="pref-summary">
+        <div class="pref-item">
+          <span class="pref-label">Experience</span>
+          <span class="pref-val">{{ worker.years_experience }} Yrs</span>
+        </div>
+        <div class="pref-item">
+          <span class="pref-label">Salary Expectation</span>
+          <span class="pref-val">
+            {% if worker.expected_monthly_salary %}
+              ₦{{ worker.expected_monthly_salary|intcomma }}/mo
+            {% else %}
+              Not set
+            {% endif %}
+          </span>
+        </div>
+        <div class="pref-item">
+          <span class="pref-label">Notice Period</span>
+          <span class="pref-val">{{ worker.notice_period|default:"Immediate" }}</span>
+        </div>
+        <div class="pref-item">
+          <span class="pref-label">Preference</span>
+          <span class="pref-val">{{ worker.get_employment_preference_display|default:"Full-Time or Contract" }}</span>
+        </div>
+      </div>
+
+      <a href="{% url 'hiring:employment_prefs' %}" class="btn btn-outline" style="width: 100%;">
+        <i class="fas fa-sliders-h"></i> Manage Preferences
+      </a>
+    </div>
+
+    {# ── Right Main Sections ── #}
+    <div>
+
+      {# Work Experience #}
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-card-title">
+            <i class="fas fa-briefcase"></i> Work Experience
+          </div>
+          <a href="{% url 'hiring:history_add' %}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus"></i> Add Experience
+          </a>
+        </div>
+
+        {% if work_history %}
+          <div class="hub-list">
+            {% for item in work_history %}
+              <div class="hub-item">
+                <div class="hub-item-info">
+                  <h4>{{ item.role_title }}</h4>
+                  <div class="hub-item-company">{{ item.employer_name }}{% if item.location_state %} · {{ item.get_location_state_display|default:item.location_state|title }}{% endif %}</div>
+                  <div class="hub-item-dates">
+                    {{ item.start_date|date:"M Y" }} –
+                    {% if item.is_current %}
+                      <span style="color: var(--emerald); font-weight: 600;">Present</span>
+                    {% elif item.end_date %}
+                      {{ item.end_date|date:"M Y" }}
+                    {% endif %}
+                  </div>
+                  {% if item.description %}
+                    <div class="hub-item-desc">{{ item.description }}</div>
+                  {% endif %}
+                </div>
+                <div class="hub-item-actions">
+                  <a href="{% url 'hiring:history_edit' item.pk %}" class="btn btn-ghost btn-sm" title="Edit">
+                    <i class="fas fa-edit"></i>
+                  </a>
+                  <form method="post" action="{% url 'hiring:history_delete' item.pk %}" style="display:inline;" onsubmit="return confirm('Remove this experience entry?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-ghost btn-sm" style="color: #EF4444;" title="Delete">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-section">
+            <i class="fas fa-briefcase" style="font-size: 1.8rem; margin-bottom: 8px; display: block; color: var(--text-3);"></i>
+            No past work experience listed. Add your past roles to stand out to verified employers.
+          </div>
+        {% endif %}
+      </div>
+
+      {# Certifications #}
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-card-title">
+            <i class="fas fa-award"></i> Certifications & Trade Tests
+          </div>
+          <a href="{% url 'hiring:cert_add' %}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus"></i> Add Certification
+          </a>
+        </div>
+
+        {% if certifications %}
+          <div class="hub-list">
+            {% for cert in certifications %}
+              <div class="hub-item">
+                <div class="hub-item-info">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <h4>{{ cert.name }}</h4>
+                    {% if cert.is_verified %}
+                      <span class="badge badge-sky"><i class="fas fa-check"></i> Verified</span>
+                    {% else %}
+                      <span class="badge badge-amber" style="opacity: 0.7;">Pending Review</span>
+                    {% endif %}
+                  </div>
+                  <div class="hub-item-company">{{ cert.issuing_body }}</div>
+                  {% if cert.year_obtained %}
+                    <div class="hub-item-dates">Issued: {{ cert.year_obtained }}</div>
+                  {% endif %}
+                </div>
+                <div class="hub-item-actions">
+                  {% if cert.certificate_image %}
+                    <a href="{{ cert.certificate_image.url }}" target="_blank" class="btn btn-ghost btn-sm" title="View Certificate Document">
+                      <i class="fas fa-file-image"></i>
+                    </a>
+                  {% endif %}
+                  <form method="post" action="{% url 'hiring:cert_delete' cert.pk %}" style="display:inline;" onsubmit="return confirm('Remove this certificate?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-ghost btn-sm" style="color: #EF4444;" title="Delete">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-section">
+            <i class="fas fa-award" style="font-size: 1.8rem; margin-bottom: 8px; display: block; color: var(--text-3);"></i>
+            No certificates added yet. Upload qualifications (NABTEB, Trade Test, City & Guilds) to earn a verified qualification badge.
+          </div>
+        {% endif %}
+      </div>
+
+      {# Skill Endorsements #}
+      <div class="section-card">
+        <div class="section-card-title" style="margin-bottom: 16px;">
+          <i class="fas fa-thumbs-up"></i> Skill Endorsements Received
+        </div>
+        {% if endorsements %}
+          <div class="endorse-tags">
+            {% for e in endorsements %}
+              <div class="endorse-tag">
+                <span>{{ e.skill__name }}</span>
+                <span class="endorse-badge">{{ e.count }} endorsements</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-section">
+            <i class="fas fa-thumbs-up" style="font-size: 1.8rem; margin-bottom: 8px; display: block; color: var(--text-3);"></i>
+            No endorsements received yet. When employers and peers visit your public profile, they can endorse your skills.
+          </div>
+        {% endif %}
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

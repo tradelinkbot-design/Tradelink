@@ -1,0 +1,958 @@
+{% extends "base.html" %}
+{% block title %}
+  {% if profile.pk %}Edit Company Profile{% else %}Set Up Employer Profile{% endif %} — TradeLink NG
+{% endblock %}
+
+{% block extra_head %}
+<style>
+/* =====================================================
+   EMPLOYER PROFILE EDIT — TradeLink NG
+   Context: form (EmployerProfileForm), profile (EmployerProfile),
+            unread_count
+===================================================== */
+
+/* ── PAGE SHELL ── */
+.ep-page { padding-top: var(--nav-h); min-height: 100vh; }
+
+/* ── PAGE HEADER BAND ── */
+.ep-header {
+  background: linear-gradient(
+    180deg,
+    rgba(56,189,248,0.05) 0%,
+    rgba(245,158,11,0.02) 60%,
+    transparent 100%
+  );
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 40px 0 36px;
+  position: relative; overflow: hidden;
+}
+.ep-header::before {
+  content: '';
+  position: absolute; top: -120px; right: -80px;
+  width: 440px; height: 440px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(56,189,248,0.06), transparent 65%);
+  pointer-events: none;
+}
+.ep-header-inner {
+  max-width: 1100px; margin: 0 auto;
+  padding: 0 clamp(20px,5vw,64px);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 20px; flex-wrap: wrap;
+}
+.ep-header-left { display: flex; align-items: center; gap: 18px; }
+
+.ep-avatar {
+  width: 62px; height: 62px; border-radius: 18px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--sky), #818cf8);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Fraunces', serif; font-size: 1.6rem; font-weight: 900;
+  color: #0C0A08;
+  box-shadow: 0 6px 24px rgba(56,189,248,0.25);
+  overflow: hidden;
+}
+.ep-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 18px; }
+
+.ep-header-title {
+  font-family: 'Fraunces', serif; font-size: 1.55rem;
+  font-weight: 900; letter-spacing: -0.5px; color: var(--text-1);
+  margin-bottom: 3px;
+}
+.ep-header-sub { font-size: 0.85rem; color: var(--text-2); }
+.ep-header-sub a { color: var(--amber); text-decoration: none; transition: var(--t); }
+.ep-header-sub a:hover { color: var(--amber-light); text-decoration: underline; }
+
+/* ── VERIFIED BADGE ── */
+.ep-verified {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(56,189,248,0.10); border: 1px solid rgba(56,189,248,0.22);
+  border-radius: var(--r-pill); padding: 6px 14px;
+  font-size: 0.78rem; font-weight: 700; color: var(--sky);
+  flex-shrink: 0;
+}
+
+/* ── BODY LAYOUT ── */
+.ep-body {
+  max-width: 1100px; margin: 0 auto;
+  padding: 44px clamp(20px,5vw,64px) 80px;
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 40px; align-items: start;
+}
+
+/* ── MESSAGES ── */
+.ep-messages { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 10px; }
+.ep-msg {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 18px; border-radius: var(--r-lg); font-size: 0.88rem;
+}
+.ep-msg-success {
+  background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2);
+  color: #6ee7b7;
+}
+.ep-msg-error {
+  background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+  color: #fca5a5;
+}
+.ep-msg i { font-size: 0.85rem; margin-top: 2px; flex-shrink: 0; }
+
+/* ── SECTION CARD ── */
+.ep-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); overflow: hidden; margin-bottom: 24px;
+}
+.ep-card:last-child { margin-bottom: 0; }
+.ep-card-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+}
+.ep-card-header::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--sky), #818cf8);
+}
+.ep-card-title {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 800;
+  color: var(--text-1);
+}
+.ep-card-icon {
+  width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+  background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; color: var(--sky);
+}
+.ep-card-body { padding: 24px; }
+
+/* ── FORM FIELDS ── */
+.ep-field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.ep-field-grid .ep-field-full { grid-column: 1 / -1; }
+
+.ep-field { display: flex; flex-direction: column; gap: 7px; }
+.ep-label {
+  font-size: 0.82rem; font-weight: 600; color: var(--text-2);
+  display: flex; align-items: center; gap: 6px;
+}
+.ep-label-required { color: var(--amber); font-size: 0.75rem; }
+.ep-help { font-size: 0.77rem; color: var(--text-3); margin-top: -2px; }
+
+.ep-input,
+.ep-select,
+.ep-textarea {
+  width: 100%;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); color: var(--text-1);
+  font-family: 'Outfit', sans-serif; font-size: 0.92rem;
+  transition: var(--t); outline: none;
+}
+.ep-input    { padding: 11px 14px; }
+.ep-select   {
+  padding: 11px 14px; cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(250,245,235,0.3)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center;
+}
+.ep-textarea { padding: 11px 14px; resize: vertical; min-height: 120px; }
+.ep-input:focus,
+.ep-select:focus,
+.ep-textarea:focus {
+  border-color: var(--sky);
+  background: rgba(56,189,248,0.04);
+  box-shadow: 0 0 0 3px rgba(56,189,248,0.1);
+}
+.ep-input::placeholder,
+.ep-textarea::placeholder { color: var(--text-3); }
+.ep-select option { background: var(--bg-card); color: var(--text-1); }
+
+/* Field error */
+.ep-field.has-error .ep-input,
+.ep-field.has-error .ep-select,
+.ep-field.has-error .ep-textarea {
+  border-color: rgba(239,68,68,0.5);
+  background: rgba(239,68,68,0.04);
+}
+.ep-field-error {
+  font-size: 0.77rem; color: #fca5a5;
+  display: flex; align-items: center; gap: 5px; margin-top: 2px;
+}
+.ep-field-error i { font-size: 0.7rem; }
+
+/* ── LOGO UPLOAD ── */
+.ep-logo-wrap {
+  display: flex; align-items: center; gap: 20px;
+  padding: 20px;
+  background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+}
+.ep-logo-preview {
+  width: 80px; height: 80px; border-radius: var(--r-lg); flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(56,189,248,0.12), rgba(129,140,248,0.08));
+  border: 1px solid rgba(56,189,248,0.2);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.ep-logo-preview img { width: 100%; height: 100%; object-fit: cover; }
+.ep-logo-preview i { font-size: 1.8rem; color: var(--sky); opacity: 0.5; }
+.ep-logo-info { flex: 1; }
+.ep-logo-info p { font-size: 0.82rem; color: var(--text-2); line-height: 1.6; margin-bottom: 10px; }
+.ep-logo-info span { font-size: 0.75rem; color: var(--text-3); }
+.ep-file-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 16px; border-radius: var(--r-md);
+  background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.2);
+  color: var(--sky); font-size: 0.83rem; font-weight: 600;
+  cursor: pointer; transition: var(--t);
+}
+.ep-file-btn:hover { background: rgba(56,189,248,0.14); }
+
+/* ── WEBSITE INPUT PREFIX ── */
+.ep-input-prefix { position: relative; }
+.ep-input-prefix .ep-prefix-sym {
+  position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+  font-size: 0.75rem; color: var(--text-3); pointer-events: none; white-space: nowrap;
+}
+.ep-input-prefix .ep-input { padding-left: 48px; }
+
+/* ── SUBMIT BAR ──
+   No fade-up class — sticky + paused animation = invisible button (same
+   fix as marketplace/workers/edit.html). Always fully visible.
+── */
+.ep-submit-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+  padding: 20px 24px;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl);
+  position: sticky; bottom: 20px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+  backdrop-filter: blur(12px);
+  z-index: 10;
+  opacity: 1 !important;
+  transform: none !important;
+}
+.ep-submit-hint { font-size: 0.8rem; color: var(--text-3); }
+.ep-submit-hint i { color: var(--sky); margin-right: 5px; }
+.ep-submit-actions { display: flex; gap: 12px; align-items: center; }
+.ep-btn-cancel {
+  padding: 11px 22px;
+  background: transparent; border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md); color: var(--text-2);
+  font-family: 'Outfit', sans-serif; font-size: 0.9rem; font-weight: 600;
+  cursor: pointer; text-decoration: none; transition: var(--t);
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.ep-btn-cancel:hover { background: var(--surface-1); color: var(--text-1); border-color: var(--border-strong); }
+.ep-btn-save {
+  padding: 11px 28px;
+  background: linear-gradient(135deg, var(--sky), #818cf8);
+  border: none; border-radius: var(--r-md);
+  color: #0C0A08; font-family: 'Outfit', sans-serif;
+  font-size: 0.92rem; font-weight: 700;
+  cursor: pointer; transition: var(--t);
+  display: inline-flex; align-items: center; gap: 8px;
+  box-shadow: 0 4px 20px rgba(56,189,248,0.25);
+}
+.ep-btn-save:hover { filter: brightness(1.06); transform: translateY(-1px); box-shadow: 0 8px 28px rgba(56,189,248,0.35); }
+.ep-btn-save:active { transform: translateY(0); }
+
+/* ── RIGHT SIDEBAR ── */
+.ep-sidebar { display: flex; flex-direction: column; gap: 18px; }
+
+.ep-tip-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 20px; overflow: hidden; position: relative;
+}
+.ep-tip-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(56,189,248,0.03), transparent 70%);
+  pointer-events: none;
+}
+.ep-tip-title {
+  font-family: 'Fraunces', serif; font-size: 0.92rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.ep-tip-title i { color: var(--sky); font-size: 0.82rem; }
+.ep-tip-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.ep-tip-item {
+  display: flex; align-items: flex-start; gap: 9px;
+  font-size: 0.82rem; color: var(--text-2); line-height: 1.55;
+}
+.ep-tip-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--sky); flex-shrink: 0; margin-top: 7px;
+}
+
+/* Quick links */
+.ep-quick-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 20px;
+}
+.ep-quick-title {
+  font-family: 'Fraunces', serif; font-size: 0.92rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.ep-quick-title i { color: var(--sky); font-size: 0.82rem; }
+.ep-quick-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--r-md);
+  text-decoration: none; color: var(--text-2);
+  font-size: 0.86rem; font-weight: 500;
+  transition: var(--t); margin-bottom: 4px;
+}
+.ep-quick-link:last-child { margin-bottom: 0; }
+.ep-quick-link:hover { background: var(--surface-1); color: var(--text-1); }
+.ep-quick-link i { width: 16px; text-align: center; color: var(--text-3); font-size: 0.78rem; }
+.ep-quick-link:hover i { color: var(--sky); }
+.ep-quick-badge {
+  margin-left: auto; font-size: 0.7rem; font-weight: 600;
+  padding: 2px 8px; border-radius: var(--r-pill);
+  background: var(--surface-1); border: 1px solid var(--border-subtle); color: var(--text-3);
+}
+
+/* Profile preview */
+.ep-preview-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 20px; text-align: center;
+}
+.ep-preview-logo {
+  width: 64px; height: 64px; border-radius: var(--r-lg); margin: 0 auto 14px;
+  background: linear-gradient(135deg, rgba(56,189,248,0.12), rgba(129,140,248,0.08));
+  border: 1px solid rgba(56,189,248,0.2);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.ep-preview-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: var(--r-md); }
+.ep-preview-logo i { font-size: 1.6rem; color: var(--sky); opacity: 0.6; }
+.ep-preview-name {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 700;
+  color: var(--text-1); margin-bottom: 4px;
+}
+.ep-preview-type { font-size: 0.78rem; color: var(--text-3); margin-bottom: 6px; }
+.ep-preview-meta {
+  display: flex; flex-direction: column; gap: 6px; margin-top: 12px;
+  padding-top: 12px; border-top: 1px solid var(--border-subtle); text-align: left;
+}
+.ep-preview-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.8rem; color: var(--text-2);
+}
+.ep-preview-row i { font-size: 0.72rem; color: var(--text-3); width: 14px; text-align: center; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .ep-body { grid-template-columns: 1fr; }
+  .ep-sidebar { order: -1; }
+  .ep-field-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .ep-header-inner { flex-direction: column; align-items: flex-start; }
+  .ep-submit-bar { position: static; flex-direction: column; align-items: stretch; }
+  .ep-submit-actions { flex-direction: column; }
+  .ep-btn-cancel, .ep-btn-save { justify-content: center; }
+  .ep-logo-wrap { flex-direction: column; align-items: flex-start; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ep-page">
+
+  {# ── PAGE HEADER ── #}
+  <div class="ep-header">
+    <div class="ep-header-inner">
+      <div class="ep-header-left">
+
+        {# Avatar — shows logo if uploaded, initial letter otherwise #}
+        <div class="ep-avatar" id="headerAvatar">
+          {% if profile.logo %}
+            <img src="{{ profile.logo.url }}" alt="{{ profile.company_name }}">
+          {% else %}
+            {{ profile.company_name|slice:":1"|upper|default:request.user.username|slice:":1"|upper }}
+          {% endif %}
+        </div>
+
+        <div>
+          <div class="ep-header-title">
+            {% if profile.pk and profile.company_name %}
+              {{ profile.company_name }}
+            {% elif profile.pk %}
+              Edit Company Profile
+            {% else %}
+              Set Up Employer Profile
+            {% endif %}
+          </div>
+          <div class="ep-header-sub">
+            <a href="{% url 'marketplace:employer_dashboard' %}">
+              <i class="fas fa-chevron-left" style="font-size:0.7rem;"></i> Dashboard
+            </a>
+            &nbsp;·&nbsp;
+            {% if profile.pk %}
+              <a href="{% url 'marketplace:employer_profile_public' pk=profile.pk %}">
+                View public profile
+                <i class="fas fa-arrow-up-right-from-square" style="font-size:0.7rem;"></i>
+              </a>
+            {% else %}
+              Complete your profile so workers can find your listings
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {% if profile.is_verified %}
+        <div class="ep-verified">
+          <i class="fas fa-shield-halved"></i> Verified Employer
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── BODY ── #}
+  <div class="ep-body">
+
+    {# ── DJANGO MESSAGES ── #}
+    {% if messages %}
+    <div class="ep-messages">
+      {% for msg in messages %}
+      <div class="ep-msg {% if msg.tags == 'success' %}ep-msg-success{% else %}ep-msg-error{% endif %}">
+        <i class="fas {% if msg.tags == 'success' %}fa-circle-check{% else %}fa-circle-exclamation{% endif %}"></i>
+        {{ msg }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    
+    <div>
+      <form
+        method="POST"
+        action="{% url 'marketplace:employer_profile_edit' %}"
+        enctype="multipart/form-data"
+        id="employerProfileForm"
+        novalidate
+      >
+        {% csrf_token %}
+
+        {# ─── 1. Company Identity ─── #}
+        <div class="ep-card fade-up">
+          <div class="ep-card-header">
+            <div class="ep-card-icon"><i class="fas fa-building"></i></div>
+            <div class="ep-card-title">Company Identity</div>
+          </div>
+          <div class="ep-card-body">
+            <div class="ep-field-grid">
+
+              {# Company Name — full width #}
+              <div class="ep-field ep-field-full {% if form.company_name.errors %}has-error{% endif %}">
+                <label class="ep-label" for="{{ form.company_name.id_for_label }}">
+                  Company / Trading Name <span class="ep-label-required">✱</span>
+                </label>
+                <input
+                  type="text"
+                  name="{{ form.company_name.html_name }}"
+                  id="companyNameInput"
+                  value="{{ form.company_name.value|default:'' }}"
+                  class="ep-input"
+                  placeholder="e.g. DanPower Services Ltd"
+                >
+                {% if form.company_name.errors %}
+                  <span class="ep-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.company_name.errors.0 }}
+                  </span>
+                {% else %}
+                  <span class="ep-help">Your business name as it appears to workers on the platform.</span>
+                {% endif %}
+              </div>
+
+              {# Company Type #}
+              <div class="ep-field {% if form.company_type.errors %}has-error{% endif %}">
+                <label class="ep-label" for="{{ form.company_type.id_for_label }}">
+                  Organisation Type <span class="ep-label-required">✱</span>
+                </label>
+                <select
+                  name="{{ form.company_type.html_name }}"
+                  id="{{ form.company_type.id_for_label }}"
+                  class="ep-select"
+                >
+                  {% for val, label in form.company_type.field.choices %}
+                  <option value="{{ val }}"
+                    {% if form.company_type.value == val %}selected{% endif %}>
+                    {{ label }}
+                  </option>
+                  {% endfor %}
+                </select>
+                {% if form.company_type.errors %}
+                  <span class="ep-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.company_type.errors.0 }}
+                  </span>
+                {% endif %}
+              </div>
+
+              {# Industry #}
+              <div class="ep-field {% if form.industry.errors %}has-error{% endif %}">
+                <label class="ep-label" for="{{ form.industry.id_for_label }}">
+                  Industry / Sector
+                </label>
+                <input
+                  type="text"
+                  name="{{ form.industry.html_name }}"
+                  id="{{ form.industry.id_for_label }}"
+                  value="{{ form.industry.value|default:'' }}"
+                  class="ep-input"
+                  placeholder="e.g. Construction, Energy, Hospitality…"
+                >
+                {% if form.industry.errors %}
+                  <span class="ep-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.industry.errors.0 }}
+                  </span>
+                {% else %}
+                  <span class="ep-help">Helps workers understand what kind of projects you run.</span>
+                {% endif %}
+              </div>
+
+              {# Website #}
+              <div class="ep-field {% if form.website.errors %}has-error{% endif %}">
+                <label class="ep-label" for="{{ form.website.id_for_label }}">
+                  Website
+                </label>
+                <div class="ep-input-prefix">
+                  <span class="ep-prefix-sym">https://</span>
+                  <input
+                    type="url"
+                    name="{{ form.website.html_name }}"
+                    id="{{ form.website.id_for_label }}"
+                    value="{{ form.website.value|default:'' }}"
+                    class="ep-input"
+                    placeholder="yourcompany.com"
+                  >
+                </div>
+                {% if form.website.errors %}
+                  <span class="ep-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.website.errors.0 }}
+                  </span>
+                {% endif %}
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {# ─── 2. About ─── #}
+        <div class="ep-card fade-up d1">
+          <div class="ep-card-header">
+            <div class="ep-card-icon"><i class="fas fa-align-left"></i></div>
+            <div class="ep-card-title">About Your Company</div>
+          </div>
+          <div class="ep-card-body">
+            <div class="ep-field {% if form.about.errors %}has-error{% endif %}">
+              <label class="ep-label" for="{{ form.about.id_for_label }}">
+                Company Description
+              </label>
+              <textarea
+                name="{{ form.about.html_name }}"
+                id="{{ form.about.id_for_label }}"
+                rows="5"
+                class="ep-textarea"
+                placeholder="Tell workers about your company — what you do, the type of projects you run, your work culture, and what makes working with you great…"
+                maxlength="2000"
+              >{{ form.about.value|default:'' }}</textarea>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                {% if form.about.errors %}
+                  <span class="ep-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.about.errors.0 }}
+                  </span>
+                {% else %}
+                  <span class="ep-help">A compelling description attracts better applicants and builds trust.</span>
+                {% endif %}
+                <span id="aboutCount" style="font-size:0.74rem; color:var(--text-3); flex-shrink:0; margin-left:12px;">
+                  0 / 2000
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# ─── 3. Location ─── #}
+        <div class="ep-card fade-up d2">
+          <div class="ep-card-header">
+            <div class="ep-card-icon"><i class="fas fa-location-dot"></i></div>
+            <div class="ep-card-title">Location</div>
+          </div>
+          <div class="ep-card-body">
+            <div class="ep-field-grid">
+
+              {# State #}
+              <div class="ep-field {% if form.state.errors %}has-error{% endif %}">
+                <label class="ep-label" for="{{ form.state.id_for_label }}">State</label>
+                <select
+                  name="{{ form.state.html_name }}"
+                  id="{{ form.state.id_for_label }}"
+                  class="ep-select"
+                >
+                  <option value="">— Select State —</option>
+                  {% for val, label in form.state.field.choices %}
+                    {% if val %}
+                    <option value="{{ val }}"
+                      {% if form.state.value == val %}selected{% endif %}>
+                      {{ label }}
+                    </option>
+                    {% endif %}
+                  {% endfor %}
+                </select>
+                {% if form.state.errors %}
+                  <span class="ep-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.state.errors.0 }}
+                  </span>
+                {% endif %}
+              </div>
+
+              {# LGA #}
+              <div class="ep-field {% if form.lga.errors %}has-error{% endif %}">
+                <label class="ep-label" for="{{ form.lga.id_for_label }}">
+                  Local Government Area (LGA)
+                </label>
+                <input
+                  type="text"
+                  name="{{ form.lga.html_name }}"
+                  id="{{ form.lga.id_for_label }}"
+                  value="{{ form.lga.value|default:'' }}"
+                  class="ep-input"
+                  placeholder="e.g. Victoria Island"
+                >
+                {% if form.lga.errors %}
+                  <span class="ep-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.lga.errors.0 }}
+                  </span>
+                {% else %}
+                  <span class="ep-help">Helps workers in your area find your listings first.</span>
+                {% endif %}
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {# ─── 4. Company Logo ─── #}
+        <div class="ep-card fade-up d3">
+          <div class="ep-card-header">
+            <div class="ep-card-icon"><i class="fas fa-image"></i></div>
+            <div class="ep-card-title">Company Logo</div>
+          </div>
+          <div class="ep-card-body">
+            <div class="ep-logo-wrap">
+
+              {# Live preview — updates in real time via JS #}
+              <div class="ep-logo-preview" id="logoPreview">
+                {% if profile.logo %}
+                  <img src="{{ profile.logo.url }}" alt="Current logo">
+                {% else %}
+                  <i class="fas fa-building"></i>
+                {% endif %}
+              </div>
+
+              <div class="ep-logo-info">
+                <p>
+                  Your logo appears on every job listing and your public employer profile.
+                  A recognisable logo builds worker trust and increases applications.
+                </p>
+                <span>PNG, JPG or WebP &nbsp;·&nbsp; Max 2 MB &nbsp;·&nbsp; Recommended 400×400 px</span>
+                <br><br>
+
+                <label for="{{ form.logo.id_for_label }}" class="ep-file-btn">
+                  <i class="fas fa-upload"></i>
+                  {% if profile.logo %}Change Logo{% else %}Upload Logo{% endif %}
+                </label>
+                <input
+                  type="file"
+                  name="{{ form.logo.html_name }}"
+                  id="{{ form.logo.id_for_label }}"
+                  accept="image/png,image/jpeg,image/webp"
+                  style="display:none;"
+                  onchange="previewLogo(this)"
+                >
+
+                {% if profile.logo %}
+                  <div style="margin-top:8px; font-size:0.76rem; color:var(--text-3);">
+                    <i class="fas fa-check-circle" style="color:var(--emerald); margin-right:4px;"></i>
+                    Logo uploaded
+                  </div>
+                {% endif %}
+
+                {% if form.logo.errors %}
+                  <div class="ep-field-error" style="margin-top:8px;">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.logo.errors.0 }}
+                  </div>
+                {% endif %}
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+     
+        <div class="ep-submit-bar">
+          <div class="ep-submit-hint">
+            <i class="fas fa-bolt"></i>
+            Changes are visible to workers immediately after saving.
+          </div>
+          <div class="ep-submit-actions">
+            <a href="{% url 'marketplace:employer_dashboard' %}" class="ep-btn-cancel">
+              <i class="fas fa-xmark"></i> Cancel
+            </a>
+            <button type="submit" class="ep-btn-save">
+              <i class="fas fa-floppy-disk"></i> Save Profile
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>{# /left column #}
+
+
+    <div class="ep-sidebar">
+
+      {# ─── Live Profile Preview ─── #}
+      <div class="ep-preview-card fade-up">
+        <p style="font-size:0.65rem; font-weight:700; letter-spacing:2px;
+                  text-transform:uppercase; color:var(--text-3); margin-bottom:14px;">
+          Profile Preview
+        </p>
+        <div class="ep-preview-logo" id="sidebarLogoPreview">
+          {% if profile.logo %}
+            <img src="{{ profile.logo.url }}" alt="Logo">
+          {% else %}
+            <i class="fas fa-building"></i>
+          {% endif %}
+        </div>
+        <div class="ep-preview-name" id="previewName">
+          {{ profile.company_name|default:"Your Company Name" }}
+        </div>
+        <div class="ep-preview-type">
+          {{ profile.get_company_type_display|default:"Organisation type" }}
+          {% if profile.industry %}&nbsp;·&nbsp;{{ profile.industry }}{% endif %}
+        </div>
+        {% if profile.is_verified %}
+          <div style="display:inline-flex; align-items:center; gap:5px;
+                      font-size:0.72rem; color:var(--sky); font-weight:600; margin-bottom:8px;">
+            <i class="fas fa-shield-halved"></i> Verified Employer
+          </div>
+        {% endif %}
+
+        {% if profile.state or profile.website or profile.jobs.count %}
+        <div class="ep-preview-meta">
+          {% if profile.state %}
+            <div class="ep-preview-row">
+              <i class="fas fa-location-dot"></i>
+              {% if profile.lga %}{{ profile.lga }}, {% endif %}{{ profile.get_state_display }}
+            </div>
+          {% endif %}
+          {% if profile.website %}
+            <div class="ep-preview-row">
+              <i class="fas fa-globe"></i>
+              <a href="{{ profile.website }}" target="_blank" rel="noopener"
+                 style="color:var(--sky); text-decoration:none; font-size:0.8rem;
+                        white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:190px;">
+                {{ profile.website|truncatechars:32 }}
+              </a>
+            </div>
+          {% endif %}
+          {% if profile.jobs.count %}
+            <div class="ep-preview-row">
+              <i class="fas fa-briefcase"></i>
+              {{ profile.jobs.count }} job{{ profile.jobs.count|pluralize }} posted
+            </div>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+
+      {# ─── Tips ─── #}
+      <div class="ep-tip-card fade-up d1">
+        <div class="ep-tip-title">
+          <i class="fas fa-lightbulb"></i> Profile Tips
+        </div>
+        <ul class="ep-tip-list">
+          <li class="ep-tip-item">
+            <span class="ep-tip-dot"></span>
+            Upload a clear logo — profiles with logos get 3× more applications.
+          </li>
+          <li class="ep-tip-item">
+            <span class="ep-tip-dot"></span>
+            Write a detailed description to attract the right tradespeople.
+          </li>
+          <li class="ep-tip-item">
+            <span class="ep-tip-dot"></span>
+            Set your state and LGA so nearby workers see your jobs first.
+          </li>
+          <li class="ep-tip-item">
+            <span class="ep-tip-dot"></span>
+            Add your website — it builds trust with experienced workers.
+          </li>
+          <li class="ep-tip-item">
+            <span class="ep-tip-dot"></span>
+            Contact support to get your account verified for a trust badge.
+          </li>
+        </ul>
+      </div>
+
+      {# ─── Quick Links ─── #}
+      <div class="ep-quick-card fade-up d2">
+        <div class="ep-quick-title">
+          <i class="fas fa-link"></i> Quick Links
+        </div>
+        <a href="{% url 'marketplace:employer_dashboard' %}" class="ep-quick-link">
+          <i class="fas fa-gauge-high"></i> Dashboard
+        </a>
+        <a href="{% url 'marketplace:job_create' %}" class="ep-quick-link">
+          <i class="fas fa-plus-circle"></i> Post a New Job
+        </a>
+        <a href="{% url 'marketplace:job_list' %}" class="ep-quick-link">
+          <i class="fas fa-briefcase"></i> Browse All Jobs
+        </a>
+        {% if profile.pk %}
+          <a href="{% url 'marketplace:employer_profile_public' pk=profile.pk %}" class="ep-quick-link">
+            <i class="fas fa-eye"></i> View Public Profile
+          </a>
+        {% endif %}
+        <a href="{% url 'marketplace:notifications' %}" class="ep-quick-link">
+          <i class="fas fa-bell"></i> Notifications
+          {% if unread_count %}
+            <span class="ep-quick-badge">{{ unread_count }}</span>
+          {% endif %}
+        </a>
+      </div>
+
+      {# ─── Verification status ─── #}
+      <div class="ep-tip-card fade-up d3"
+           style="border-color:{% if profile.is_verified %}rgba(56,189,248,0.22){% else %}var(--border-subtle){% endif %};">
+        <div class="ep-tip-title">
+          <i class="fas fa-shield-halved"
+             style="color:{% if profile.is_verified %}var(--sky){% else %}var(--text-3){% endif %};"></i>
+          <span style="color:{% if profile.is_verified %}var(--sky){% else %}var(--text-2){% endif %};">
+            Verification Status
+          </span>
+        </div>
+        {% if profile.is_verified %}
+          <div style="display:flex; align-items:center; gap:8px; font-size:0.83rem;
+                      color:var(--sky); margin-bottom:8px;">
+            <i class="fas fa-circle-check"></i> Your account is verified
+          </div>
+          <div style="font-size:0.76rem; color:var(--text-3);">
+            The verified badge appears on all your job listings, increasing worker trust and applications.
+          </div>
+        {% else %}
+          <div style="display:flex; align-items:center; gap:8px; font-size:0.83rem;
+                      color:var(--text-2); margin-bottom:8px;">
+            <i class="fas fa-clock" style="color:var(--amber);"></i> Not yet verified
+          </div>
+          <div style="font-size:0.76rem; color:var(--text-3); margin-bottom:12px;">
+            Verified employers get a badge on every listing and are ranked higher in worker search.
+          </div>
+          <a href="mailto:support@tradelinkng.com?subject=Employer%20Verification%20Request"
+             style="display:inline-flex; align-items:center; gap:6px; font-size:0.78rem;
+                    font-weight:600; color:var(--amber); text-decoration:none;
+                    padding:7px 14px; border-radius:var(--r-md);
+                    background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.2);
+                    transition:var(--t);">
+            <i class="fas fa-envelope"></i> Request Verification
+          </a>
+        {% endif %}
+      </div>
+
+    </div>{# /sidebar #}
+
+  </div>{# /ep-body #}
+</div>{# /ep-page #}
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+/* ── About character counter ── */
+const aboutEl    = document.querySelector('textarea[name="about"]');
+const aboutCount = document.getElementById('aboutCount');
+if (aboutEl && aboutCount) {
+  const update = () => aboutCount.textContent = aboutEl.value.length + ' / 2000';
+  aboutEl.addEventListener('input', update);
+  update();
+}
+
+/* ── Live company name → sidebar preview ── */
+const nameInput   = document.getElementById('companyNameInput');
+const previewName = document.getElementById('previewName');
+if (nameInput && previewName) {
+  nameInput.addEventListener('input', () => {
+    previewName.textContent = nameInput.value.trim() || 'Your Company Name';
+  });
+}
+
+/* ── Logo file upload → instant previews in 3 places ── */
+function previewLogo(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+
+  if (file.size > 2 * 1024 * 1024) {
+    alert('Logo must be under 2 MB. Please choose a smaller image.');
+    input.value = '';
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const src = e.target.result;
+
+    // 1. Header avatar
+    const headerAvatar = document.getElementById('headerAvatar');
+    if (headerAvatar) {
+      headerAvatar.innerHTML =
+        `<img src="${src}" alt="Logo preview"
+              style="width:100%;height:100%;object-fit:cover;border-radius:18px;">`;
+    }
+
+    // 2. Main logo preview (upload card)
+    const mainPreview = document.getElementById('logoPreview');
+    if (mainPreview) {
+      mainPreview.innerHTML = `<img src="${src}" alt="Logo preview">`;
+    }
+
+    // 3. Sidebar preview
+    const sidebarPreview = document.getElementById('sidebarLogoPreview');
+    if (sidebarPreview) {
+      sidebarPreview.innerHTML =
+        `<img src="${src}" alt="Logo preview"
+              style="width:100%;height:100%;object-fit:cover;border-radius:var(--r-md);">`;
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ── Scroll-triggered fade-up ── */
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.style.animationPlayState = 'running';
+      obs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.06 });
+
+document.querySelectorAll('.fade-up').forEach((el, i) => {
+  el.style.animationPlayState = 'paused';
+  el.style.animationDelay = el.style.animationDelay || (i * 0.07) + 's';
+  obs.observe(el);
+});
+
+/* ── Auto-dismiss messages ── */
+document.querySelectorAll('.ep-msg').forEach(el => {
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.4s';
+    el.style.opacity    = '0';
+    setTimeout(() => el.remove(), 420);
+  }, 5000);
+});
+</script>
+{% endblock %}

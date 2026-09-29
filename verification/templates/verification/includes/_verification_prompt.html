@@ -1,0 +1,39 @@
+{# verification/templates/verification/includes/_verification_prompt.html #}
+{# Sticky bottom-of-screen prompt nudging unverified users to verify #}
+{# Automatically shown via base.html when user is logged in and unverified #}
+
+{% if user.is_authenticated and verification_profile %}
+  {% if verification_profile.level == 0 %}
+  <div class="ver-prompt ver-prompt--warn" id="verPromptBanner" role="alert">
+    <div class="ver-prompt__inner">
+      <span class="ver-prompt__icon"><i class="fas fa-shield-alt"></i></span>
+      <span class="ver-prompt__text">
+        <strong>Verify your identity</strong> to unlock marketplace listings,
+        job applications, and trust badges.
+      </span>
+      <a href="{% url 'verify:nin' %}" class="ver-prompt__cta">
+        <i class="fas fa-id-card"></i> Start NIN Verification
+      </a>
+      <button class="ver-prompt__close" onclick="document.getElementById('verPromptBanner').remove()" aria-label="Dismiss">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </div>
+  {% elif verification_profile.level == 1 %}
+  <div class="ver-prompt ver-prompt--info" id="verPromptBanner" role="alert">
+    <div class="ver-prompt__inner">
+      <span class="ver-prompt__icon"><i class="fas fa-id-card" style="color:var(--sky)"></i></span>
+      <span class="ver-prompt__text">
+        <strong>You're ID Verified!</strong>
+        Add your BVN for an Enhanced badge and unlock escrow for high-value items.
+      </span>
+      <a href="{% url 'verify:bvn' %}" class="ver-prompt__cta ver-prompt__cta--subtle">
+        Upgrade to Enhanced →
+      </a>
+      <button class="ver-prompt__close" onclick="document.getElementById('verPromptBanner').remove()" aria-label="Dismiss">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </div>
+  {% endif %}
+{% endif %}

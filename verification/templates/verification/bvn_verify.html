@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}BVN Verification — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+.ver-form-page {
+  padding-top: calc(var(--nav-h) + clamp(48px, 6vw, 80px));
+  padding-bottom: clamp(48px, 8vw, 96px);
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+.ver-form-card {
+  width: 100%;
+  max-width: 520px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl);
+  padding: clamp(28px, 5vw, 48px);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+}
+.ver-form-card__icon {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: rgba(245,158,11,0.12);
+  color: #F59E0B;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem;
+  margin-bottom: 20px;
+}
+.ver-form-card h1 {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+.ver-form-card__sub {
+  color: var(--text-2);
+  font-size: 0.9rem;
+  line-height: 1.7;
+  margin-bottom: 28px;
+}
+.ver-input-wrap { margin-bottom: 20px; }
+.ver-input-wrap label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 6px;
+}
+.ver-input {
+  width: 100%;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  color: var(--text-1);
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.05rem;
+  letter-spacing: 2px;
+  outline: none;
+  transition: var(--t);
+  box-sizing: border-box;
+}
+.ver-input:focus {
+  border-color: #F59E0B;
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.15);
+}
+.ver-input-help {
+  font-size: 0.78rem;
+  color: var(--text-3);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+.ver-submit-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #F59E0B, #F97316);
+  color: #0C0A08;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: var(--t);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.ver-submit-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.ver-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.ver-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(245,158,11,0.06);
+  border: 1px solid rgba(245,158,11,0.15);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  margin-bottom: 24px;
+  font-size: 0.83rem;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+.ver-note i { color: #F59E0B; flex-shrink: 0; margin-top: 2px; }
+.ver-errors {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: var(--r-md);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 0.88rem;
+  color: #FCA5A5;
+}
+.ver-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text-3);
+  text-decoration: none;
+  margin-top: 20px;
+  transition: var(--t);
+}
+.ver-back:hover { color: var(--text-1); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ver-form-page">
+  <div class="ver-form-card fade-up">
+
+    <div class="ver-form-card__icon"><i class="fas fa-shield-alt"></i></div>
+    <h1>BVN Verification</h1>
+    <p class="ver-form-card__sub">
+      Enter your 11-digit Bank Verification Number (BVN) to upgrade to Enhanced status.
+      This unlocks high-value escrow transactions above ₦50,000.
+    </p>
+
+    <div class="ver-note">
+      <i class="fas fa-info-circle"></i>
+      <span>
+        <strong>Don't know your BVN?</strong> Dial <strong>*565*0#</strong> on any
+        Nigerian mobile network (MTN, Airtel, Glo, 9mobile) to retrieve it instantly.
+        Your BVN is a unique 11-digit number assigned by the CBN.
+      </span>
+    </div>
+
+    {% if form.non_field_errors %}
+    <div class="ver-errors">
+      <i class="fas fa-exclamation-triangle"></i>
+      {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" id="bvnForm">
+      {% csrf_token %}
+
+      <div class="ver-input-wrap">
+        {{ form.bvn.label_tag }}
+        {{ form.bvn }}
+        {% if form.bvn.errors %}
+          <p style="color:#FCA5A5;font-size:0.82rem;margin-top:4px;">{{ form.bvn.errors|join:", " }}</p>
+        {% else %}
+          <p class="ver-input-help">{{ form.bvn.help_text }}</p>
+        {% endif %}
+      </div>
+
+      <button type="submit" class="ver-submit-btn" id="submitBtn">
+        <i class="fas fa-check-circle"></i> Verify My BVN
+      </button>
+    </form>
+
+    <a href="{% url 'verify:dashboard' %}" class="ver-back">
+      <i class="fas fa-arrow-left"></i> Back to Verification Centre
+    </a>
+  </div>
+</div>
+
+<script>
+  const bvnInput = document.getElementById('id_bvn');
+  const form     = document.getElementById('bvnForm');
+  const btn      = document.getElementById('submitBtn');
+  if (bvnInput) {
+    bvnInput.addEventListener('input', () => {
+      bvnInput.value = bvnInput.value.replace(/\D/g, '').slice(0, 11);
+    });
+  }
+  if (form) {
+    form.addEventListener('submit', () => {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying…';
+    });
+  }
+</script>
+{% endblock %}

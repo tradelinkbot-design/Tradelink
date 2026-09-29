@@ -1,0 +1,1076 @@
+{% extends "base.html" %}
+{% block title %}{{ worker.user.get_full_name|default:worker.user.username }} — Worker Profile — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+/* =====================================================
+   WORKER PUBLIC PROFILE — TradeLink NG
+   Context: worker (WorkerProfile), reviews (QuerySet),
+            avg_rating (float|None), unread_count
+===================================================== */
+
+/* ── PAGE SHELL ── */
+.wp-page { padding-top: var(--nav-h); position: relative; z-index: 1; }
+
+/* ── BREADCRUMB ── */
+.wp-breadcrumb {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-raised);
+}
+.wp-breadcrumb-inner {
+  max-width: 1200px; margin: 0 auto;
+  padding: 0 clamp(20px,5vw,64px);
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.82rem; color: var(--text-3);
+}
+.wp-breadcrumb a { color: var(--text-3); text-decoration: none; transition: var(--t); }
+.wp-breadcrumb a:hover { color: var(--amber); }
+.wp-breadcrumb-sep { font-size: 0.62rem; }
+
+/* ── HERO ── */
+.wp-hero {
+  background: linear-gradient(
+    180deg,
+    rgba(245,158,11,0.06) 0%,
+    rgba(249,115,22,0.02) 60%,
+    transparent 100%
+  );
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 48px 0 44px;
+  position: relative; overflow: hidden;
+}
+.wp-hero::before {
+  content: '';
+  position: absolute; top: -140px; right: -120px;
+  width: 540px; height: 540px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,158,11,0.07), transparent 65%);
+  pointer-events: none;
+}
+
+.wp-hero-inner {
+  max-width: 1200px; margin: 0 auto;
+  padding: 0 clamp(20px,5vw,64px);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 28px; align-items: flex-start;
+}
+
+/* ── Avatar ── */
+.wp-avatar {
+  width: 96px; height: 96px; border-radius: 24px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Fraunces', serif; font-size: 2.6rem; font-weight: 900;
+  color: #0C0A08; overflow: hidden;
+  box-shadow: 0 8px 32px rgba(245,158,11,0.35);
+  border: 3px solid rgba(245,158,11,0.2);
+}
+.wp-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ── Identity block ── */
+.wp-identity { min-width: 0; }
+
+.wp-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.wp-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 12px; border-radius: var(--r-pill);
+  font-size: 0.74rem; font-weight: 700;
+}
+.wp-badge-verified {
+  background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25);
+  color: var(--emerald);
+}
+.wp-badge-trade {
+  background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.22);
+  color: var(--amber);
+}
+.wp-badge-avail {
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  color: var(--text-2);
+}
+.wp-badge-avail.green  { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.2); color: var(--emerald); }
+.wp-badge-avail.yellow { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.2); color: var(--amber); }
+.wp-badge-avail.orange { background: rgba(249,115,22,0.08); border-color: rgba(249,115,22,0.2); color: var(--orange); }
+.wp-badge-avail.red    { background: rgba(239,68,68,0.08);  border-color: rgba(239,68,68,0.2);  color: #f87171; }
+
+.wp-name {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(1.7rem, 4vw, 2.6rem);
+  font-weight: 900; line-height: 1.1; letter-spacing: -1px;
+  color: var(--text-1); margin-bottom: 6px;
+}
+
+.wp-username {
+  font-size: 0.88rem; color: var(--text-3); margin-bottom: 14px;
+}
+
+.wp-meta-row {
+  display: flex; flex-wrap: wrap; gap: 20px;
+  font-size: 0.85rem; color: var(--text-2);
+}
+.wp-meta-item { display: flex; align-items: center; gap: 7px; }
+.wp-meta-item i { font-size: 0.75rem; color: var(--text-3); flex-shrink: 0; }
+
+/* ── Rating pill in hero ── */
+.wp-rating-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 14px;
+  background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2);
+  border-radius: var(--r-pill); font-size: 0.85rem;
+  font-weight: 600; color: var(--amber);
+}
+
+/* ── Completion badge (hero top-right) ── */
+.wp-completion-card {
+  flex-shrink: 0; min-width: 140px;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 18px 20px; text-align: center;
+  position: relative; overflow: hidden;
+}
+.wp-completion-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(245,158,11,0.06), transparent 70%);
+  pointer-events: none;
+}
+.wp-completion-pct {
+  font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 900;
+  line-height: 1;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.wp-completion-label {
+  font-size: 0.68rem; font-weight: 700; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 1.5px; margin-top: 4px; display: block;
+}
+.wp-completion-bar-wrap {
+  width: 100%; height: 4px; background: var(--surface-1);
+  border-radius: var(--r-pill); overflow: hidden; margin-top: 10px;
+}
+.wp-completion-bar {
+  height: 100%; border-radius: var(--r-pill);
+  background: linear-gradient(90deg, var(--amber), var(--orange));
+}
+
+/* ── BODY ── */
+.wp-body {
+  max-width: 1200px; margin: 0 auto;
+  padding: 52px clamp(20px,5vw,64px) 80px;
+}
+.wp-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 48px; align-items: start;
+}
+
+/* ── SECTION HEADER ── */
+.wp-section { margin-bottom: 44px; }
+.wp-section:last-child { margin-bottom: 0; }
+.wp-section-head {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Fraunces', serif; font-size: 1.1rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 20px;
+  padding-bottom: 14px; border-bottom: 1px solid var(--border-subtle);
+}
+.wp-section-head i { color: var(--amber); font-size: 0.88rem; }
+.wp-section-count {
+  margin-left: auto; font-family: 'Outfit', sans-serif;
+  font-size: 0.78rem; font-weight: 600; color: var(--amber);
+  background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2);
+  border-radius: var(--r-pill); padding: 2px 10px;
+}
+
+/* ── BIO ── */
+.wp-bio {
+  font-size: 0.96rem; color: var(--text-2);
+  line-height: 1.9; white-space: pre-line;
+}
+.wp-bio-empty {
+  font-size: 0.9rem; color: var(--text-3); font-style: italic;
+}
+
+/* ── SKILLS ── */
+.wp-skills-grid { display: flex; flex-wrap: wrap; gap: 9px; }
+.wp-skill-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 16px;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-pill); font-size: 0.83rem; font-weight: 500;
+  color: var(--text-2); transition: var(--t);
+}
+.wp-skill-chip:hover { border-color: var(--border-strong); color: var(--text-1); }
+.wp-skill-chip i { font-size: 0.68rem; color: var(--amber); }
+.wp-skill-level {
+  font-size: 0.68rem; color: var(--text-3); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  padding: 1px 6px; background: var(--surface-1);
+  border-radius: var(--r-pill); margin-left: 2px;
+}
+
+/* ── PORTFOLIO ── */
+.wp-portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+}
+.wp-portfolio-item {
+  position: relative; border-radius: var(--r-lg); overflow: hidden;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  aspect-ratio: 4 / 3; cursor: pointer;
+  transition: var(--t);
+}
+.wp-portfolio-item:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,0.4); border-color: var(--border-strong); }
+.wp-portfolio-img {
+  width: 100%; height: 100%; object-fit: cover; display: block; transition: var(--t);
+}
+.wp-portfolio-item:hover .wp-portfolio-img { transform: scale(1.04); }
+.wp-portfolio-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(12,10,8,0.88), transparent 55%);
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 12px; opacity: 0; transition: var(--t);
+}
+.wp-portfolio-item:hover .wp-portfolio-overlay { opacity: 1; }
+.wp-portfolio-caption {
+  font-size: 0.77rem; color: var(--text-1); line-height: 1.4; font-weight: 500;
+}
+.wp-portfolio-trade {
+  font-size: 0.68rem; color: var(--amber); font-weight: 600; margin-top: 3px;
+}
+.wp-portfolio-empty {
+  grid-column: 1 / -1; text-align: center; padding: 40px 20px;
+  color: var(--text-3); font-size: 0.88rem;
+}
+.wp-portfolio-empty i { font-size: 2rem; color: var(--border-strong); display: block; margin-bottom: 12px; }
+
+/* Video badge on thumbnail */
+.wp-video-thumb-badge {
+  position: absolute; top: 8px; right: 8px; z-index: 2;
+  background: rgba(12,10,8,0.85); backdrop-filter: blur(6px);
+  border: 1px solid var(--border-subtle); border-radius: var(--r-sm);
+  padding: 3px 8px; display: flex; align-items: center; gap: 5px;
+  font-size: 0.68rem; font-weight: 700; color: #FF4444;
+  pointer-events: none;
+}
+
+/* ── PORTFOLIO VIDEO EMBEDS ── */
+.wp-videos-section {
+  margin-top: 32px; padding-top: 28px;
+  border-top: 1px solid var(--border-subtle);
+}
+.wp-videos-title {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 20px;
+}
+.wp-videos-title i { color: #FF0000; font-size: 0.9rem; }
+.wp-video-entry { margin-bottom: 28px; }
+.wp-video-entry:last-child { margin-bottom: 0; }
+.wp-video-label {
+  font-size: 0.82rem; font-weight: 600; color: var(--text-2);
+  margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.wp-video-label i { color: #FF0000; font-size: 0.78rem; flex-shrink: 0; }
+.wp-video-trade-tag {
+  font-size: 0.72rem; color: var(--amber); font-weight: 600;
+  padding: 1px 8px; border-radius: var(--r-pill);
+  background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2);
+}
+.wp-video-yt-link {
+  margin-left: auto; font-size: 0.72rem; color: var(--text-3);
+  text-decoration: none; display: flex; align-items: center; gap: 4px;
+  transition: var(--t);
+}
+.wp-video-yt-link:hover { color: var(--amber); }
+.wp-video-frame {
+  position: relative; padding-bottom: 56.25%; height: 0;
+  border-radius: var(--r-lg); overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+.wp-video-frame iframe {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%; border: none;
+}
+
+/* ── LIGHTBOX ── */
+.wp-lightbox {
+  position: fixed; inset: 0; z-index: 5000;
+  background: rgba(12,10,8,0.95); backdrop-filter: blur(12px);
+  display: none; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.wp-lightbox.open { display: flex; }
+.wp-lightbox-img {
+  max-width: min(900px, 100%); max-height: 85vh;
+  object-fit: contain; border-radius: var(--r-xl);
+  box-shadow: 0 32px 80px rgba(0,0,0,0.8);
+}
+.wp-lightbox-close {
+  position: absolute; top: 20px; right: 24px;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  color: var(--text-1); font-size: 1.1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: var(--t);
+}
+.wp-lightbox-close:hover { background: var(--surface-2); color: var(--amber); }
+.wp-lightbox-caption {
+  position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
+  font-size: 0.85rem; color: var(--text-2); text-align: center;
+  background: rgba(12,10,8,0.7); padding: 8px 18px; border-radius: var(--r-pill);
+  white-space: nowrap; max-width: 80%;
+  overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ── REVIEWS ── */
+.wp-reviews-list { display: flex; flex-direction: column; gap: 20px; }
+.wp-review-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 22px 24px;
+}
+.wp-review-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 14px; margin-bottom: 12px;
+}
+.wp-reviewer-row { display: flex; align-items: center; gap: 12px; }
+.wp-reviewer-avatar {
+  width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--amber-dark), var(--orange));
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Fraunces', serif; font-weight: 800; font-size: 1rem;
+  color: #0C0A08;
+}
+.wp-reviewer-name { font-size: 0.92rem; font-weight: 700; color: var(--text-1); margin-bottom: 2px; }
+.wp-review-date  { font-size: 0.75rem; color: var(--text-3); }
+.wp-stars { display: flex; gap: 3px; }
+.wp-star { font-size: 0.8rem; color: var(--border-strong); }
+.wp-star.filled { color: var(--amber); }
+.wp-review-comment {
+  font-size: 0.88rem; color: var(--text-2); line-height: 1.8;
+  font-style: italic;
+}
+.wp-review-comment::before { content: '"'; color: var(--amber); font-size: 1.1rem; font-style: normal; }
+.wp-review-comment::after  { content: '"'; color: var(--amber); font-size: 1.1rem; font-style: normal; }
+.wp-no-reviews {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 40px; text-align: center;
+  color: var(--text-3); font-size: 0.9rem;
+}
+.wp-no-reviews i { font-size: 1.8rem; color: var(--border-strong); display: block; margin-bottom: 10px; }
+
+/* ── SIDEBAR ── */
+.wp-sidebar { display: flex; flex-direction: column; gap: 20px; }
+
+.wp-action-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); overflow: hidden;
+  position: sticky; top: calc(var(--nav-h) + 24px);
+}
+.wp-action-top {
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(245,158,11,0.05), transparent 70%);
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+}
+.wp-action-top::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--amber), var(--orange));
+}
+
+/* Rate display */
+.wp-rate {
+  font-family: 'Fraunces', serif; font-size: 1.8rem; font-weight: 900;
+  color: var(--amber); line-height: 1; margin-bottom: 3px;
+}
+.wp-rate-unit { font-family: 'Outfit', sans-serif; font-size: 0.8rem; color: var(--text-3); font-weight: 400; }
+.wp-rate-alt { font-size: 0.85rem; color: var(--text-3); margin-top: 4px; }
+.wp-rate-negotiable { font-size: 0.9rem; color: var(--text-3); font-style: italic; }
+
+/* Info list */
+.wp-info-list { padding: 20px 24px; display: flex; flex-direction: column; gap: 0; }
+.wp-info-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--border-subtle);
+}
+.wp-info-row:last-child { border-bottom: none; }
+.wp-info-icon {
+  width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.78rem; color: var(--amber);
+}
+.wp-info-label { font-size: 0.72rem; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.wp-info-val   { font-size: 0.9rem; color: var(--text-1); font-weight: 600; margin-top: 1px; }
+
+/* CTA buttons */
+.wp-action-btm { padding: 20px 24px; display: flex; flex-direction: column; gap: 10px; }
+.wp-btn-primary {
+  width: 100%; padding: 14px;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  border: none; border-radius: var(--r-lg);
+  color: #0C0A08; font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem; font-weight: 800;
+  cursor: pointer; text-decoration: none; transition: var(--t);
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  box-shadow: 0 6px 24px rgba(245,158,11,0.3);
+}
+.wp-btn-primary:hover { filter: brightness(1.06); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(245,158,11,0.4); }
+.wp-btn-ghost {
+  width: 100%; padding: 12px;
+  background: transparent; border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); color: var(--text-2);
+  font-family: 'Outfit', sans-serif; font-size: 0.9rem; font-weight: 600;
+  cursor: pointer; text-decoration: none; transition: var(--t);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.wp-btn-ghost:hover { background: var(--surface-1); border-color: var(--border-strong); color: var(--text-1); }
+
+/* Sign-in prompt */
+.wp-signin-prompt {
+  padding: 18px; text-align: center; border-radius: var(--r-lg);
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+}
+.wp-signin-prompt p { font-size: 0.83rem; color: var(--text-2); margin-bottom: 12px; line-height: 1.6; }
+
+/* Stats mini card */
+.wp-stats-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 20px;
+}
+.wp-stats-title {
+  font-family: 'Fraunces', serif; font-size: 0.9rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.wp-stats-title i { color: var(--amber); font-size: 0.8rem; }
+.wp-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.wp-stat {
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); padding: 14px; text-align: center;
+}
+.wp-stat-number {
+  font-family: 'Fraunces', serif; font-size: 1.5rem; font-weight: 900;
+  color: var(--amber); line-height: 1;
+}
+.wp-stat-label { font-size: 0.7rem; color: var(--text-3); margin-top: 4px; font-weight: 500; }
+
+/* Floating messages */
+.wp-messages {
+  position: fixed; top: calc(var(--nav-h) + 16px); right: 20px;
+  z-index: 3000; display: flex; flex-direction: column; gap: 10px;
+  max-width: 360px; pointer-events: none;
+}
+.wp-msg {
+  padding: 13px 18px; border-radius: var(--r-lg);
+  font-size: 0.87rem; font-weight: 600;
+  display: flex; align-items: center; gap: 10px;
+  box-shadow: var(--shadow-md); pointer-events: all; cursor: pointer;
+  animation: wpMsgSlide 0.35s var(--ease) both;
+}
+@keyframes wpMsgSlide { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+.wp-msg-success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; }
+.wp-msg-error   { background: rgba(239,68,68,0.15);  border: 1px solid rgba(239,68,68,0.3);  color: #fca5a5; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1024px) {
+  .wp-layout { grid-template-columns: 1fr; }
+  .wp-action-card { position: static; }
+  .wp-completion-card { display: none; }
+}
+@media (max-width: 720px) {
+  .wp-hero-inner { grid-template-columns: auto 1fr; grid-template-rows: auto auto; }
+  .wp-avatar { width: 72px; height: 72px; font-size: 1.8rem; border-radius: 18px; }
+  .wp-portfolio-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}
+@media (max-width: 480px) {
+  .wp-stats-grid { grid-template-columns: 1fr 1fr; }
+  .wp-meta-row { flex-direction: column; gap: 10px; }
+}
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+{# ── Floating messages ── #}
+{% if messages %}
+<div class="wp-messages">
+  {% for message in messages %}
+  <div class="wp-msg wp-msg-{{ message.tags }}" onclick="this.remove()">
+    {% if 'success' in message.tags %}<i class="fas fa-circle-check"></i>
+    {% else %}<i class="fas fa-circle-exclamation"></i>{% endif %}
+    {{ message }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Lightbox ── #}
+<div class="wp-lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <button class="wp-lightbox-close" onclick="closeLightbox()">
+    <i class="fas fa-xmark"></i>
+  </button>
+  <img src="" alt="" class="wp-lightbox-img" id="lightboxImg">
+  <div class="wp-lightbox-caption" id="lightboxCaption"></div>
+</div>
+
+<div class="wp-page">
+
+  {# ── BREADCRUMB ── #}
+  <div class="wp-breadcrumb">
+    <div class="wp-breadcrumb-inner">
+      <a href="{% url 'marketplace:job_list' %}">
+        <i class="fas fa-briefcase" style="font-size:0.7rem;"></i> Find Work
+      </a>
+      <span class="wp-breadcrumb-sep"><i class="fas fa-chevron-right" style="font-size:0.6rem;"></i></span>
+      {% if worker.trade_category %}
+      <a href="{% url 'marketplace:trade_detail' slug=worker.trade_category.slug %}">
+        {{ worker.trade_category.name }}
+      </a>
+      <span class="wp-breadcrumb-sep"><i class="fas fa-chevron-right" style="font-size:0.6rem;"></i></span>
+      {% endif %}
+      <span style="color:var(--text-2);">
+        {{ worker.user.get_full_name|default:worker.user.username }}
+      </span>
+    </div>
+  </div>
+
+  {# ── HERO ── #}
+  <section class="wp-hero">
+    <div class="wp-hero-inner">
+
+      {# Avatar #}
+      <div class="wp-avatar">
+        {% if worker.user.image %}
+          <img src="{{ worker.user.image.url }}" alt="{{ worker.user.username }}">
+        {% else %}
+          {{ worker.user.get_full_name|default:worker.user.username|slice:":1"|upper }}
+        {% endif %}
+      </div>
+
+      {# Identity #}
+      <div class="wp-identity fade-up">
+
+        <div class="wp-badges">
+          {% if worker.user.verification_profile %}
+            {% include "verification/includes/_verification_badge.html" with vp=worker.user.verification_profile %}
+          {% endif %}
+          {% if worker.is_verified %}
+          <span class="wp-badge wp-badge-verified">
+            <i class="fas fa-circle-check"></i> Verified
+          </span>
+          {% endif %}
+          {% if worker.trade_category %}
+          <span class="wp-badge wp-badge-trade">
+            {% if worker.trade_category.icon_class %}
+            <i class="{{ worker.trade_category.icon_class }}"></i>
+            {% endif %}
+            {{ worker.trade_category.name }}
+          </span>
+          {% endif %}
+          {% if worker.availability == 'available' %}
+            <span class="wp-badge wp-badge-avail green"><i class="fas fa-circle" style="font-size:0.45rem;"></i> Available Now</span>
+          {% elif worker.availability == 'soon' %}
+            <span class="wp-badge wp-badge-avail yellow"><i class="fas fa-circle" style="font-size:0.45rem;"></i> Available Soon</span>
+          {% elif worker.availability == 'busy' %}
+            <span class="wp-badge wp-badge-avail orange"><i class="fas fa-circle" style="font-size:0.45rem;"></i> Currently Busy</span>
+          {% else %}
+            <span class="wp-badge wp-badge-avail red"><i class="fas fa-circle" style="font-size:0.45rem;"></i> Not Available</span>
+          {% endif %}
+        </div>
+
+        <h1 class="wp-name">
+          {{ worker.user.get_full_name|default:worker.user.username }}
+        </h1>
+
+        <div class="wp-username">@{{ worker.user.username }}</div>
+
+        <div class="wp-meta-row">
+          {% if worker.state %}
+          <span class="wp-meta-item">
+            <i class="fas fa-location-dot"></i>
+            {{ worker.get_state_display }}{% if worker.lga %}, {{ worker.lga }}{% endif %}
+          </span>
+          {% endif %}
+
+          {% if worker.years_experience %}
+          <span class="wp-meta-item">
+            <i class="fas fa-briefcase"></i>
+            {{ worker.years_experience }} yr{{ worker.years_experience|pluralize }} experience
+          </span>
+          {% endif %}
+
+          <span class="wp-meta-item">
+            <i class="fas fa-layer-group"></i>
+            {{ worker.get_experience_level_display }}
+          </span>
+
+          {% if worker.is_willing_to_relocate %}
+          <span class="wp-meta-item">
+            <i class="fas fa-plane"></i>
+            Willing to relocate
+          </span>
+          {% endif %}
+
+          {% if avg_rating %}
+          <span class="wp-rating-pill">
+            <i class="fas fa-star"></i>
+            {{ avg_rating }} / 5
+            <span style="font-weight:400;color:var(--text-3);">({{ reviews|length }} review{{ reviews|length|pluralize }})</span>
+          </span>
+          {% endif %}
+
+          <span class="wp-meta-item">
+            <i class="fas fa-calendar"></i>
+            Joined {{ worker.created|date:"N Y" }}
+          </span>
+        </div>
+
+      </div>{# /identity #}
+
+      {# Profile Completion (top-right) #}
+      <div class="wp-completion-card fade-in d2">
+        <div class="wp-completion-pct">{{ worker.profile_completion }}%</div>
+        <span class="wp-completion-label">Profile Strength</span>
+        <div class="wp-completion-bar-wrap">
+          <div class="wp-completion-bar" style="width:{{ worker.profile_completion }}%;"></div>
+        </div>
+      </div>
+
+    </div>{# /hero-inner #}
+  </section>
+
+  {# ── BODY ── #}
+  <div class="wp-body">
+    <div class="wp-layout">
+
+      {# ── LEFT COLUMN — main content ── #}
+      <div>
+
+        {# About / Bio #}
+        <div class="wp-section fade-up">
+          <div class="wp-section-head">
+            <i class="fas fa-id-card-clip"></i> About
+          </div>
+          {% if worker.bio %}
+            <p class="wp-bio">{{ worker.bio }}</p>
+          {% else %}
+            <p class="wp-bio-empty">This worker hasn't added a bio yet.</p>
+          {% endif %}
+        </div>
+
+        {# Skills #}
+        <div class="wp-section fade-up d1">
+          <div class="wp-section-head">
+            <i class="fas fa-screwdriver-wrench"></i> Skills
+            {% if worker.skills.all %}
+            <span class="wp-section-count">{{ worker.skills.count }}</span>
+            {% endif %}
+          </div>
+          {% if worker.skills.all %}
+          <div class="wp-skills-grid">
+            {% for worker_skill in worker.workerskill_set.all %}
+            <span class="wp-skill-chip">
+              <i class="fas fa-check-circle"></i>
+              {{ worker_skill.skill.name }}
+              <span class="wp-skill-level">{{ worker_skill.get_proficiency_display }}</span>
+            </span>
+            {% empty %}
+            {# fallback: render skills without proficiency #}
+            {% for skill in worker.skills.all %}
+            <span class="wp-skill-chip">
+              <i class="fas fa-check-circle"></i>
+              {{ skill.name }}
+            </span>
+            {% endfor %}
+            {% endfor %}
+          </div>
+          {% else %}
+          <p style="font-size:0.88rem;color:var(--text-3);font-style:italic;">No skills listed yet.</p>
+          {% endif %}
+        </div>
+
+        
+        <div class="wp-section fade-up d2">
+          <div class="wp-section-head">
+            <i class="fas fa-images"></i> Portfolio
+            {% with count=worker.portfolio.count %}
+            {% if count %}
+            <span class="wp-section-count">{{ count }} item{{ count|pluralize }}</span>
+            {% endif %}
+            {% endwith %}
+          </div>
+
+          {# ── Photo grid (clickable → lightbox) ── #}
+          <div class="wp-portfolio-grid">
+            {% for item in worker.portfolio.all %}
+            <div class="wp-portfolio-item"
+                 onclick="openLightbox('{{ item.image.url }}', '{{ item.caption|escapejs }}')">
+
+              <img src="{{ item.image.url }}"
+                   alt="{{ item.caption|default:'Portfolio item' }}"
+                   class="wp-portfolio-img"
+                   loading="lazy">
+
+              {# YouTube badge on thumbnails that have a video #}
+              {% if item.has_video %}
+              <div class="wp-video-thumb-badge">
+                <i class="fab fa-youtube"></i> Video
+              </div>
+              {% endif %}
+
+              <div class="wp-portfolio-overlay">
+                {% if item.caption %}
+                <div class="wp-portfolio-caption">{{ item.caption|truncatechars:60 }}</div>
+                {% endif %}
+                {% if item.trade_context %}
+                <div class="wp-portfolio-trade">{{ item.trade_context.name }}</div>
+                {% endif %}
+              </div>
+            </div>
+            {% empty %}
+            <div class="wp-portfolio-empty">
+              <i class="fas fa-camera"></i>
+              No portfolio photos yet.
+            </div>
+            {% endfor %}
+          </div>
+
+          {# ── YouTube video embeds — one player per item that has a video ── #}
+          {% for item in worker.portfolio.all %}
+            {% if item.has_video %}
+              {% if forloop.first %}
+              <div class="wp-videos-section">
+                <div class="wp-videos-title">
+                  <i class="fab fa-youtube"></i> Work Demo Videos
+                </div>
+              {% endif %}
+
+                <div class="wp-video-entry">
+                  <div class="wp-video-label">
+                    <i class="fab fa-youtube"></i>
+                    {{ item.caption|default:"Work Demo" }}
+                    {% if item.trade_context %}
+                    <span class="wp-video-trade-tag">{{ item.trade_context.name }}</span>
+                    {% endif %}
+                    <a href="{{ item.youtube_url }}"
+                       target="_blank" rel="noopener noreferrer"
+                       class="wp-video-yt-link">
+                      <i class="fas fa-external-link-alt" style="font-size:0.65rem;"></i>
+                      Open on YouTube
+                    </a>
+                  </div>
+                  <div class="wp-video-frame">
+                    <iframe
+                      src="{{ item.get_embed_url }}"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowfullscreen
+                      loading="lazy"
+                      title="{{ item.caption|default:'Work demo video' }}">
+                    </iframe>
+                  </div>
+                </div>
+
+              {% if forloop.last %}</div>{% endif %}{# close .wp-videos-section #}
+            {% endif %}
+          {% endfor %}
+
+        </div>{# /portfolio section #}
+
+        {# Reviews #}
+        <div class="wp-section fade-up d3">
+          <div class="wp-section-head">
+            <i class="fas fa-star-half-stroke"></i> Reviews
+            {% if reviews %}
+            <span class="wp-section-count">{{ reviews|length }}</span>
+            {% endif %}
+          </div>
+
+          {% if reviews %}
+          <div class="wp-reviews-list">
+            {% for review in reviews %}
+            <div class="wp-review-card">
+              <div class="wp-review-header">
+                <div class="wp-reviewer-row">
+                  <div class="wp-reviewer-avatar">
+                    {{ review.reviewer.username|slice:":1"|upper }}
+                  </div>
+                  <div>
+                    <div class="wp-reviewer-name">
+                      {{ review.reviewer.get_full_name|default:review.reviewer.username }}
+                    </div>
+                    <div class="wp-review-date">{{ review.created_at|date:"d M Y" }}</div>
+                  </div>
+                </div>
+                <div class="wp-stars">
+                  {% for i in "12345" %}
+                  <i class="fas fa-star wp-star {% if forloop.counter <= review.rating %}filled{% endif %}"></i>
+                  {% endfor %}
+                </div>
+              </div>
+              {% if review.comment %}
+              <p class="wp-review-comment"> {{ review.comment }} </p>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="wp-no-reviews">
+            <i class="fas fa-comment-slash"></i>
+            No reviews yet. Employers who've worked with this tradesperson can leave a review.
+          </div>
+          {% endif %}
+        </div>
+
+      </div>{# /left column #}
+
+      {# ── RIGHT SIDEBAR ── #}
+      <div class="wp-sidebar">
+
+        {# Action card #}
+        <div class="wp-action-card fade-up">
+
+          {# Rate display #}
+          <div class="wp-action-top">
+            {% if worker.daily_rate %}
+              <div class="wp-rate">
+                ₦{{ worker.daily_rate|floatformat:0 }}
+                <span class="wp-rate-unit">/ day</span>
+              </div>
+              {% if worker.hourly_rate %}
+              <div class="wp-rate-alt">
+                ₦{{ worker.hourly_rate|floatformat:0 }} / hr
+              </div>
+              {% endif %}
+            {% elif worker.hourly_rate %}
+              <div class="wp-rate">
+                ₦{{ worker.hourly_rate|floatformat:0 }}
+                <span class="wp-rate-unit">/ hr</span>
+              </div>
+            {% else %}
+              <div class="wp-rate-negotiable">Rate negotiable</div>
+            {% endif %}
+          </div>
+
+          {# Info list #}
+          <div class="wp-info-list">
+
+            <div class="wp-info-row">
+              <div class="wp-info-icon"><i class="fas fa-circle-dot"></i></div>
+              <div>
+                <div class="wp-info-label">Availability</div>
+                <div class="wp-info-val">{{ worker.get_availability_display }}</div>
+              </div>
+            </div>
+
+            {% if worker.trade_category %}
+            <div class="wp-info-row">
+              <div class="wp-info-icon">
+                {% if worker.trade_category.icon_class %}
+                <i class="{{ worker.trade_category.icon_class }}"></i>
+                {% else %}
+                <i class="fas fa-helmet-safety"></i>
+                {% endif %}
+              </div>
+              <div>
+                <div class="wp-info-label">Trade</div>
+                <div class="wp-info-val">{{ worker.trade_category.name }}</div>
+              </div>
+            </div>
+            {% endif %}
+
+            <div class="wp-info-row">
+              <div class="wp-info-icon"><i class="fas fa-layer-group"></i></div>
+              <div>
+                <div class="wp-info-label">Experience Level</div>
+                <div class="wp-info-val">{{ worker.get_experience_level_display }}</div>
+              </div>
+            </div>
+
+            {% if worker.years_experience %}
+            <div class="wp-info-row">
+              <div class="wp-info-icon"><i class="fas fa-clock-rotate-left"></i></div>
+              <div>
+                <div class="wp-info-label">Years Active</div>
+                <div class="wp-info-val">{{ worker.years_experience }} year{{ worker.years_experience|pluralize }}</div>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if worker.state %}
+            <div class="wp-info-row">
+              <div class="wp-info-icon"><i class="fas fa-location-dot"></i></div>
+              <div>
+                <div class="wp-info-label">Location</div>
+                <div class="wp-info-val">
+                  {{ worker.get_state_display }}{% if worker.lga %}, {{ worker.lga }}{% endif %}
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if worker.is_willing_to_relocate %}
+            <div class="wp-info-row">
+              <div class="wp-info-icon"><i class="fas fa-plane"></i></div>
+              <div>
+                <div class="wp-info-label">Relocation</div>
+                <div class="wp-info-val" style="color:var(--emerald);">Open to relocating</div>
+              </div>
+            </div>
+            {% endif %}
+
+          </div>{# /info-list #}
+
+          {# CTA buttons #}
+          <div class="wp-action-btm">
+            {% if request.user.is_authenticated %}
+              {% if request.user.employer_profile %}
+                {# Employer viewing a worker — let them go post or browse jobs #}
+                <a href="{% url 'marketplace:job_create' %}" class="wp-btn-primary">
+                  <i class="fas fa-briefcase"></i> Post a Job
+                </a>
+                <a href="{% url 'marketplace:job_list' %}" class="wp-btn-ghost">
+                  <i class="fas fa-search"></i> Browse All Workers
+                </a>
+              {% else %}
+                {# Worker viewing another worker's profile #}
+                <a href="{% url 'marketplace:job_list' %}" class="wp-btn-primary">
+                  <i class="fas fa-briefcase"></i> Find Jobs Like This
+                </a>
+                <a href="{% url 'marketplace:worker_profile_edit' %}" class="wp-btn-ghost">
+                  <i class="fas fa-user-pen"></i> Update My Profile
+                </a>
+              {% endif %}
+            {% else %}
+              {# Guest #}
+              <div class="wp-signin-prompt">
+                <p>Sign in to contact this worker or post a job.</p>
+                <a href="{% url 'signin' %}?next={{ request.path }}" class="wp-btn-primary" style="margin-bottom:8px;">
+                  <i class="fas fa-sign-in-alt"></i> Sign In
+                </a>
+                <a href="{% url 'register' %}" class="wp-btn-ghost">
+                  New here? Create a free account
+                </a>
+              </div>
+            {% endif %}
+          </div>
+
+        </div>{# /action-card #}
+
+        {# Stats card #}
+        <div class="wp-stats-card fade-up d1">
+          <div class="wp-stats-title">
+            <i class="fas fa-chart-simple"></i> At a Glance
+          </div>
+          <div class="wp-stats-grid">
+            <div class="wp-stat">
+              <div class="wp-stat-number">{{ worker.profile_completion }}%</div>
+              <div class="wp-stat-label">Profile</div>
+            </div>
+            <div class="wp-stat">
+              <div class="wp-stat-number">
+                {% if avg_rating %}{{ avg_rating }}{% else %}—{% endif %}
+              </div>
+              <div class="wp-stat-label">Rating</div>
+            </div>
+            <div class="wp-stat">
+              <div class="wp-stat-number">{{ reviews|length }}</div>
+              <div class="wp-stat-label">Reviews</div>
+            </div>
+            <div class="wp-stat">
+              <div class="wp-stat-number">{{ worker.portfolio.count }}</div>
+              <div class="wp-stat-label">Portfolio</div>
+            </div>
+          </div>
+        </div>
+
+        {# AI matching status #}
+        {% if worker.text_embedding %}
+        <div style="background:var(--bg-card);border:1px solid rgba(56,189,248,0.15);
+                    border-radius:var(--r-xl);padding:18px;" class="fade-up d2">
+          <div style="display:flex;align-items:center;gap:10px;font-size:0.82rem;
+                      color:var(--sky);font-weight:600;margin-bottom:6px;">
+            <i class="fas fa-brain"></i> AI-Indexed Profile
+          </div>
+          <p style="font-size:0.78rem;color:var(--text-3);line-height:1.6;margin:0;">
+            This worker's profile is indexed for AI job matching.
+            Employers posting relevant jobs will see this worker recommended automatically.
+          </p>
+        </div>
+        {% endif %}
+
+      </div>{# /sidebar #}
+
+    </div>{# /layout #}
+  </div>{# /body #}
+
+</div>{# /wp-page #}
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+/* ── Portfolio lightbox ── */
+function openLightbox(src, caption) {
+  const lb  = document.getElementById('lightbox');
+  const img = document.getElementById('lightboxImg');
+  const cap = document.getElementById('lightboxCaption');
+  img.src      = src;
+  img.alt      = caption;
+  cap.textContent = caption;
+  cap.style.display = caption ? 'block' : 'none';
+  lb.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox(e) {
+  if (e && e.target !== e.currentTarget && !e.target.closest('.wp-lightbox-close')) return;
+  const lb = document.getElementById('lightbox');
+  lb.classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+
+/* ── Scroll-triggered fade-up ── */
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.style.animationPlayState = 'running';
+      obs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.07 });
+document.querySelectorAll('.fade-up').forEach((el, i) => {
+  el.style.animationPlayState = 'paused';
+  el.style.animationDelay = el.style.animationDelay || (i * 0.07) + 's';
+  obs.observe(el);
+});
+
+/* ── Portfolio item stagger ── */
+document.querySelectorAll('.wp-portfolio-item').forEach((el, i) => {
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(10px)';
+  el.style.transition = `opacity 0.4s ${0.05 + i * 0.07}s, transform 0.4s ${0.05 + i * 0.07}s`;
+  const sObs = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) {
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0)';
+      sObs.disconnect();
+    }
+  }, { threshold: 0.1 });
+  sObs.observe(el);
+});
+
+/* ── Auto-dismiss messages ── */
+document.querySelectorAll('.wp-msg').forEach(el => {
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.4s';
+    el.style.opacity    = '0';
+    setTimeout(() => el.remove(), 420);
+  }, 5000);
+});
+</script>
+{% endblock %}

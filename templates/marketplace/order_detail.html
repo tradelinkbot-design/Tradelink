@@ -1,0 +1,1246 @@
+{% extends "base.html" %}
+{% block title %}Order #{{ order.pk|stringformat:"s"|slice:":8"|upper }} — TradeLink NG{% endblock %}
+{% block nav_marketplace %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* =====================================================
+     MARKETPLACE — ORDER DETAIL
+  ===================================================== */
+
+  .od-page {
+    padding-top: calc(var(--nav-h) + clamp(32px, 5vw, 52px));
+    padding-bottom: clamp(56px, 8vw, 96px);
+    position: relative; z-index: 1;
+  }
+  .od-container {
+    max-width: 1100px; margin: 0 auto;
+    padding: 0 clamp(16px, 4vw, 48px);
+  }
+
+  /* ── Flash messages ── */
+  .msg-bar { margin-bottom: 20px; }
+  .msg-inner {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 18px; border-radius: var(--r-md);
+    font-size: 0.88rem; font-weight: 500; margin-bottom: 8px;
+  }
+  .msg-success { background: rgba(16,185,129,0.10); border: 1px solid rgba(16,185,129,0.2); color: #6EE7B7; }
+  .msg-error   { background: rgba(239,68,68,0.10);  border: 1px solid rgba(239,68,68,0.2);  color: #FCA5A5; }
+  .msg-warning { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); color: #FCD34D; }
+  .msg-info    { background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.2); color: #7DD3FC; }
+
+  /* ── Back nav ── */
+  .od-back {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 0.82rem; font-weight: 600; color: var(--text-3);
+    text-decoration: none; margin-bottom: 24px;
+    transition: var(--t);
+  }
+  .od-back:hover { color: var(--text-1); }
+
+  /* ── Page header ── */
+  .od-header {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 16px;
+    margin-bottom: 32px; flex-wrap: wrap;
+  }
+  .od-eyebrow {
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--amber);
+    display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+  }
+  .od-eyebrow::before {
+    content: ''; display: block; width: 14px; height: 2px;
+    background: var(--amber); border-radius: 2px;
+  }
+  .od-title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.5rem, 3.5vw, 2.1rem);
+    font-weight: 900; line-height: 1.1;
+    letter-spacing: -0.5px; color: var(--text-1);
+    margin-bottom: 4px;
+  }
+  .od-meta {
+    font-size: 0.82rem; color: var(--text-3); margin-top: 4px;
+  }
+
+  /* ── Status badge (large, header) ── */
+  .od-status-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 16px; border-radius: var(--r-pill);
+    font-size: 0.8rem; font-weight: 700; letter-spacing: 0.3px;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .od-status-badge .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+  }
+  .st-pending          { background: rgba(245,158,11,0.10); color: #FCD34D; border: 1px solid rgba(245,158,11,0.25); }
+  .st-pending .dot     { background: #FCD34D; }
+  .st-paid             { background: rgba(16,185,129,0.10); color: #6EE7B7; border: 1px solid rgba(16,185,129,0.25); }
+  .st-paid .dot        { background: #6EE7B7; }
+  .st-meetup           { background: rgba(56,189,248,0.10); color: #7DD3FC; border: 1px solid rgba(56,189,248,0.25); }
+  .st-meetup .dot      { background: #7DD3FC; }
+  .st-confirmed        { background: rgba(16,185,129,0.12); color: #34D399; border: 1px solid rgba(16,185,129,0.3); }
+  .st-confirmed .dot   { background: #34D399; }
+  .st-completed        { background: rgba(56,189,248,0.12); color: #38BDF8; border: 1px solid rgba(56,189,248,0.3); }
+  .st-completed .dot   { background: #38BDF8; }
+  .st-disputed         { background: rgba(239,68,68,0.10); color: #FCA5A5; border: 1px solid rgba(239,68,68,0.25); }
+  .st-disputed .dot    { background: #FCA5A5; }
+  .st-cancelled        { background: rgba(250,245,235,0.05); color: var(--text-3); border: 1px solid var(--border-subtle); }
+  .st-cancelled .dot   { background: var(--text-3); }
+  .st-refunded         { background: rgba(139,92,246,0.10); color: #C4B5FD; border: 1px solid rgba(139,92,246,0.25); }
+  .st-refunded .dot    { background: #C4B5FD; }
+
+  /* ══════════════════════════════════════════════════════
+     LAYOUT: main column + sidebar
+  ══════════════════════════════════════════════════════ */
+  .od-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 24px;
+    align-items: start;
+  }
+  .od-main  { display: flex; flex-direction: column; gap: 20px; }
+  .od-aside { display: flex; flex-direction: column; gap: 20px; position: sticky; top: calc(var(--nav-h) + 16px); }
+
+  /* ══════════════════════════════════════════════════════
+     CARD (shared)
+  ══════════════════════════════════════════════════════ */
+  .od-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    overflow: hidden;
+  }
+  .od-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 24px; border-bottom: 1px solid var(--border-subtle);
+    gap: 10px;
+  }
+  .od-card-head-left {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .od-card-icon {
+    width: 30px; height: 30px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.78rem; flex-shrink: 0;
+  }
+  .icon-amber  { background: rgba(245,158,11,0.12); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+  .icon-green  { background: rgba(16,185,129,0.12); color: var(--emerald); border: 1px solid rgba(16,185,129,0.2); }
+  .icon-sky    { background: rgba(56,189,248,0.12); color: var(--sky); border: 1px solid rgba(56,189,248,0.2); }
+  .icon-red    { background: rgba(239,68,68,0.10); color: #FCA5A5; border: 1px solid rgba(239,68,68,0.2); }
+  .icon-purple { background: rgba(139,92,246,0.10); color: #C4B5FD; border: 1px solid rgba(139,92,246,0.2); }
+  .icon-orange { background: rgba(249,115,22,0.12); color: var(--orange); border: 1px solid rgba(249,115,22,0.2); }
+
+  .od-card-head h2 {
+    font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 700;
+    color: var(--text-1);
+  }
+  .od-card-body { padding: 24px; }
+
+  /* ══════════════════════════════════════════════════════
+     PRODUCT SUMMARY CARD
+  ══════════════════════════════════════════════════════ */
+  .product-summary {
+    display: flex; gap: 18px; align-items: flex-start;
+  }
+  .product-summary-img {
+    width: 90px; height: 90px; border-radius: var(--r-lg);
+    object-fit: cover; border: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+  }
+  .product-summary-no-img {
+    width: 90px; height: 90px; border-radius: var(--r-lg);
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-3); font-size: 1.6rem; flex-shrink: 0;
+  }
+  .product-summary-info { flex: 1; min-width: 0; }
+  .product-summary-title {
+    font-family: 'Fraunces', serif; font-weight: 700;
+    font-size: 1.05rem; color: var(--text-1); line-height: 1.3;
+    text-decoration: none;
+    display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .product-summary-title:hover { color: var(--amber); }
+  .product-summary-meta {
+    font-size: 0.78rem; color: var(--text-3); margin-top: 5px;
+    display: flex; flex-wrap: wrap; gap: 6px 12px;
+  }
+  .product-summary-meta span { display: flex; align-items: center; gap: 4px; }
+  .product-summary-price {
+    font-family: 'Fraunces', serif; font-weight: 700;
+    font-size: 0.95rem; color: var(--amber);
+    margin-top: 8px; display: block;
+  }
+
+  /* ══════════════════════════════════════════════════════
+     TIMELINE / PROGRESS TRACKER
+  ══════════════════════════════════════════════════════ */
+  .od-timeline {
+    padding: 24px;
+    display: flex; flex-direction: column; gap: 0;
+  }
+  .timeline-step {
+    display: flex; gap: 16px; position: relative;
+  }
+  .timeline-step:not(:last-child)::after {
+    content: ''; position: absolute;
+    left: 15px; top: 32px;
+    width: 2px; height: calc(100% - 8px);
+    background: var(--border-subtle);
+  }
+  .timeline-step.done::after  { background: var(--emerald); opacity: 0.4; }
+  .timeline-step.active::after { background: linear-gradient(to bottom, rgba(16,185,129,0.4), transparent); }
+
+  .timeline-dot {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.78rem; flex-shrink: 0; margin-top: 2px;
+    border: 2px solid var(--border-subtle);
+    background: var(--bg-card); color: var(--text-3);
+    position: relative; z-index: 1;
+  }
+  .timeline-dot.done   { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.4); color: var(--emerald); }
+  .timeline-dot.active { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.4); color: var(--amber); box-shadow: 0 0 0 3px rgba(245,158,11,0.1); }
+
+  .timeline-content { flex: 1; padding-bottom: 24px; }
+  .timeline-label {
+    font-size: 0.88rem; font-weight: 700; color: var(--text-1);
+    margin-bottom: 2px;
+  }
+  .timeline-label.muted { color: var(--text-3); font-weight: 500; }
+  .timeline-time {
+    font-size: 0.75rem; color: var(--text-3);
+  }
+  .timeline-note {
+    font-size: 0.8rem; color: var(--text-2);
+    margin-top: 4px; line-height: 1.5;
+  }
+
+  /* ══════════════════════════════════════════════════════
+     FINANCIAL BREAKDOWN
+  ══════════════════════════════════════════════════════ */
+  .financials-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 0.88rem;
+  }
+  .financials-row:last-child { border-bottom: none; }
+  .financials-label { color: var(--text-3); }
+  .financials-value { color: var(--text-1); font-weight: 600; }
+  .financials-row.total .financials-label {
+    font-family: 'Fraunces', serif; font-weight: 700;
+    font-size: 0.92rem; color: var(--text-1);
+  }
+  .financials-row.total .financials-value {
+    font-family: 'Fraunces', serif; font-weight: 900;
+    font-size: 1.15rem;
+    background: linear-gradient(120deg, var(--amber), var(--orange));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .financials-fee { color: var(--text-3); }
+  .financials-payout { color: var(--emerald); font-weight: 700; }
+
+  /* ══════════════════════════════════════════════════════
+     ESCROW NOTICE
+  ══════════════════════════════════════════════════════ */
+  .escrow-notice {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 14px 18px; border-radius: var(--r-md);
+    background: rgba(56,189,248,0.06);
+    border: 1px solid rgba(56,189,248,0.2);
+    font-size: 0.82rem; color: var(--text-2); line-height: 1.55;
+    margin-top: 16px;
+  }
+  .escrow-notice i { color: var(--sky); margin-top: 1px; flex-shrink: 0; }
+
+  /* ══════════════════════════════════════════════════════
+     PEOPLE CARD (buyer / seller info)
+  ══════════════════════════════════════════════════════ */
+  .person-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .person-row:first-child { padding-top: 0; }
+  .person-row:last-child  { border-bottom: none; padding-bottom: 0; }
+  .person-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; color: var(--text-3); font-weight: 700;
+    flex-shrink: 0; text-transform: uppercase;
+  }
+  .person-info { flex: 1; min-width: 0; }
+  .person-name { font-size: 0.88rem; font-weight: 600; color: var(--text-1); }
+  .person-role { font-size: 0.75rem; color: var(--text-3); margin-top: 1px; }
+  .person-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: var(--r-pill);
+    font-size: 0.68rem; font-weight: 700;
+    background: rgba(16,185,129,0.10); color: #6EE7B7;
+    border: 1px solid rgba(16,185,129,0.2);
+    margin-top: 3px;
+  }
+
+  /* ══════════════════════════════════════════════════════
+     OFFER SUMMARY (if order came from an offer)
+  ══════════════════════════════════════════════════════ */
+  .offer-summary-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 0; font-size: 0.85rem;
+    border-bottom: 1px dashed var(--border-subtle);
+  }
+  .offer-summary-row:last-child { border-bottom: none; }
+  .offer-summary-label { color: var(--text-3); }
+  .offer-summary-val   { color: var(--text-1); font-weight: 600; }
+
+  /* ══════════════════════════════════════════════════════
+     MEETUP NOTES
+  ══════════════════════════════════════════════════════ */
+  .meetup-notes-box {
+    font-size: 0.87rem; color: var(--text-2); line-height: 1.6;
+    padding: 16px 18px;
+    background: var(--surface-1); border-radius: var(--r-md);
+    border: 1px solid var(--border-subtle);
+    white-space: pre-wrap;
+  }
+  .meetup-empty {
+    font-size: 0.85rem; color: var(--text-3);
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  /* ══════════════════════════════════════════════════════
+     ACTION BUTTONS (Confirm / Dispute / Review)
+  ══════════════════════════════════════════════════════ */
+  .od-actions { display: flex; flex-direction: column; gap: 10px; }
+
+  .od-action-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 13px 20px; border-radius: var(--r-md);
+    font-size: 0.9rem; font-weight: 700; font-family: 'Outfit', sans-serif;
+    cursor: pointer; border: none; text-decoration: none;
+    transition: var(--t); letter-spacing: 0.1px;
+  }
+  .od-action-btn.primary {
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    color: #0C0A08;
+  }
+  .od-action-btn.primary:hover { filter: brightness(1.07); transform: translateY(-1px); }
+  .od-action-btn.ghost {
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    color: var(--text-2);
+  }
+  .od-action-btn.ghost:hover { border-color: var(--border-strong); color: var(--text-1); }
+  .od-action-btn.danger {
+    background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+    color: #FCA5A5;
+  }
+  .od-action-btn.danger:hover { background: rgba(239,68,68,0.14); }
+  .od-action-btn.sky {
+    background: rgba(56,189,248,0.10); border: 1px solid rgba(56,189,248,0.25);
+    color: var(--sky);
+  }
+  .od-action-btn.sky:hover { background: rgba(56,189,248,0.18); }
+
+  /* Confirm receipt warning box */
+  .confirm-warning {
+    font-size: 0.78rem; color: var(--text-3); line-height: 1.55;
+    padding: 10px 14px;
+    background: rgba(245,158,11,0.06);
+    border: 1px solid rgba(245,158,11,0.15);
+    border-radius: var(--r-md);
+  }
+  .confirm-warning i { color: var(--amber); margin-right: 4px; }
+
+  /* ══════════════════════════════════════════════════════
+     DISPUTE PANEL
+  ══════════════════════════════════════════════════════ */
+  .dispute-panel {
+    padding: 20px 24px;
+  }
+  .dispute-open-label {
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: #FCA5A5; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dispute-open-label i { font-size: 0.65rem; }
+  .dispute-reason-box {
+    font-size: 0.87rem; color: var(--text-2); line-height: 1.6;
+    padding: 14px 16px;
+    background: rgba(239,68,68,0.05);
+    border: 1px solid rgba(239,68,68,0.15);
+    border-radius: var(--r-md);
+    white-space: pre-wrap; margin-bottom: 12px;
+  }
+  .dispute-meta {
+    font-size: 0.75rem; color: var(--text-3);
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .dispute-resolution-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 12px; border-radius: var(--r-pill);
+    font-size: 0.72rem; font-weight: 700;
+  }
+  .res-pending   { background: rgba(245,158,11,0.1); color: #FCD34D; border: 1px solid rgba(245,158,11,0.2); }
+  .res-seller    { background: rgba(16,185,129,0.1); color: #6EE7B7; border: 1px solid rgba(16,185,129,0.2); }
+  .res-buyer     { background: rgba(56,189,248,0.1); color: #7DD3FC; border: 1px solid rgba(56,189,248,0.2); }
+  .res-split     { background: rgba(139,92,246,0.1); color: #C4B5FD; border: 1px solid rgba(139,92,246,0.2); }
+  .dispute-note-box {
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    font-size: 0.82rem; color: var(--text-2); line-height: 1.55;
+  }
+
+  /* ── Raise dispute form ── */
+  .dispute-form { display: flex; flex-direction: column; gap: 12px; }
+  .od-textarea {
+    width: 100%; padding: 11px 14px; resize: vertical;
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md); color: var(--text-1);
+    font-family: 'Outfit', sans-serif; font-size: 0.87rem;
+    outline: none; transition: var(--t); line-height: 1.55;
+    min-height: 90px;
+  }
+  .od-textarea:focus { border-color: var(--amber); box-shadow: 0 0 0 3px rgba(245,158,11,0.1); }
+  .od-file-label {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 0.82rem; color: var(--text-3); cursor: pointer;
+  }
+  .od-file-label input[type="file"] { display: none; }
+  .od-file-label:hover { color: var(--text-1); }
+
+  /* ══════════════════════════════════════════════════════
+     REVIEW PANEL
+  ══════════════════════════════════════════════════════ */
+  .review-existing {
+    padding: 20px 24px;
+  }
+  .review-stars-display {
+    color: var(--amber); font-size: 1.1rem; letter-spacing: 2px; margin-bottom: 6px;
+  }
+  .review-comment {
+    font-size: 0.88rem; color: var(--text-2); line-height: 1.6;
+  }
+  .review-date {
+    font-size: 0.75rem; color: var(--text-3); margin-top: 6px;
+  }
+
+  /* Star rating input */
+  .star-rating {
+    display: flex; flex-direction: row-reverse;
+    gap: 4px; justify-content: flex-end;
+  }
+  .star-rating input { display: none; }
+  .star-rating label {
+    font-size: 1.5rem; color: var(--text-3);
+    cursor: pointer; transition: color 0.12s;
+  }
+  .star-rating input:checked ~ label,
+  .star-rating label:hover,
+  .star-rating label:hover ~ label { color: var(--amber); }
+
+  .review-form { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+  .review-form label { font-size: 0.8rem; font-weight: 700; color: var(--text-3); letter-spacing: 0.5px; }
+
+  /* ══════════════════════════════════════════════════════
+     PAYSTACK REF (debug / support)
+  ══════════════════════════════════════════════════════ */
+  .ref-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 0; font-size: 0.78rem;
+    border-bottom: 1px dashed var(--border-subtle);
+  }
+  .ref-row:last-child { border-bottom: none; }
+  .ref-label { color: var(--text-3); }
+  .ref-value {
+    font-family: monospace; font-size: 0.75rem;
+    color: var(--text-2); word-break: break-all; text-align: right;
+    max-width: 60%;
+  }
+
+  /* ══════════════════════════════════════════════════════
+     DIVIDER LABEL
+  ══════════════════════════════════════════════════════ */
+  .od-divider-label {
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text-3);
+    display: flex; align-items: center; gap: 8px;
+    margin: 4px 0;
+  }
+  .od-divider-label::before,
+  .od-divider-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--border-subtle);
+  }
+
+  /* ══════════════════════════════════════════════════════
+     EMPTY / FILLER STATES
+  ══════════════════════════════════════════════════════ */
+  .od-empty {
+    padding: 28px 24px; text-align: center;
+    color: var(--text-3); font-size: 0.85rem;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .od-empty i { font-size: 1.6rem; opacity: 0.3; }
+
+  /* ══════════════════════════════════════════════════════
+     FADE-UP ANIMATION
+  ══════════════════════════════════════════════════════ */
+  .fade-up {
+    opacity: 0; transform: translateY(14px);
+    animation: fadeUp 0.4s ease forwards;
+  }
+  @keyframes fadeUp {
+    to { opacity: 1; transform: none; }
+  }
+  .d1 { animation-delay: 0.04s; }
+  .d2 { animation-delay: 0.10s; }
+  .d3 { animation-delay: 0.16s; }
+  .d4 { animation-delay: 0.22s; }
+  .d5 { animation-delay: 0.28s; }
+
+  /* ══════════════════════════════════════════════════════
+     RESPONSIVE
+  ══════════════════════════════════════════════════════ */
+  @media (max-width: 960px) {
+    .od-layout { grid-template-columns: 1fr; }
+    .od-aside  { position: static; }
+    /* Sidebar cards move below main on mobile — reorder visually */
+    .od-aside  { order: 2; }
+    .od-main   { order: 1; }
+  }
+  @media (max-width: 600px) {
+    .od-header { flex-direction: column; gap: 12px; }
+    .od-status-badge { align-self: flex-start; }
+    .product-summary { flex-direction: column; }
+    .product-summary-img,
+    .product-summary-no-img { width: 100%; height: 180px; border-radius: var(--r-lg); }
+    .od-card-body { padding: 18px 16px; }
+    .od-card-head { padding: 14px 16px; }
+    .timeline-step:not(:last-child)::after { left: 14px; }
+    .financials-row { font-size: 0.83rem; }
+    .dispute-panel,
+    .review-existing,
+    .review-form { padding: 16px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="od-page">
+  <div class="od-container">
+
+    <!-- Flash messages -->
+    {% if messages %}
+    <div class="msg-bar">
+      {% for message in messages %}
+      <div class="msg-inner msg-{{ message.tags }}">
+        <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}times-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Back navigation -->
+    {% if is_seller %}
+      <a href="{% url 'mktplace:seller_order_list' %}" class="od-back">
+        <i class="fas fa-arrow-left"></i> All Orders
+      </a>
+    {% else %}
+      <a href="{% url 'mktplace:order_list' %}" class="od-back">
+        <i class="fas fa-arrow-left"></i> My Orders
+      </a>
+    {% endif %}
+
+    <!-- ── Page header ── -->
+    <div class="od-header fade-up">
+      <div>
+        <p class="od-eyebrow"><i class="fas fa-receipt"></i> Order Details</p>
+        <h1 class="od-title">#{{ order.pk|stringformat:"s"|slice:":8"|upper }}</h1>
+        <p class="od-meta">
+          Placed {{ order.created_at|date:"j F Y, H:i" }}
+          {% if is_buyer %} · You are the <strong>buyer</strong>{% endif %}
+          {% if is_seller %} · You are the <strong>seller</strong>{% endif %}
+        </p>
+      </div>
+      <div>
+        <span class="od-status-badge
+          {% if order.status == 'pending' %}st-pending
+          {% elif order.status == 'paid' %}st-paid
+          {% elif order.status == 'meetup_scheduled' %}st-meetup
+          {% elif order.status == 'confirmed' %}st-confirmed
+          {% elif order.status == 'completed' %}st-completed
+          {% elif order.status == 'disputed' %}st-disputed
+          {% elif order.status == 'refunded' %}st-refunded
+          {% else %}st-cancelled{% endif %}">
+          <span class="dot"></span>
+          {{ order.get_status_display }}
+        </span>
+      </div>
+    </div><!-- /od-header -->
+
+
+    <!-- ════════════════════════════════════════════
+         MAIN LAYOUT
+    ════════════════════════════════════════════ -->
+    <div class="od-layout">
+
+      <!-- ═══════════════ MAIN COLUMN ═══════════════ -->
+      <div class="od-main">
+
+        <!-- ── Product Summary ── -->
+        <div class="od-card fade-up d1">
+          <div class="od-card-head">
+            <div class="od-card-head-left">
+              <div class="od-card-icon icon-amber"><i class="fas fa-box"></i></div>
+              <h2>Item</h2>
+            </div>
+            <a href="{% url 'mktplace:product_detail' pk=order.product.pk %}" class="od-back" style="margin-bottom:0;font-size:0.78rem;">
+              View listing <i class="fas fa-external-link-alt" style="font-size:0.7rem;"></i>
+            </a>
+          </div>
+          <div class="od-card-body">
+            <div class="product-summary">
+              {% with cover=order.product.images.all|first %}
+                {% if cover %}
+                  <img src="{{ cover.image.url }}"
+                       alt="{{ order.product.title }}"
+                       class="product-summary-img">
+                {% else %}
+                  <div class="product-summary-no-img">
+                    <i class="fas fa-tools"></i>
+                  </div>
+                {% endif %}
+              {% endwith %}
+              <div class="product-summary-info">
+                <a href="{% url 'mktplace:product_detail' pk=order.product.pk %}"
+                   class="product-summary-title">
+                  {{ order.product.title }}
+                </a>
+                <div class="product-summary-meta">
+                  {% if order.product.condition %}
+                  <span><i class="fas fa-tag"></i> {{ order.product.get_condition_display }}</span>
+                  {% endif %}
+                  {% if order.product.category %}
+                  <span><i class="fas fa-layer-group"></i> {{ order.product.category }}</span>
+                  {% endif %}
+                  {% if order.product.state %}
+                  <span><i class="fas fa-map-marker-alt"></i> {{ order.product.state }}</span>
+                  {% endif %}
+                  {% if order.product.brand %}
+                  <span><i class="fas fa-industry"></i> {{ order.product.brand }}</span>
+                  {% endif %}
+                </div>
+                <span class="product-summary-price">Listed at ₦{{ order.product.price|floatformat:0 }}</span>
+              </div>
+            </div>
+
+            <!-- If order was placed via an offer -->
+            {% if order.offer %}
+            <div style="margin-top: 20px;">
+              <div class="od-divider-label">Via Offer</div>
+              <div style="margin-top: 12px;">
+                <div class="offer-summary-row">
+                  <span class="offer-summary-label">Buyer's original offer</span>
+                  <span class="offer-summary-val">₦{{ order.offer.offered_price|floatformat:0 }}</span>
+                </div>
+                {% if order.offer.counter_price %}
+                <div class="offer-summary-row">
+                  <span class="offer-summary-label">Seller's counter</span>
+                  <span class="offer-summary-val">₦{{ order.offer.counter_price|floatformat:0 }}</span>
+                </div>
+                {% endif %}
+                <div class="offer-summary-row">
+                  <span class="offer-summary-label">Agreed price</span>
+                  <span class="offer-summary-val" style="color:var(--amber);">₦{{ order.agreed_price|floatformat:0 }}</span>
+                </div>
+                {% if order.offer.message %}
+                <div style="margin-top:10px;font-size:0.8rem;color:var(--text-3);">
+                  <i class="fas fa-comment-alt" style="margin-right:5px;"></i>
+                  Buyer note: <em style="color:var(--text-2);">{{ order.offer.message }}</em>
+                </div>
+                {% endif %}
+                {% if order.offer.counter_message %}
+                <div style="margin-top:6px;font-size:0.8rem;color:var(--text-3);">
+                  <i class="fas fa-reply" style="margin-right:5px;"></i>
+                  Seller note: <em style="color:var(--text-2);">{{ order.offer.counter_message }}</em>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div><!-- /product card -->
+
+        <!-- ── Order Progress / Timeline ── -->
+        <div class="od-card fade-up d2">
+          <div class="od-card-head">
+            <div class="od-card-head-left">
+              <div class="od-card-icon icon-sky"><i class="fas fa-route"></i></div>
+              <h2>Order Progress</h2>
+            </div>
+          </div>
+          <div class="od-timeline">
+
+            <!-- Step 1: Order placed -->
+            <div class="timeline-step {% if order.status != 'pending' or order.created_at %}done{% endif %}">
+              <div class="timeline-dot done"><i class="fas fa-check"></i></div>
+              <div class="timeline-content">
+                <p class="timeline-label">Order placed</p>
+                <p class="timeline-time">{{ order.created_at|date:"j M Y, H:i" }}</p>
+              </div>
+            </div>
+
+            <!-- Step 2: Payment -->
+            <div class="timeline-step
+              {% if order.status == 'pending' %}active
+              {% elif order.paid_at %}done
+              {% endif %}">
+              <div class="timeline-dot
+                {% if order.status == 'pending' %}active
+                {% elif order.paid_at %}done
+                {% endif %}">
+                {% if order.paid_at %}<i class="fas fa-check"></i>
+                {% elif order.status == 'pending' %}<i class="fas fa-clock"></i>
+                {% else %}<i class="fas fa-lock"></i>{% endif %}
+              </div>
+              <div class="timeline-content">
+                <p class="timeline-label {% if not order.paid_at and order.status != 'pending' %}muted{% endif %}">
+                  Payment into escrow
+                </p>
+                {% if order.paid_at %}
+                  <p class="timeline-time">{{ order.paid_at|date:"j M Y, H:i" }}</p>
+                  <p class="timeline-note">Funds are securely held in escrow.</p>
+                {% elif order.status == 'pending' %}
+                  <p class="timeline-note">Waiting for buyer to complete payment.</p>
+                {% else %}
+                  <p class="timeline-time">Pending</p>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Step 3: Meetup / Handover -->
+            <div class="timeline-step
+              {% if order.status == 'paid' or order.status == 'meetup_scheduled' %}active
+              {% elif order.status in 'confirmed,completed,disputed' %}done
+              {% endif %}">
+              <div class="timeline-dot
+                {% if order.status == 'paid' or order.status == 'meetup_scheduled' %}active
+                {% elif order.confirmed_at %}done
+                {% endif %}">
+                {% if order.confirmed_at %}<i class="fas fa-check"></i>
+                {% elif order.status == 'paid' or order.status == 'meetup_scheduled' %}<i class="fas fa-handshake"></i>
+                {% else %}<i class="fas fa-lock"></i>{% endif %}
+              </div>
+              <div class="timeline-content">
+                <p class="timeline-label {% if not order.paid_at %}muted{% endif %}">
+                  Meetup &amp; handover
+                </p>
+                {% if order.status == 'meetup_scheduled' %}
+                  <p class="timeline-note">Meetup has been arranged.</p>
+                {% elif order.status == 'paid' %}
+                  <p class="timeline-note">Coordinate with the {% if is_buyer %}seller{% else %}buyer{% endif %} to arrange handover.</p>
+                {% elif order.confirmed_at %}
+                  <p class="timeline-time">{{ order.confirmed_at|date:"j M Y, H:i" }}</p>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Step 4: Buyer confirms receipt -->
+            <div class="timeline-step
+              {% if order.status == 'confirmed' %}active
+              {% elif order.confirmed_at and order.status != 'confirmed' %}done
+              {% endif %}">
+              <div class="timeline-dot
+                {% if order.status == 'confirmed' %}active
+                {% elif order.confirmed_at and order.status != 'confirmed' %}done
+                {% endif %}">
+                {% if order.confirmed_at and order.status != 'confirmed' %}<i class="fas fa-check"></i>
+                {% elif order.status == 'confirmed' %}<i class="fas fa-thumbs-up"></i>
+                {% else %}<i class="fas fa-lock"></i>{% endif %}
+              </div>
+              <div class="timeline-content">
+                <p class="timeline-label {% if not order.confirmed_at and order.status not in 'confirmed,completed' %}muted{% endif %}">
+                  Buyer confirms receipt
+                </p>
+                {% if order.confirmed_at %}
+                  <p class="timeline-time">{{ order.confirmed_at|date:"j M Y, H:i" }}</p>
+                {% elif order.status == 'confirmed' %}
+                  <p class="timeline-note">Payout is being processed to seller.</p>
+                {% endif %}
+                {% if order.auto_complete_at and order.status == 'confirmed' %}
+                  <p class="timeline-note" style="color:var(--amber);">
+                    <i class="fas fa-clock" style="margin-right:3px;"></i>
+                    Auto-completes {{ order.auto_complete_at|date:"j M Y" }} if no dispute is raised.
+                  </p>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Step 5: Completed / Payout -->
+            <div class="timeline-step
+              {% if order.status == 'completed' %}done{% endif %}">
+              <div class="timeline-dot {% if order.status == 'completed' %}done{% endif %}">
+                {% if order.status == 'completed' %}
+                  <i class="fas fa-check"></i>
+                {% else %}
+                  <i class="fas fa-lock"></i>
+                {% endif %}
+              </div>
+              <div class="timeline-content" style="padding-bottom:0;">
+                <p class="timeline-label {% if order.status != 'completed' %}muted{% endif %}">
+                  Completed &amp; paid out
+                </p>
+                {% if order.completed_at %}
+                  <p class="timeline-time">{{ order.completed_at|date:"j M Y, H:i" }}</p>
+                  {% if is_seller %}
+                    <p class="timeline-note" style="color:var(--emerald);">
+                      <i class="fas fa-check-circle" style="margin-right:3px;"></i>
+                      ₦{{ order.seller_payout_amount|floatformat:0 }} transferred to your bank account.
+                    </p>
+                  {% else %}
+                    <p class="timeline-note">The seller received their payout. Thank you!</p>
+                  {% endif %}
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Disputed path (shown alongside if disputed) -->
+            {% if order.status == 'disputed' or order.status == 'refunded' %}
+            <div class="timeline-step" style="margin-top:8px;">
+              <div class="timeline-dot" style="border-color:rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#FCA5A5;">
+                <i class="fas fa-exclamation"></i>
+              </div>
+              <div class="timeline-content" style="padding-bottom:0;">
+                <p class="timeline-label" style="color:#FCA5A5;">
+                  {% if order.status == 'disputed' %}Dispute raised — under review{% else %}Refunded{% endif %}
+                </p>
+                {% if dispute %}
+                  <p class="timeline-time">{{ dispute.created_at|date:"j M Y, H:i" }}</p>
+                {% endif %}
+              </div>
+            </div>
+            {% endif %}
+
+          </div>
+        </div><!-- /timeline card -->
+
+        <!-- ── Meetup Notes ── -->
+        <div class="od-card fade-up d3">
+          <div class="od-card-head">
+            <div class="od-card-head-left">
+              <div class="od-card-icon icon-orange"><i class="fas fa-map-marker-alt"></i></div>
+              <h2>Meetup Details</h2>
+            </div>
+          </div>
+          <div class="od-card-body">
+            {% if order.product.pickup_notes or order.meetup_notes %}
+              {% if order.meetup_notes %}
+                <p style="font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;">Agreed meetup notes</p>
+                <div class="meetup-notes-box">{{ order.meetup_notes }}</div>
+              {% endif %}
+              {% if order.product.pickup_notes %}
+                <p style="font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);margin-top:16px;margin-bottom:8px;">Seller's pickup info</p>
+                <div class="meetup-notes-box" style="border-color:var(--border-subtle);">{{ order.product.pickup_notes }}</div>
+              {% endif %}
+            {% else %}
+              <div class="meetup-empty">
+                <i class="fas fa-map-pin" style="color:var(--text-3);opacity:0.4;"></i>
+                No meetup notes yet. The {% if is_buyer %}seller{% else %}buyer{% endif %} will reach out to arrange handover.
+              </div>
+            {% endif %}
+          </div>
+        </div><!-- /meetup card -->
+
+        <!-- ── Dispute Panel ── -->
+        {% if dispute %}
+        <div class="od-card fade-up d4">
+          <div class="od-card-head">
+            <div class="od-card-head-left">
+              <div class="od-card-icon icon-red"><i class="fas fa-exclamation-circle"></i></div>
+              <h2>Dispute</h2>
+            </div>
+            <span class="dispute-resolution-badge
+              {% if dispute.resolution == 'pending' %}res-pending
+              {% elif dispute.resolution == 'released_to_seller' %}res-seller
+              {% elif dispute.resolution == 'refunded_to_buyer' %}res-buyer
+              {% else %}res-split{% endif %}">
+              {{ dispute.get_resolution_display }}
+            </span>
+          </div>
+          <div class="dispute-panel">
+            <p class="dispute-open-label"><i class="fas fa-circle"></i> Reason</p>
+            <div class="dispute-reason-box">{{ dispute.reason }}</div>
+            <div class="dispute-meta">
+              <span>Raised by <strong>{{ dispute.raised_by.get_full_name|default:dispute.raised_by.username }}</strong></span>
+              <span>{{ dispute.created_at|date:"j M Y, H:i" }}</span>
+              {% if dispute.evidence %}
+              <a href="{{ dispute.evidence.url }}" target="_blank" style="color:var(--sky);text-decoration:none;">
+                <i class="fas fa-paperclip"></i> View evidence
+              </a>
+              {% endif %}
+            </div>
+            {% if dispute.resolution != 'pending' and dispute.resolution_note %}
+            <div class="dispute-note-box">
+              <strong style="font-size:0.75rem;color:var(--text-3);display:block;margin-bottom:4px;">Admin resolution note</strong>
+              {{ dispute.resolution_note }}
+            </div>
+            {% endif %}
+
+            <!-- Admin resolve form -->
+            {% if request.user.is_staff and dispute.resolution == 'pending' %}
+            <div style="margin-top:20px;">
+              <div class="od-divider-label">Resolve Dispute</div>
+              <form method="post" action="{% url 'mktplace:dispute_resolve' pk=dispute.pk %}" style="margin-top:14px;display:flex;flex-direction:column;gap:10px;">
+                {% csrf_token %}
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <label style="flex:1;min-width:140px;">
+                    <input type="radio" name="resolution" value="released_to_seller" style="margin-right:5px;">
+                    <span style="font-size:0.82rem;color:var(--text-2);">Release to seller</span>
+                  </label>
+                  <label style="flex:1;min-width:140px;">
+                    <input type="radio" name="resolution" value="refunded_to_buyer" style="margin-right:5px;">
+                    <span style="font-size:0.82rem;color:var(--text-2);">Refund buyer</span>
+                  </label>
+                  <label style="flex:1;min-width:140px;">
+                    <input type="radio" name="resolution" value="split" style="margin-right:5px;">
+                    <span style="font-size:0.82rem;color:var(--text-2);">Split</span>
+                  </label>
+                </div>
+                <textarea name="resolution_note" class="od-textarea" rows="3" placeholder="Resolution note (shown to both parties)…"></textarea>
+                <button type="submit" class="od-action-btn primary" style="width:auto;align-self:flex-start;padding:10px 20px;">
+                  <i class="fas fa-gavel"></i> Submit resolution
+                </button>
+              </form>
+            </div>
+            {% endif %}
+          </div>
+        </div><!-- /dispute card -->
+        {% endif %}
+
+        <!-- ── Review ── -->
+        {% if order.status == 'completed' %}
+        <div class="od-card fade-up d4">
+          <div class="od-card-head">
+            <div class="od-card-head-left">
+              <div class="od-card-icon icon-orange"><i class="fas fa-star"></i></div>
+              <h2>Review</h2>
+            </div>
+          </div>
+
+          {% if review %}
+          <!-- Existing review -->
+          <div class="review-existing">
+            <div class="review-stars-display">
+              {% for i in "12345" %}
+                {% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}
+              {% endfor %}
+            </div>
+            {% if review.comment %}
+            <p class="review-comment">{{ review.comment }}</p>
+            {% else %}
+            <p class="review-comment" style="color:var(--text-3);font-style:italic;">No written comment.</p>
+            {% endif %}
+            <p class="review-date">
+              Left by {{ review.reviewer.get_full_name|default:review.reviewer.username }}
+              · {{ review.created_at|date:"j M Y" }}
+            </p>
+          </div>
+
+          {% elif can_review %}
+          <!-- Submit review form -->
+          <form method="post" action="{% url 'mktplace:order_review' pk=order.pk %}" class="review-form">
+            {% csrf_token %}
+            <div>
+              <label>Your rating</label>
+              <div class="star-rating" style="margin-top:8px;">
+                <input type="radio" id="s5" name="rating" value="5"><label for="s5">★</label>
+                <input type="radio" id="s4" name="rating" value="4"><label for="s4">★</label>
+                <input type="radio" id="s3" name="rating" value="3"><label for="s3">★</label>
+                <input type="radio" id="s2" name="rating" value="2"><label for="s2">★</label>
+                <input type="radio" id="s1" name="rating" value="1"><label for="s1">★</label>
+              </div>
+            </div>
+            <div>
+              <label for="review-comment">Comment <span style="font-weight:400;">(optional)</span></label>
+              <textarea id="review-comment" name="comment" class="od-textarea"
+                        rows="3" style="margin-top:6px;"
+                        placeholder="How was the item and seller?"></textarea>
+            </div>
+            <button type="submit" class="od-action-btn primary">
+              <i class="fas fa-paper-plane"></i> Submit review
+            </button>
+          </form>
+
+          {% else %}
+          <!-- Seller sees "no review yet" -->
+          <div class="od-empty">
+            <i class="fas fa-star-half-alt"></i>
+            <p>No review from the buyer yet.</p>
+          </div>
+          {% endif %}
+
+        </div><!-- /review card -->
+        {% endif %}
+
+      </div><!-- /od-main -->
+
+
+      <!-- ═══════════════ SIDEBAR ═══════════════ -->
+      <aside class="od-aside">
+
+        <!-- ── Financials ── -->
+        <div class="od-card fade-up d2">
+          <div class="od-card-head">
+            <div class="od-card-head-left">
+              <div class="od-card-icon icon-amber"><i class="fas fa-naira-sign"></i></div>
+              <h2>Financials</h2>
+            </div>
+          </div>
+          <div class="od-card-body">
+            <div class="financials-row">
+              <span class="financials-label">Agreed price</span>
+              <span class="financials-value">₦{{ order.agreed_price|floatformat:0 }}</span>
+            </div>
+            {% if order.platform_fee_amount %}
+            <div class="financials-row">
+              <span class="financials-label">Platform fee ({{ order.platform_fee_pct }}%)</span>
+              <span class="financials-fee">−₦{{ order.platform_fee_amount|floatformat:0 }}</span>
+            </div>
+            {% endif %}
+            {% if order.seller_payout_amount and is_seller %}
+            <div class="financials-row">
+              <span class="financials-label">Your payout</span>
+              <span class="financials-payout">₦{{ order.seller_payout_amount|floatformat:0 }}</span>
+            </div>
+            {% endif %}
+            <div class="financials-row total">
+              <span class="financials-label">Total paid</span>
+              <span class="financials-value">₦{{ order.agreed_price|floatformat:0 }}</span>
+            </div>
+
+            {% if order.status == 'pending' and is_buyer %}
+            <div class="escrow-notice">
+              <i class="fas fa-shield-alt"></i>
+              <span>Your payment is secured in escrow and only released once you confirm you've received the item.</span>
+            </div>
+            {% elif order.status == 'paid' or order.status == 'meetup_scheduled' %}
+            <div class="escrow-notice">
+              <i class="fas fa-shield-alt"></i>
+              <span>
+                ₦{{ order.agreed_price|floatformat:0 }} is held in escrow.
+                {% if is_seller %}Released to you after the buyer confirms receipt.
+                {% else %}Released to the seller after you confirm receipt.{% endif %}
+              </span>
+            </div>
+            {% endif %}
+          </div>
+        </div><!-- /financials card -->
+
+        <!-- ── Buyer & Seller ── -->
+        <div class="od-card fade-up d3">
+          <div class="od-card-head">
+            <div class="od-card-head-left">
+              <div class="od-card-icon icon-sky"><i class="fas fa-users"></i></div>
+              <h2>Parties</h2>
+            </div>
+          </div>
+          <div class="od-card-body">
+            {% with conv=order.conversations.first %}
+            {% if conv %}
+            <a href="{% url 'chats:conversation_detail' pk=conv.pk %}"
+               class="od-action-btn sky" style="margin-bottom:14px;">
+              <i class="fas fa-comment-dots"></i>
+              Message {% if is_buyer %}Seller{% else %}Buyer{% endif %}
+            </a>
+            {% endif %}
+            {% endwith %}
+            <!-- Buyer -->
+            <div class="person-row">
+              <div class="person-avatar">
+                {{ order.buyer.get_full_name|default:order.buyer.username|slice:":1" }}
+              </div>
+              <div class="person-info">
+                <p class="person-name">{{ order.buyer.get_full_name|default:order.buyer.username }}</p>
+                <p class="person-role">Buyer</p>
+                {% if is_seller %}
+                <span class="person-badge"><i class="fas fa-envelope"></i> {{ order.buyer.email }}</span>
+                {% endif %}
+              </div>
+              {% if is_buyer %}
+              <span style="font-size:0.72rem;color:var(--amber);font-weight:700;">You</span>
+              {% endif %}
+            </div>
+            <!-- Seller -->
+            <div class="person-row">
+              <div class="person-avatar">
+                {{ order.seller.user.get_full_name|default:order.seller.user.username|slice:":1" }}
+              </div>
+              <div class="person-info">
+                <p class="person-name">{{ order.seller.user.get_full_name|default:order.seller.user.username }}</p>
+                <p class="person-role">Seller</p>
+                <a href="{% url 'mktplace:seller_public' pk=order.seller.pk %}"
+                   class="person-badge" style="text-decoration:none;color:inherit;">
+                  <i class="fas fa-store"></i> View profile
+                </a>
+              </div>
+              {% if is_seller %}
+              <span style="font-size:0.72rem;color:var(--amber);font-weight:700;">You</span>
+              {% endif %}
+            </div>
+          </div>
+        </div><!-- /parties card -->
+
+        <!-- ── Actions ── -->
+        {% if is_buyer or is_seller or request.user.is_staff %}
+        <div class="od-card fade-up d4">
+          <div class="od-card-head">
+            <div class="od-card-head-left">
+              <div class="od-card-icon icon-green"><i class="fas fa-bolt"></i></div>
+              <h2>Actions</h2>
+            </div>
+          </div>
+          <div class="od-card-body">
+            <div class="od-actions">
+
+              <!-- Confirm receipt (Buyer) -->
+              {% if can_confirm %}
+              <div class="confirm-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                Only confirm once you have physically received and inspected the item. This triggers the seller's payout.
+              </div>
+              <form method="post" action="{% url 'mktplace:order_confirm' pk=order.pk %}"
+                    onsubmit="return confirm('Confirm you have received the item? This will release payment to the seller.');">
+                {% csrf_token %}
+                <button type="submit" class="od-action-btn primary">
+                  <i class="fas fa-thumbs-up"></i> I've received the item
+                </button>
+              </form>
+              {% endif %}
+
+              <!-- Retry Payout (Buyer or Seller or Staff) -->
+              {% if can_retry_payout %}
+              <div class="confirm-warning" style="background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.25); color: var(--text-1);">
+                <i class="fas fa-info-circle" style="color: var(--sky);"></i>
+                {% if is_buyer %}
+                  Receipt is confirmed. If payout hasn't reached the seller yet, you can retry processing it now.
+                {% else %}
+                  Buyer has confirmed receipt! Click below to process/retry your payout transfer to your bank.
+                {% endif %}
+              </div>
+              <form method="post" action="{% url 'mktplace:order_confirm' pk=order.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="od-action-btn primary">
+                  <i class="fas fa-sync-alt"></i> Process / Retry Seller Payout
+                </button>
+              </form>
+              {% endif %}
+
+              <!-- Raise dispute (Buyer) -->
+              {% if can_dispute and not dispute %}
+              <div id="dispute-toggle-area">
+                <button type="button" class="od-action-btn danger" onclick="toggleDisputeForm()">
+                  <i class="fas fa-flag"></i> Raise a dispute
+                </button>
+                <div id="dispute-form-area" style="display:none;margin-top:12px;">
+                  <form method="post" action="{% url 'mktplace:order_dispute' pk=order.pk %}"
+                        enctype="multipart/form-data" class="dispute-form">
+                    {% csrf_token %}
+                    <textarea name="reason" class="od-textarea" rows="4" required
+                              placeholder="Describe the problem in detail — what went wrong, what you expected…"></textarea>
+                    <label class="od-file-label">
+                      <i class="fas fa-paperclip"></i> Attach evidence (optional)
+                      <input type="file" name="evidence" accept="image/*,.pdf">
+                    </label>
+                    <div style="display:flex;gap:8px;">
+                      <button type="submit" class="od-action-btn danger" style="flex:1;">
+                        <i class="fas fa-exclamation-circle"></i> Submit dispute
+                      </button>
+                      <button type="button" class="od-action-btn ghost" style="flex:1;"
+                              onclick="toggleDisputeForm()">Cancel</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+              {% endif %}
+
+              <!-- No actions available -->
+              {% if not can_confirm and not can_retry_payout and not can_dispute and not can_review %}
+              <p style="font-size:0.85rem;color:var(--text-3);text-align:center;padding:8px 0;">
+                {% if order.status == 'completed' %}
+                  This order is complete.
+                {% elif order.status == 'disputed' %}
+                  Your dispute is under review. We'll update you within 24 hours.
+                {% elif order.status == 'refunded' %}
+                  This order has been refunded.
+                {% elif order.status == 'cancelled' %}
+                  This order was cancelled.
+                {% else %}
+                  No actions available right now.
+                {% endif %}
+              </p>
+              {% endif %}
+
+            </div>
+          </div>
+        </div><!-- /actions card -->
+        {% endif %}
+
+        <!-- ── Payment References ── -->
+        {% if order.paystack_payment_ref or order.paystack_transfer_ref %}
+        <div class="od-card fade-up d5">
+          <div class="od-card-head">
+            <div class="od-card-head-left">
+              <div class="od-card-icon icon-purple"><i class="fas fa-fingerprint"></i></div>
+              <h2>References</h2>
+            </div>
+          </div>
+          <div class="od-card-body">
+            <div class="ref-row">
+              <span class="ref-label">Order ID</span>
+              <span class="ref-value">{{ order.pk }}</span>
+            </div>
+            {% if order.paystack_payment_ref %}
+            <div class="ref-row">
+              <span class="ref-label">Payment ref</span>
+              <span class="ref-value">{{ order.paystack_payment_ref }}</span>
+            </div>
+            {% endif %}
+            {% if order.paystack_transfer_ref %}
+            <div class="ref-row">
+              <span class="ref-label">Transfer ref</span>
+              <span class="ref-value">{{ order.paystack_transfer_ref }}</span>
+            </div>
+            {% endif %}
+          </div>
+        </div><!-- /references card -->
+        {% endif %}
+
+      </aside><!-- /od-aside -->
+
+    </div><!-- /od-layout -->
+  </div><!-- /od-container -->
+</div><!-- /od-page -->
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function toggleDisputeForm() {
+    const area = document.getElementById('dispute-form-area');
+    if (!area) return;
+    const isOpen = area.style.display !== 'none';
+    area.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) {
+      area.querySelector('textarea')?.focus();
+    }
+  }
+</script>
+{% endblock %}

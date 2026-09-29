@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  .form-page-container {
+    min-height: 100vh;
+    padding: calc(var(--nav-h) + 40px) clamp(16px, 5vw, 64px) 80px;
+    max-width: 760px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .breadcrumb-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+    font-size: 0.85rem;
+    color: var(--text-3);
+  }
+  .breadcrumb-nav a {
+    color: var(--text-2);
+    text-decoration: none;
+    transition: var(--t);
+  }
+  .breadcrumb-nav a:hover {
+    color: var(--amber);
+  }
+
+  .entry-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 36px clamp(20px, 4vw, 40px);
+    box-shadow: var(--shadow-md);
+  }
+  .entry-card h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: var(--text-1);
+  }
+  .entry-card-sub {
+    color: var(--text-2);
+    font-size: 0.92rem;
+    margin-bottom: 28px;
+  }
+
+  .form-group-custom {
+    margin-bottom: 20px;
+  }
+  .form-group-custom label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-2);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .form-group-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 600px) {
+    .form-group-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .checkbox-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 12px 16px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border-subtle);
+    cursor: pointer;
+  }
+  .checkbox-wrap input[type="checkbox"] {
+    accent-color: var(--amber);
+    transform: scale(1.2);
+  }
+  .checkbox-wrap span {
+    font-size: 0.9rem;
+    color: var(--text-1);
+    font-weight: 600;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-subtle);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-page-container">
+
+  {# ── Breadcrumb ── #}
+  <div class="breadcrumb-nav">
+    <a href="{% url 'home' %}">Home</a>
+    <span>/</span>
+    <a href="{% url 'hiring:worker_profile_enhanced' %}">My Profile</a>
+    <span>/</span>
+    <span style="color: var(--text-1);">{{ action }} Work Experience</span>
+  </div>
+
+  <div class="entry-card">
+    <div class="eyebrow"><i class="fas fa-briefcase"></i> Work History</div>
+    <h1>{{ page_title }}</h1>
+    <p class="entry-card-sub">
+      List previous projects, contractors, or companies you've worked with to establish credibility.
+    </p>
+
+    <form method="post">
+      {% csrf_token %}
+
+      <div class="form-group-custom">
+        <label for="id_role_title">Role / Position Title</label>
+        {{ form.role_title }}
+        {% for err in form.role_title.errors %}
+          <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ err }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="form-group-row">
+        <div class="form-group-custom">
+          <label for="id_employer_name">Company / Client / Contractor</label>
+          {{ form.employer_name }}
+          {% for err in form.employer_name.errors %}
+            <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ err }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="form-group-custom">
+          <label for="id_location_state">State / Location</label>
+          {{ form.location_state }}
+          {% for err in form.location_state.errors %}
+            <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <label class="checkbox-wrap" for="id_is_current">
+        {{ form.is_current }}
+        <span>I currently work here / ongoing engagement</span>
+      </label>
+
+      <div class="form-group-row">
+        <div class="form-group-custom">
+          <label for="id_start_date">Start Date</label>
+          {{ form.start_date }}
+          {% for err in form.start_date.errors %}
+            <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ err }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="form-group-custom" id="wrap_end_date">
+          <label for="id_end_date">End Date</label>
+          {{ form.end_date }}
+          {% for err in form.end_date.errors %}
+            <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="form-group-custom">
+        <label for="id_description">Description & Responsibilities</label>
+        {{ form.description }}
+        {% for err in form.description.errors %}
+          <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ err }}</div>
+        {% endfor %}
+      </div>
+
+      {% if form.non_field_errors %}
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--r-md); padding: 12px; color: #EF4444; margin-bottom: 20px;">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      <div class="btn-row">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save"></i> Save Work Experience
+        </button>
+        <a href="{% url 'hiring:worker_profile_enhanced' %}" class="btn btn-ghost">
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+
+</div>
+
+{% block extra_scripts %}
+<script>
+  // Hide end date when is_current is checked
+  const currentCheckbox = document.getElementById('id_is_current');
+  const endDateWrap = document.getElementById('wrap_end_date');
+  function toggleEndDate() {
+    if (currentCheckbox && currentCheckbox.checked) {
+      endDateWrap.style.opacity = '0.4';
+      endDateWrap.style.pointerEvents = 'none';
+    } else if (endDateWrap) {
+      endDateWrap.style.opacity = '1';
+      endDateWrap.style.pointerEvents = 'auto';
+    }
+  }
+  if (currentCheckbox) {
+    currentCheckbox.addEventListener('change', toggleEndDate);
+    toggleEndDate();
+  }
+</script>
+{% endblock %}
+{% endblock %}

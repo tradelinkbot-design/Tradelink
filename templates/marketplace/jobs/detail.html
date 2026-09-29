@@ -1,0 +1,1293 @@
+{% extends "base.html" %}
+{% block title %}{{ job.title }} — {{ job.employer }} — TradeLink NG{% endblock %}
+{% block nav_jobs %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+/* =====================================================
+   JOB DETAIL PAGE — TradeLink NG
+   Context: job, form, has_applied, application,
+            is_saved, clip_score, similar_jobs
+===================================================== */
+
+/* ── PAGE SHELL ── */
+.jd-page { padding-top: var(--nav-h); position: relative; z-index: 1; }
+
+/* ── BREADCRUMB ── */
+.jd-breadcrumb {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-raised);
+}
+.jd-breadcrumb-inner {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.82rem; color: var(--text-3);
+  max-width: 100%; overflow: hidden;
+}
+.jd-breadcrumb a { color: var(--text-3); text-decoration: none; transition: var(--t); }
+.jd-breadcrumb a:hover { color: var(--amber); }
+.jd-breadcrumb-sep { font-size: 0.7rem; }
+
+/* ── HERO BAND ── */
+.jd-hero {
+  background: linear-gradient(
+    180deg,
+    rgba(245,158,11,0.05) 0%,
+    rgba(249,115,22,0.02) 60%,
+    transparent 100%
+  );
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 44px 0 40px;
+  position: relative; overflow: hidden;
+}
+.jd-hero::before {
+  content: '';
+  position: absolute; top: -120px; right: -100px;
+  width: 480px; height: 480px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,158,11,0.07), transparent 65%);
+  pointer-events: none;
+}
+
+.jd-hero-inner {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 24px; align-items: flex-start;
+}
+
+/* Employer logo */
+.jd-employer-logo {
+  width: 72px; height: 72px; border-radius: 18px; flex-shrink: 0;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem; overflow: hidden;
+}
+.jd-employer-logo img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Title block */
+.jd-title-block { min-width: 0; }
+.jd-title {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(1.65rem, 3.5vw, 2.5rem);
+  font-weight: 900; line-height: 1.1; letter-spacing: -1px;
+  margin-bottom: 10px; color: var(--text-1);
+}
+.jd-employer-link {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 0.95rem; font-weight: 600; color: var(--amber);
+  text-decoration: none; margin-bottom: 14px; transition: var(--t);
+}
+.jd-employer-link:hover { color: var(--amber-light); }
+.jd-employer-link i { font-size: 0.8rem; }
+
+.jd-meta-row {
+  display: flex; flex-wrap: wrap; gap: 14px;
+  font-size: 0.87rem; color: var(--text-2); align-items: center;
+}
+.jd-meta-item { display: flex; align-items: center; gap: 6px; }
+.jd-meta-item i { font-size: 0.76rem; color: var(--text-3); flex-shrink: 0; }
+
+.jd-tags-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+.jd-tag {
+  display: inline-flex; padding: 4px 12px;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-pill); font-size: 0.77rem;
+  font-weight: 500; color: var(--text-2);
+  word-break: break-word; max-width: 100%;
+}
+.jd-tag.highlight {
+  background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.25);
+  color: var(--amber-light);
+}
+
+/* AI match badge (top-right of hero) */
+.jd-match-badge {
+  flex-shrink: 0; text-align: center;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 16px 20px;
+  position: relative; overflow: hidden;
+  min-width: 120px;
+}
+.jd-match-badge::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(245,158,11,0.07), transparent 70%);
+  pointer-events: none;
+}
+.jd-match-score {
+  font-family: 'Fraunces', serif; font-size: 2.2rem; font-weight: 900;
+  line-height: 1;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.jd-match-label {
+  font-size: 0.68rem; font-weight: 700; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 1.5px; margin-top: 4px;
+  display: block;
+}
+.jd-match-sub {
+  font-size: 0.7rem; color: var(--text-3); margin-top: 6px;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+}
+
+/* ── BODY LAYOUT ── */
+.jd-body {
+  padding: 52px 0 80px;
+}
+.jd-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 48px; align-items: start;
+}
+
+/* ── LEFT COLUMN — content ── */
+.jd-content { display: flex; flex-direction: column; gap: 44px; }
+
+.jd-section-head {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Fraunces', serif; font-size: 1.15rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 18px;
+  padding-bottom: 14px; border-bottom: 1px solid var(--border-subtle);
+}
+.jd-section-head i { color: var(--amber); font-size: 0.9rem; }
+
+/* Description */
+.jd-description {
+  font-size: 0.96rem; color: var(--text-2);
+  line-height: 1.9; white-space: pre-line;
+  overflow-wrap: break-word; word-break: break-word;
+}
+.jd-description p { margin-bottom: 14px; }
+.jd-description p:last-child { margin-bottom: 0; }
+
+/* Skills grid */
+.jd-skills-grid { display: flex; flex-wrap: wrap; gap: 9px; }
+.jd-skill-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 15px;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-pill); font-size: 0.83rem; font-weight: 500;
+  color: var(--text-2); transition: var(--t);
+}
+.jd-skill-chip:hover { border-color: var(--border-strong); color: var(--text-1); }
+.jd-skill-chip i { font-size: 0.7rem; color: var(--amber); }
+
+/* Apply inline block */
+.jd-apply-inline {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 28px; display: none;
+  overflow: hidden; position: relative;
+}
+.jd-apply-inline::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--amber), var(--orange));
+}
+.jd-apply-inline.open { display: block; animation: fadeIn 0.3s var(--ease); }
+.jd-apply-textarea {
+  width: 100%; padding: 14px 16px; min-height: 120px;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); color: var(--text-1);
+  font-family: 'Outfit', sans-serif; font-size: 0.93rem;
+  transition: var(--t); outline: none; resize: vertical;
+}
+.jd-apply-textarea:focus {
+  border-color: var(--amber); background: rgba(245,158,11,0.04);
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+}
+.jd-apply-textarea::placeholder { color: var(--text-3); }
+
+/* Already applied state */
+.jd-applied-banner {
+  padding: 20px 24px; border-radius: var(--r-xl);
+  background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.2);
+  display: flex; align-items: flex-start; gap: 16px;
+}
+.jd-applied-icon {
+  width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+  background: rgba(16,185,129,0.15); display: flex; align-items: center;
+  justify-content: center; font-size: 1.1rem; color: var(--emerald);
+}
+.jd-applied-title { font-weight: 700; font-size: 0.95rem; color: var(--emerald); margin-bottom: 3px; }
+.jd-applied-sub   { font-size: 0.83rem; color: var(--text-2); }
+
+/* App status timeline */
+.jd-status-steps {
+  display: flex; gap: 0; margin-top: 14px; flex-wrap: wrap;
+}
+.jd-status-step {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  flex: 1; position: relative; min-width: 70px;
+}
+.jd-status-step:not(:last-child)::after {
+  content: ''; position: absolute;
+  top: 10px; left: 50%; right: -50%;
+  height: 2px; background: var(--border-subtle);
+  z-index: 0;
+}
+.jd-status-step.done::after { background: var(--emerald); }
+.jd-status-dot {
+  width: 20px; height: 20px; border-radius: 50%; z-index: 1;
+  background: var(--border-subtle);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.6rem; color: var(--text-3); flex-shrink: 0;
+}
+.jd-status-step.done .jd-status-dot { background: var(--emerald); color: #fff; }
+.jd-status-step.active .jd-status-dot { background: var(--amber); color: #0C0A08; }
+.jd-status-step-label {
+  font-size: 0.68rem; font-weight: 600; color: var(--text-3);
+  text-align: center; white-space: nowrap;
+}
+.jd-status-step.done .jd-status-step-label   { color: var(--emerald); }
+.jd-status-step.active .jd-status-step-label { color: var(--amber); }
+
+/* Similar jobs */
+.jd-similar-list { display: flex; flex-direction: column; gap: 2px; }
+.jd-similar-item {
+  display: flex; align-items: center; gap: 13px;
+  padding: 14px 16px; border-radius: var(--r-lg);
+  text-decoration: none; color: inherit; transition: var(--t);
+}
+.jd-similar-item:hover { background: var(--surface-1); }
+.jd-similar-logo {
+  width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.95rem; overflow: hidden;
+}
+.jd-similar-logo img { width: 100%; height: 100%; object-fit: cover; }
+.jd-similar-title {
+  font-weight: 700; font-size: 0.9rem; margin-bottom: 2px;
+  transition: var(--t);
+  overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.jd-similar-item:hover .jd-similar-title { color: var(--amber); }
+.jd-similar-sub { font-size: 0.76rem; color: var(--text-3); }
+.jd-similar-pay {
+  font-family: 'Fraunces', serif; font-size: 0.9rem; font-weight: 700;
+  color: var(--amber); margin-left: auto; flex-shrink: 0;
+}
+
+/* Reviews */
+.jd-review-item { padding: 18px 0; border-bottom: 1px solid var(--border-subtle); }
+.jd-review-item:last-child { border-bottom: none; }
+.jd-review-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap;
+}
+.jd-reviewer-avatar {
+  width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--amber-dark), var(--orange));
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Fraunces', serif; font-weight: 800; font-size: 0.82rem;
+  color: #0C0A08;
+}
+.jd-reviewer-name { font-weight: 700; font-size: 0.9rem; margin-bottom: 2px; }
+.jd-review-stars  { color: var(--amber); font-size: 0.8rem; letter-spacing: 1px; }
+.jd-review-date   { font-size: 0.74rem; color: var(--text-3); margin-left: auto; }
+.jd-review-text   { font-size: 0.88rem; color: var(--text-2); line-height: 1.75; font-style: italic; }
+
+/* ── RIGHT COLUMN — sticky action card ── */
+.jd-action-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); overflow: hidden;
+  position: sticky; top: calc(var(--nav-h) + 24px);
+}
+.jd-action-card-top {
+  padding: 28px 28px 24px;
+  background: linear-gradient(135deg, rgba(245,158,11,0.05), transparent 70%);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Pay display */
+.jd-pay {
+  font-family: 'Fraunces', serif;
+  font-size: 1.75rem; font-weight: 900; line-height: 1;
+  color: var(--amber); margin-bottom: 4px;
+}
+.jd-pay-range {
+  font-family: 'Fraunces', serif;
+  font-size: 1.25rem; font-weight: 700; color: var(--amber-light);
+}
+.jd-pay-unit {
+  font-family: 'Outfit', sans-serif; font-size: 0.8rem;
+  font-weight: 400; color: var(--text-3); margin-left: 4px;
+}
+.jd-pay-negotiable { font-size: 0.95rem; color: var(--text-3); font-style: italic; }
+
+/* Info list inside card */
+.jd-info-list { display: flex; flex-direction: column; gap: 0; }
+.jd-info-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 0; border-bottom: 1px solid var(--border-subtle);
+}
+.jd-info-row:last-child { border-bottom: none; }
+.jd-info-icon {
+  width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.82rem; color: var(--amber);
+}
+.jd-info-label { font-size: 0.74rem; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.jd-info-val   { font-size: 0.9rem;  color: var(--text-1); font-weight: 600; margin-top: 1px; }
+
+/* Action card bottom */
+.jd-action-card-btm {
+  padding: 22px 28px; display: flex; flex-direction: column; gap: 10px;
+}
+
+/* Apply / applied CTA */
+.jd-btn-apply {
+  width: 100%; padding: 15px; border: none;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  color: #0C0A08; font-family: 'Outfit', sans-serif;
+  font-size: 1rem; font-weight: 800; letter-spacing: 0.2px;
+  border-radius: var(--r-lg); cursor: pointer;
+  box-shadow: 0 6px 24px rgba(245,158,11,0.32);
+  transition: var(--t); display: flex; align-items: center;
+  justify-content: center; gap: 9px; text-decoration: none;
+}
+.jd-btn-apply:hover {
+  box-shadow: 0 8px 32px rgba(245,158,11,0.45); transform: translateY(-2px);
+  filter: brightness(1.06);
+}
+.jd-btn-apply:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.jd-btn-save {
+  width: 100%; padding: 12px; background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-2); font-family: 'Outfit', sans-serif;
+  font-size: 0.9rem; font-weight: 600;
+  border-radius: var(--r-lg); cursor: pointer; transition: var(--t);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.jd-btn-save:hover { background: var(--surface-1); border-color: var(--border-strong); color: var(--text-1); }
+.jd-btn-save.saved { border-color: rgba(245,158,11,0.35); color: var(--amber); background: rgba(245,158,11,0.06); }
+.jd-btn-save.saved:hover { background: rgba(245,158,11,0.1); }
+
+/* Applied card state */
+.jd-applied-card {
+  padding: 16px; border-radius: var(--r-lg); text-align: center;
+  background: rgba(16,185,129,0.07); border: 1px solid rgba(16,185,129,0.2);
+}
+.jd-applied-card i { display: block; font-size: 1.4rem; color: var(--emerald); margin-bottom: 6px; }
+.jd-applied-card strong { display: block; color: var(--emerald); font-size: 0.92rem; margin-bottom: 2px; }
+.jd-applied-card span { font-size: 0.79rem; color: var(--text-3); }
+
+/* Employer mini-card */
+.jd-employer-mini {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-subtle);
+  text-decoration: none; color: inherit; transition: var(--t);
+}
+.jd-employer-mini:hover { background: var(--surface-1); }
+.jd-employer-mini-logo {
+  width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(249,115,22,0.1));
+  border: 1px solid rgba(245,158,11,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; overflow: hidden;
+}
+.jd-employer-mini-logo img { width: 100%; height: 100%; object-fit: cover; }
+.jd-employer-mini-name { font-weight: 700; font-size: 0.9rem; margin-bottom: 1px; }
+.jd-employer-mini-type { font-size: 0.75rem; color: var(--text-3); }
+.jd-employer-mini-arrow { margin-left: auto; color: var(--text-3); font-size: 0.75rem; transition: var(--t); }
+.jd-employer-mini:hover .jd-employer-mini-arrow { color: var(--amber); transform: translateX(3px); }
+
+/* Verified badge */
+.jd-verified {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: var(--r-pill);
+  background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.22);
+  color: var(--emerald); font-size: 0.72rem; font-weight: 700;
+}
+
+/* ── MESSAGES ── */
+.jd-messages {
+  position: fixed; top: calc(var(--nav-h) + 16px); right: 20px;
+  z-index: 3000; display: flex; flex-direction: column; gap: 10px;
+  max-width: 380px; pointer-events: none;
+}
+.jd-msg {
+  padding: 13px 18px; border-radius: var(--r-lg);
+  font-size: 0.88rem; font-weight: 600;
+  display: flex; align-items: center; gap: 10px;
+  box-shadow: var(--shadow-md); pointer-events: all; cursor: pointer;
+  animation: msgSlide 0.35s var(--ease) both;
+}
+.jd-msg-success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #6EE7B7; }
+.jd-msg-error   { background: rgba(239,68,68,0.15);  border: 1px solid rgba(239,68,68,0.3);  color: #FCA5A5; }
+.jd-msg-info    { background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.25); color: var(--sky); }
+@keyframes msgSlide { from { opacity:0; transform: translateX(20px); } to { opacity:1; transform: translateX(0); } }
+
+/* ── SIGN-IN PROMPT ── */
+.jd-signin-prompt {
+  padding: 18px; text-align: center; border-radius: var(--r-lg);
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+}
+.jd-signin-prompt p { font-size: 0.85rem; color: var(--text-2); margin-bottom: 12px; line-height: 1.6; }
+
+/* ── GLOBAL OVERFLOW GUARD ── */
+.jd-page,
+.jd-hero,
+.jd-breadcrumb,
+.jd-body { overflow-x: hidden; }
+
+/* Make sure long words / URLs in description never push the page wide */
+.jd-description {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Tag text: allow wrapping inside the chip so pay ranges don't overflow */
+.jd-tag {
+  white-space: normal;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+/* Similar job title: allow wrapping instead of nowrap overflow */
+.jd-similar-title {
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Breadcrumb: cap width so the job title doesn't overflow on narrow screens */
+.jd-breadcrumb-inner {
+  max-width: 100%;
+  overflow: hidden;
+}
+.jd-breadcrumb-inner > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* ── RESPONSIVE ── */
+
+/* 1024px — single column; hoist action card above content for mobile UX */
+@media (max-width: 1024px) {
+  .jd-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  /* Push the right-column (action card) to render first — Apply button
+     is the most important element and shouldn't be buried below the content */
+  .jd-layout > div:nth-child(2) { order: -1; }
+  .jd-action-card { position: static; }
+  .jd-match-badge { display: none; }
+  .jd-body { padding: 36px 0 64px; }
+}
+
+/* 768px — phablet / large phone */
+@media (max-width: 768px) {
+  .jd-hero { padding: 32px 0 26px; }
+
+  /* Hero: collapse 3-col grid to 2-col (hide match badge column) */
+  .jd-hero-inner {
+    grid-template-columns: auto 1fr;
+    gap: 16px;
+  }
+
+  /* Messages toast: keep inside viewport on any screen width */
+  .jd-messages {
+    right: 12px;
+    left: 12px;
+    max-width: none;
+    width: auto;
+  }
+
+  /* Status steps: tighter on phablets */
+  .jd-status-step { min-width: 60px; }
+  .jd-status-step-label { font-size: 0.63rem; white-space: normal; max-width: 56px; }
+}
+
+/* 640px — small phones */
+@media (max-width: 640px) {
+  .jd-hero { padding: 24px 0 20px; }
+  .jd-hero-inner {
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    align-items: center;
+  }
+  .jd-employer-logo {
+    width: 52px; height: 52px;
+    border-radius: 14px; font-size: 1.3rem;
+  }
+  .jd-title {
+    font-size: clamp(1.2rem, 5.5vw, 1.55rem);
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+  .jd-employer-link { font-size: 0.88rem; margin-bottom: 10px; }
+  .jd-meta-row { gap: 8px; font-size: 0.82rem; }
+  .jd-tags-row { gap: 5px; }
+  .jd-tag { font-size: 0.73rem; padding: 3px 10px; }
+
+  .jd-body { padding: 24px 0 48px; }
+  .jd-content { gap: 32px; }
+  .jd-section-head { font-size: 1.05rem; }
+
+  /* Action card: tighten padding */
+  .jd-action-card-top { padding: 20px; }
+  .jd-action-card-btm { padding: 16px 20px; gap: 8px; }
+  .jd-pay { font-size: 1.45rem; }
+  .jd-pay-range { font-size: 1.1rem; }
+
+  /* Apply form button row: stack buttons full-width on small screens */
+  .jd-apply-btn-row {
+    flex-direction: column-reverse !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+  }
+  .jd-apply-btn-row .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Status timeline: wrap labels gracefully */
+  .jd-status-steps { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+  .jd-status-step { min-width: 56px; }
+  .jd-status-step-label {
+    font-size: 0.62rem;
+    white-space: normal;
+    text-align: center;
+    max-width: 54px;
+  }
+
+  /* Applied banner: tighter on small screens */
+  .jd-applied-banner { gap: 12px; padding: 16px 14px; }
+
+  /* Reviews: move date below name so it doesn't fight for horizontal space */
+  .jd-review-date { margin-left: 0; width: 100%; }
+
+  /* Similar items: allow wrapping */
+  .jd-similar-pay { font-size: 0.83rem; flex-shrink: 1; }
+
+  /* Skill chips: wrap tighter */
+  .jd-skill-chip { font-size: 0.8rem; padding: 6px 12px; }
+}
+
+/* 480px — very small phones */
+@media (max-width: 480px) {
+  .jd-hero { padding: 20px 0 16px; }
+  .jd-hero-inner { gap: 10px; }
+  .jd-employer-logo { width: 44px; height: 44px; border-radius: 11px; font-size: 1.1rem; }
+  .jd-title { font-size: clamp(1.1rem, 5vw, 1.3rem); letter-spacing: -0.3px; }
+  .jd-meta-row { font-size: 0.79rem; gap: 6px; }
+
+  .jd-body { padding: 20px 0 40px; }
+
+  /* Action card: go edge-to-edge inside container */
+  .jd-action-card-top { padding: 16px; }
+  .jd-action-card-btm { padding: 14px 16px; }
+  .jd-btn-apply { font-size: 0.95rem; padding: 13px 12px; }
+  .jd-btn-save  { font-size: 0.86rem; padding: 11px 12px; }
+
+  /* Toast messages: full bleed with a bit of breathing room */
+  .jd-messages { right: 8px; left: 8px; }
+  .jd-msg { font-size: 0.83rem; padding: 11px 14px; }
+
+  /* Applied banner: stack icon + text vertically on very small phones */
+  .jd-applied-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .jd-info-row { padding: 10px 0; }
+  .jd-info-val { font-size: 0.85rem; }
+
+  /* Similar items */
+  .jd-similar-title { font-size: 0.85rem; }
+  .jd-similar-pay   { font-size: 0.82rem; }
+  .jd-similar-item  { gap: 10px; padding: 12px; }
+
+  /* Employer note: truncate long inline styles behave well */
+  .jd-employer-link {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* 380px — 360px-class phones */
+@media (max-width: 380px) {
+  .jd-title { font-size: 1.1rem; }
+  .jd-action-card-top { padding: 14px; }
+  .jd-action-card-btm { padding: 12px 14px; }
+  .jd-btn-apply { font-size: 0.9rem; padding: 12px 10px; }
+  .jd-btn-save  { font-size: 0.82rem; padding: 10px; }
+  /* Status steps: even tighter — horizontal scroll within the strip */
+  .jd-status-step { min-width: 48px; }
+  .jd-status-step-label { font-size: 0.56rem; max-width: 44px; }
+  /* Skill chips wrap tighter */
+  .jd-skill-chip { font-size: 0.76rem; padding: 5px 10px; }
+  /* Meta row: allow items to stack */
+  .jd-meta-row { gap: 5px; }
+  .jd-meta-item { font-size: 0.77rem; }
+}
+
+/* ── FADE-IN animation ── */
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+</style>
+{% endblock %}
+
+
+{% block content %}{# unread_count={{ unread_count }} — used by navbar notification badge #}
+
+{# ── Floating messages ── #}
+{% if messages %}
+<div class="jd-messages">
+  {% for message in messages %}
+  <div class="jd-msg jd-msg-{{ message.tags }}" onclick="this.remove()">
+    {% if 'success' in message.tags %}<i class="fas fa-circle-check"></i>
+    {% elif 'error' in message.tags %}<i class="fas fa-circle-exclamation"></i>
+    {% else %}<i class="fas fa-circle-info"></i>{% endif %}
+    {{ message }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="jd-page">
+
+  {# ── Breadcrumb ── #}
+  <div class="jd-breadcrumb">
+    <div class="container">
+      <div class="jd-breadcrumb-inner">
+        <a href="{% url 'marketplace:job_list' %}">
+          <i class="fas fa-briefcase" style="font-size:0.72rem;"></i> Find Work
+        </a>
+        <span class="jd-breadcrumb-sep"><i class="fas fa-chevron-right" style="font-size:0.62rem;"></i></span>
+        {% if job.trade_category %}
+        <a href="{% url 'marketplace:trade_detail' slug=job.trade_category.slug %}">
+          {{ job.trade_category.name }}
+        </a>
+        <span class="jd-breadcrumb-sep"><i class="fas fa-chevron-right" style="font-size:0.62rem;"></i></span>
+        {% endif %}
+        <span style="color:var(--text-2);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+          {{ job.title }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  {# ── Hero ── #}
+  <div class="jd-hero">
+    <div class="container">
+      <div class="jd-hero-inner">
+
+        {# Employer logo #}
+        <div class="jd-employer-logo">
+          {% if job.employer.logo %}
+            <img src="{{ job.employer.logo.url }}" alt="{{ job.employer }}">
+          {% else %}
+            <i class="fas fa-building" style="color:var(--text-3);"></i>
+          {% endif %}
+        </div>
+
+        {# Title + meta #}
+        <div class="jd-title-block">
+
+          {# Status + verified row #}
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+            <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:var(--r-pill);background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.22);color:var(--emerald);font-size:0.72rem;font-weight:700;">
+              <span style="width:6px;height:6px;border-radius:50%;background:var(--emerald);display:inline-block;animation:pulseDot 2s ease-in-out infinite;"></span>
+              Active
+            </span>
+            {% if job.employer.is_verified %}
+            <span class="jd-verified"><i class="fas fa-circle-check"></i> Verified Employer</span>
+            {% endif %}
+            {% if job.is_remote %}
+            <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:var(--r-pill);background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.2);color:var(--sky);font-size:0.72rem;font-weight:700;">
+              <i class="fas fa-globe" style="font-size:0.65rem;"></i> Remote
+            </span>
+            {% endif %}
+          </div>
+
+          <h1 class="jd-title">{{ job.title }}</h1>
+
+          <a href="{% url 'marketplace:employer_profile_public' pk=job.employer.pk %}"
+             class="jd-employer-link">
+            <i class="fas fa-building"></i>
+            {{ job.employer.company_name|default:job.employer.user.username }}
+            <i class="fas fa-arrow-up-right-from-square" style="font-size:0.65rem;opacity:0.6;"></i>
+          </a>
+
+          <div class="jd-meta-row">
+            {% if job.trade_category %}
+            <div class="jd-meta-item">
+              <i class="fas fa-layer-group"></i>
+              <a href="{% url 'marketplace:trade_detail' slug=job.trade_category.slug %}"
+                 style="color:var(--text-2);text-decoration:none;transition:var(--t);"
+                 onmouseover="this.style.color='var(--amber)'"
+                 onmouseout="this.style.color='var(--text-2)'">
+                {{ job.trade_category.name }}
+              </a>
+            </div>
+            {% endif %}
+            {% if job.state %}
+            <div class="jd-meta-item">
+              <i class="fas fa-map-pin"></i>
+              {{ job.get_state_display }}{% if job.lga %}, {{ job.lga }}{% endif %}
+            </div>
+            {% endif %}
+            <div class="jd-meta-item">
+              <i class="fas fa-clock"></i>
+              {{ job.get_job_type_display }}
+            </div>
+            <div class="jd-meta-item">
+              <i class="fas fa-eye"></i>
+              {{ job.views_count }} view{{ job.views_count|pluralize }}
+            </div>
+            <div class="jd-meta-item">
+              <i class="fas fa-users"></i>
+              {{ job.applications_count }} applicant{{ job.applications_count|pluralize }}
+            </div>
+            <div class="jd-meta-item">
+              <i class="fas fa-calendar-plus"></i>
+              Posted {{ job.created|date:"d M Y" }}
+            </div>
+            {% if job.deadline %}
+            <div class="jd-meta-item" style="color:{% if job.deadline|date:'U'|add:'0' < 0 %}#F87171{% else %}var(--text-2){% endif %};">
+              <i class="fas fa-calendar-xmark"></i>
+              Deadline {{ job.deadline|date:"d M Y" }}
+            </div>
+            {% endif %}
+          </div>
+
+          {# Tag chips #}
+          <div class="jd-tags-row">
+            <span class="jd-tag highlight">
+              <i class="fas fa-naira-sign" style="font-size:0.65rem;"></i>
+              {% if job.pay_type == 'negotiable' %}
+                Negotiable Pay
+              {% elif job.pay_min and job.pay_max %}
+                ₦{{ job.pay_min|floatformat:0 }} – ₦{{ job.pay_max|floatformat:0 }} / {{ job.get_pay_type_display }}
+              {% elif job.pay_min %}
+                From ₦{{ job.pay_min|floatformat:0 }} / {{ job.get_pay_type_display }}
+              {% else %}
+                {{ job.get_pay_type_display }}
+              {% endif %}
+            </span>
+            {% if job.slots > 1 %}
+            <span class="jd-tag">
+              <i class="fas fa-users" style="font-size:0.65rem;color:var(--amber);"></i>
+              {{ job.slots }} position{{ job.slots|pluralize }} available
+            </span>
+            {% endif %}
+            {% for skill in job.required_skills.all|slice:":3" %}
+            <span class="jd-tag">{{ skill.name }}</span>
+            {% endfor %}
+            {% with extra=job.required_skills.all|length|add:"-3" %}
+            {% if extra > 0 %}
+            <span class="jd-tag" style="color:var(--text-3);">+{{ extra }} more skill{{ extra|pluralize }}</span>
+            {% endif %}
+            {% endwith %}
+          </div>
+
+        </div>{# /title block #}
+
+        {# AI match badge — only if the worker has a score for this job #}
+        {% if clip_score %}
+        <div class="jd-match-badge fade-in">
+          <div style="font-size:0.65rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">Your Match</div>
+          <div class="jd-match-score">{{ clip_score }}%</div>
+          <span class="jd-match-label">AI Score</span>
+          <div class="jd-match-sub">
+            <i class="fas fa-brain" style="color:var(--amber);font-size:0.62rem;"></i>
+            Hybrid AI
+          </div>
+        </div>
+        {% endif %}
+
+      </div>{# /hero-inner #}
+    </div>
+  </div>{# /hero #}
+
+
+  {# ── Body ── #}
+  <section class="jd-body">
+    <div class="container">
+      <div class="jd-layout">
+
+        {# ──────────────────── LEFT COLUMN ──────────────────── #}
+        <div class="jd-content">
+
+          {# Already applied banner #}
+          {% if has_applied and application %}
+          <div class="jd-applied-banner fade-up">
+            <div class="jd-applied-icon"><i class="fas fa-circle-check"></i></div>
+            <div style="flex:1;">
+              <div class="jd-applied-title">Application Submitted</div>
+              <div class="jd-applied-sub" style="margin-bottom:14px;">
+                You applied on {{ application.applied_at|date:"d M Y" }}.
+                {% if application.clip_match_score %}
+                  Your AI match score at time of application was
+                  <strong style="color:var(--amber);">{{ application.clip_match_score|floatformat:0|add:"0" }}%</strong>.
+                {% endif %}
+              </div>
+              {# Status timeline #}
+              <div class="jd-status-steps">
+                {% with st=application.status %}
+                <div class="jd-status-step done">
+                  <div class="jd-status-dot"><i class="fas fa-check" style="font-size:0.55rem;"></i></div>
+                  <div class="jd-status-step-label">Submitted</div>
+                </div>
+                <div class="jd-status-step {% if st == 'shortlisted' or st == 'accepted' %}done{% elif st == 'pending' %}active{% endif %}">
+                  <div class="jd-status-dot">
+                    {% if st == 'shortlisted' or st == 'accepted' %}<i class="fas fa-check" style="font-size:0.55rem;"></i>{% else %}2{% endif %}
+                  </div>
+                  <div class="jd-status-step-label">Under Review</div>
+                </div>
+                <div class="jd-status-step {% if st == 'shortlisted' or st == 'accepted' %}done{% endif %}">
+                  <div class="jd-status-dot">
+                    {% if st == 'shortlisted' or st == 'accepted' %}<i class="fas fa-check" style="font-size:0.55rem;"></i>{% else %}3{% endif %}
+                  </div>
+                  <div class="jd-status-step-label">Shortlisted</div>
+                </div>
+                <div class="jd-status-step {% if st == 'accepted' %}done{% endif %}">
+                  <div class="jd-status-dot">
+                    {% if st == 'accepted' %}<i class="fas fa-check" style="font-size:0.55rem;"></i>{% else %}4{% endif %}
+                  </div>
+                  <div class="jd-status-step-label">Accepted</div>
+                </div>
+                {% endwith %}
+              </div>
+              {% if application.employer_note %}
+              <div style="margin-top:14px;padding:12px 16px;background:rgba(255,255,255,0.02);border-radius:var(--r-md);border-left:3px solid var(--amber);font-size:0.85rem;color:var(--text-2);">
+                <strong style="display:block;color:var(--text-1);font-size:0.78rem;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Employer Note</strong>
+                {{ application.employer_note }}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          {# Description #}
+          <div class="fade-up">
+            <div class="jd-section-head">
+              <i class="fas fa-file-lines"></i>
+              Job Description
+            </div>
+            <div class="jd-description">{{ job.description }}</div>
+          </div>
+
+          {# Required skills #}
+          {% if job.required_skills.all %}
+          <div class="fade-up d1">
+            <div class="jd-section-head">
+              <i class="fas fa-tags"></i>
+              Required Skills
+            </div>
+            <div class="jd-skills-grid">
+              {% for skill in job.required_skills.all %}
+              <span class="jd-skill-chip">
+                <i class="fas fa-check-circle"></i>
+                {{ skill.name }}
+              </span>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          {# Inline apply section (shown/hidden by JS) #}
+          {% if request.user.is_authenticated and not has_applied %}
+          <div class="jd-apply-inline fade-up d2" id="applySection">
+            <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:800;margin-bottom:6px;">
+              Apply for this Job
+            </div>
+            <p style="font-size:0.85rem;color:var(--text-2);margin-bottom:20px;line-height:1.65;">
+              Your profile and skills will be sent to the employer.
+              Add a personal note below to stand out.
+            </p>
+            <form method="POST" action="{% url 'marketplace:job_apply' pk=job.pk %}">
+              {% csrf_token %}
+              <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:0.83rem;font-weight:600;color:var(--text-2);margin-bottom:8px;">
+                  Cover Note
+                  <span style="font-weight:400;color:var(--text-3);margin-left:4px;">(optional)</span>
+                </label>
+                <textarea
+                  name="cover_note"
+                  class="jd-apply-textarea"
+                  placeholder="Briefly introduce yourself and explain why you're a great fit…"
+                  rows="4"
+                ></textarea>
+                {% if form.cover_note.errors %}
+                <p style="font-size:0.77rem;color:#FCA5A5;margin-top:5px;display:flex;align-items:center;gap:4px;">
+                  <i class="fas fa-circle-exclamation"></i>{{ form.cover_note.errors.0 }}
+                </p>
+                {% endif %}
+              </div>
+              <div class="jd-apply-btn-row" style="display:flex;gap:10px;justify-content:flex-end;">
+                <button type="button" class="btn btn-ghost btn-sm" onclick="closeApply()">
+                  Cancel
+                </button>
+                <button type="submit" class="btn btn-primary btn-sm">
+                  <i class="fas fa-paper-plane"></i> Submit Application
+                </button>
+              </div>
+            </form>
+          </div>
+          {% endif %}
+
+          {# Reviews on this job #}
+          {% with reviews=job.reviews.all %}
+          {% if reviews %}
+          <div class="fade-up d2">
+            <div class="jd-section-head">
+              <i class="fas fa-star"></i>
+              Reviews for this Job
+              <span style="font-family:'Outfit';font-size:0.82rem;font-weight:400;color:var(--text-3);margin-left:4px;">({{ reviews|length }})</span>
+            </div>
+            <div>
+              {% for review in reviews %}
+              {% if review.is_visible %}
+              <div class="jd-review-item">
+                <div class="jd-review-header">
+                  <div class="jd-reviewer-avatar">
+                    {{ review.reviewer.get_full_name|default:review.reviewer.username|slice:":2"|upper }}
+                  </div>
+                  <div>
+                    <div class="jd-reviewer-name">{{ review.reviewer.get_full_name|default:review.reviewer.username }}</div>
+                    <div class="jd-review-stars">
+                      {% for i in "12345" %}{% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}{% endfor %}
+                    </div>
+                  </div>
+                  <span class="jd-review-date">{{ review.created_at|date:"d M Y" }}</span>
+                </div>
+                {% if review.comment %}
+                <p class="jd-review-text">"{{ review.comment }}"</p>
+                {% endif %}
+              </div>
+              {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+          {% endwith %}
+
+          {# Similar jobs #}
+          {% if similar_jobs %}
+          <div class="fade-up d3">
+            <div class="jd-section-head">
+              <i class="fas fa-briefcase"></i>
+              Similar Jobs
+            </div>
+            <div class="jd-similar-list">
+              {% for sj in similar_jobs %}
+              <a href="{% url 'marketplace:job_detail' pk=sj.pk %}" class="jd-similar-item">
+                <div class="jd-similar-logo">
+                  {% if sj.employer.logo %}
+                    <img src="{{ sj.employer.logo.url }}" alt="{{ sj.employer }}">
+                  {% else %}
+                    <i class="fas fa-building" style="color:var(--text-3);font-size:0.9rem;"></i>
+                  {% endif %}
+                </div>
+                <div style="min-width:0;flex:1;">
+                  <div class="jd-similar-title">{{ sj.title }}</div>
+                  <div class="jd-similar-sub">
+                    {{ sj.employer.company_name|default:sj.employer.user.username }}
+                    {% if sj.state %} · {{ sj.get_state_display }}{% endif %}
+                    · {{ sj.get_job_type_display }}
+                  </div>
+                </div>
+                {% if sj.pay_min %}
+                <div class="jd-similar-pay">₦{{ sj.pay_min|floatformat:0 }}</div>
+                {% endif %}
+              </a>
+              {% endfor %}
+            </div>
+            <div style="margin-top:16px;">
+              <a href="{% url 'marketplace:job_detail' pk=job.pk %}"
+                 class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;">
+                View all {{ job.trade_category.name }} jobs
+                <i class="fas fa-arrow-right" style="font-size:0.78rem;"></i>
+              </a>
+            </div>
+          </div>
+          {% endif %}
+
+        </div>{# /jd-content #}
+
+
+        
+        <div>
+          <div class="jd-action-card fade-in d1">
+
+            {# Pay + core info #}
+            <div class="jd-action-card-top">
+              {% if job.pay_min and job.pay_max and job.pay_type != 'negotiable' %}
+                <div class="jd-pay-range">
+                  ₦{{ job.pay_min|floatformat:0 }} – ₦{{ job.pay_max|floatformat:0 }}
+                  <span class="jd-pay-unit">/ {{ job.get_pay_type_display }}</span>
+                </div>
+              {% elif job.pay_min %}
+                <div class="jd-pay">
+                  ₦{{ job.pay_min|floatformat:0 }}
+                  <span class="jd-pay-unit">/ {{ job.get_pay_type_display }}</span>
+                </div>
+              {% else %}
+                <div class="jd-pay-negotiable">Pay negotiable</div>
+              {% endif %}
+
+              <div class="jd-info-list" style="margin-top:18px;">
+                <div class="jd-info-row">
+                  <div class="jd-info-icon"><i class="fas fa-clock"></i></div>
+                  <div>
+                    <div class="jd-info-label">Job Type</div>
+                    <div class="jd-info-val">{{ job.get_job_type_display }}</div>
+                  </div>
+                </div>
+                <div class="jd-info-row">
+                  <div class="jd-info-icon"><i class="fas fa-map-pin"></i></div>
+                  <div>
+                    <div class="jd-info-label">Location</div>
+                    <div class="jd-info-val">
+                      {{ job.get_state_display|default:job.state }}{% if job.lga %}, {{ job.lga }}{% endif %}
+                      {% if job.is_remote %} <span style="font-size:0.72rem;color:var(--sky);font-weight:600;margin-left:4px;">Remote</span>{% endif %}
+                    </div>
+                  </div>
+                </div>
+                <div class="jd-info-row">
+                  <div class="jd-info-icon"><i class="fas fa-users"></i></div>
+                  <div>
+                    <div class="jd-info-label">Positions</div>
+                    <div class="jd-info-val">{{ job.slots }} worker{{ job.slots|pluralize }} needed</div>
+                  </div>
+                </div>
+                {% if job.deadline %}
+                <div class="jd-info-row">
+                  <div class="jd-info-icon"><i class="fas fa-calendar-xmark"></i></div>
+                  <div>
+                    <div class="jd-info-label">Apply By</div>
+                    <div class="jd-info-val">{{ job.deadline|date:"d M Y" }}</div>
+                  </div>
+                </div>
+                {% endif %}
+                <div class="jd-info-row" style="border-bottom:none;">
+                  <div class="jd-info-icon"><i class="fas fa-layer-group"></i></div>
+                  <div>
+                    <div class="jd-info-label">Trade</div>
+                    <div class="jd-info-val">{{ job.trade_category.name|default:"—" }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {# CTA buttons #}
+            <div class="jd-action-card-btm">
+
+              {% if request.user.is_authenticated %}
+
+                {% if has_applied %}
+                  {# Already applied #}
+                  <div class="jd-applied-card">
+                    <i class="fas fa-circle-check"></i>
+                    <strong>Application Submitted</strong>
+                    <span>Status: {{ application.get_status_display }}</span>
+                  </div>
+                  <a href="{% url 'marketplace:worker_applications' %}"
+                     class="jd-btn-save" style="margin-top:2px;">
+                    <i class="fas fa-list"></i> View My Applications
+                  </a>
+
+                {% elif request.user.workerprofile %}
+                  {# Worker — not yet applied — show apply button #}
+                  <button
+                    type="button"
+                    class="jd-btn-apply"
+                    id="applyBtn"
+                    onclick="openApply()"
+                  >
+                    <i class="fas fa-paper-plane"></i>
+                    Apply Now
+                  </button>
+                  <a href="{% url 'marketplace:job_apply' pk=job.pk %}"
+                     class="jd-btn-save" style="font-size:0.82rem;color:var(--text-3);">
+                    Open full apply page →
+                  </a>
+
+                {% else %}
+                  {# Employer or user without worker profile #}
+                  <a href="{% url 'marketplace:job_apply' pk=job.pk %}"
+                     class="jd-btn-apply">
+                    <i class="fas fa-paper-plane"></i>
+                    Apply for the job
+                  </a>
+                {% endif %}
+
+                {# Save / unsave form (AJAX) #}
+                <form method="POST"
+                      action="{% url 'marketplace:job_save_toggle' pk=job.pk %}"
+                      id="saveForm">
+                  {% csrf_token %}
+                  <button type="submit"
+                          class="jd-btn-save {% if is_saved %}saved{% endif %}"
+                          id="saveBtn">
+                    <i class="{% if is_saved %}fas{% else %}far{% endif %} fa-heart"
+                       id="saveIcon"></i>
+                    <span id="saveLabel">{% if is_saved %}Saved{% else %}Save Job{% endif %}</span>
+                  </button>
+                </form>
+
+              {% else %}
+                {# Not logged in #}
+                <div class="jd-signin-prompt">
+                  <p>Sign in to apply for this job and get personalised AI match scores.</p>
+                  <a href="{% url 'signin' %}?next={{ request.path }}"
+                     class="jd-btn-apply" style="display:flex;">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Sign In to Apply
+                  </a>
+                </div>
+                <a href="{% url 'register' %}" class="jd-btn-save" style="margin-top:4px;font-size:0.84rem;">
+                  New here? Create a free account
+                </a>
+              {% endif %}
+
+            </div>{# /card-btm #}
+
+            {# Employer mini link #}
+            <a href="{% url 'marketplace:employer_profile_public' pk=job.employer.pk %}"
+               class="jd-employer-mini">
+              <div class="jd-employer-mini-logo">
+                {% if job.employer.logo %}
+                  <img src="{{ job.employer.logo.url }}" alt="{{ job.employer }}">
+                {% else %}
+                  <i class="fas fa-building" style="color:var(--amber);"></i>
+                {% endif %}
+              </div>
+              <div>
+                <div class="jd-employer-mini-name">
+                  {{ job.employer.company_name|default:job.employer.user.username }}
+                </div>
+                <div class="jd-employer-mini-type">
+                  {{ job.employer.get_company_type_display }}
+                  {% if job.employer.is_verified %}
+                  · <span style="color:var(--emerald);font-weight:600;">Verified</span>
+                  {% endif %}
+                </div>
+              </div>
+              <i class="fas fa-chevron-right jd-employer-mini-arrow"></i>
+            </a>
+
+          </div>{# /action-card #}
+
+          {# AI score breakdown card (only shown if score exists) #}
+          {% if clip_score %}
+          <div class="card fade-in d2" style="padding:20px;margin-top:14px;display:none;" id="scoreBreakdownCard">
+            <div style="font-family:'Fraunces',serif;font-size:0.95rem;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+              <i class="fas fa-brain" style="color:var(--amber);"></i> Your Match Breakdown
+            </div>
+            <div id="scoreBreakdownContent" style="font-size:0.8rem;color:var(--text-3);">Loading…</div>
+          </div>
+          {% endif %}
+
+        </div>{# /right column #}
+
+      </div>{# /jd-layout #}
+    </div>
+  </section>
+
+</div>{# /jd-page #}
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+
+/* ── Apply section toggle ── */
+function openApply() {
+  const sec = document.getElementById('applySection');
+  const btn = document.getElementById('applyBtn');
+  if (!sec) return;
+  sec.classList.add('open');
+  sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (btn) btn.style.display = 'none';
+}
+function closeApply() {
+  const sec = document.getElementById('applySection');
+  const btn = document.getElementById('applyBtn');
+  if (sec) sec.classList.remove('open');
+  if (btn) btn.style.display = '';
+}
+
+/* ── AJAX save / unsave toggle ── */
+const saveForm = document.getElementById('saveForm');
+if (saveForm) {
+  saveForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const csrfToken = this.querySelector('[name=csrfmiddlewaretoken]').value;
+    const btn   = document.getElementById('saveBtn');
+    const icon  = document.getElementById('saveIcon');
+    const label = document.getElementById('saveLabel');
+
+    fetch(this.action, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrfToken, 'Accept': 'application/json' },
+      credentials: 'same-origin',
+    })
+    .then(r => r.json())
+    .then(data => {
+      const saved = data.saved;
+      btn.classList.toggle('saved', saved);
+      icon.className  = saved ? 'fas fa-heart' : 'far fa-heart';
+      label.textContent = saved ? 'Saved' : 'Save Job';
+    })
+    .catch(() => {
+      /* fallback: let the form POST normally */
+      saveForm.removeEventListener('submit', arguments.callee);
+      saveForm.submit();
+    });
+  });
+}
+
+/* ── Auto-dismiss messages after 4 s ── */
+document.querySelectorAll('.jd-msg').forEach(el => {
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.4s';
+    el.style.opacity = '0';
+    setTimeout(() => el.remove(), 420);
+  }, 4000);
+});
+
+/* ── Scroll-triggered fade-up ── */
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.style.animationPlayState = 'running';
+      obs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.08 });
+
+document.querySelectorAll('.fade-up').forEach((el, i) => {
+  el.style.animationPlayState = 'paused';
+  el.style.animationDelay = el.style.animationDelay || (i * 0.06) + 's';
+  obs.observe(el);
+});
+
+/* ── Stagger similar job items ── */
+document.querySelectorAll('.jd-similar-item').forEach((el, i) => {
+  el.style.opacity = '0';
+  el.style.transform = 'translateX(-8px)';
+  el.style.transition = `opacity 0.4s ${0.1 + i * 0.07}s, transform 0.4s ${0.1 + i * 0.07}s`;
+  const sObs = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) {
+      el.style.opacity = '1';
+      el.style.transform = 'translateX(0)';
+      sObs.disconnect();
+    }
+  }, { threshold: 0.1 });
+  sObs.observe(el);
+});
+
+</script>
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Delete {{ contact.full_name }} — Contacts — TradeLink NG{% endblock %}
+{% block nav_contacts %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+  .delete-page {
+    padding-top: calc(var(--nav-h) + 60px);
+    min-height: 100vh; position: relative; z-index: 1;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding-bottom: 80px;
+  }
+  .delete-card {
+    width: 100%; max-width: 520px;
+    background: var(--bg-card);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(239,68,68,0.1);
+    animation: fadeUp 0.5s cubic-bezier(0.4,0,0.2,1) both;
+  }
+  .delete-card-header {
+    padding: 28px 32px 24px;
+    border-bottom: 1px solid rgba(239,68,68,0.15);
+    background: rgba(239,68,68,0.05);
+    text-align: center;
+  }
+  .delete-warning-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: rgba(239,68,68,0.12);
+    border: 2px solid rgba(239,68,68,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem; color: #EF4444;
+    margin: 0 auto 18px;
+  }
+  .delete-card-header h2 {
+    font-family: 'Fraunces', serif; font-size: 1.4rem; font-weight: 800;
+    color: #F87171; margin-bottom: 8px;
+  }
+  .delete-card-header p { color: var(--text-2); font-size: 0.9rem; line-height: 1.6; }
+
+  /* Contact preview */
+  .contact-preview {
+    display: flex; align-items: center; gap: 16px;
+    padding: 20px 32px; border-bottom: 1px solid var(--border-subtle);
+    background: var(--surface-1);
+  }
+  .preview-avatar {
+    width: 52px; height: 52px; border-radius: 50%;
+    object-fit: cover; border: 2px solid var(--border-subtle); flex-shrink: 0;
+  }
+  .preview-avatar-placeholder {
+    width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 800;
+    color: #0C0A08;
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    border: 2px solid rgba(245,158,11,0.3);
+  }
+  .preview-info { flex: 1; min-width: 0; }
+  .preview-name { font-weight: 700; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .preview-meta { font-size: 0.82rem; color: var(--text-3); margin-top: 3px; }
+
+  /* Warning list */
+  .delete-warnings {
+    padding: 20px 32px; border-bottom: 1px solid var(--border-subtle);
+  }
+  .delete-warnings ul {
+    list-style: none; display: flex; flex-direction: column; gap: 8px;
+    padding: 0; margin: 0;
+  }
+  .delete-warnings li {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 0.85rem; color: var(--text-2);
+  }
+  .delete-warnings li i {
+    width: 20px; text-align: center; color: #F87171; flex-shrink: 0;
+  }
+
+  /* Actions */
+  .delete-actions {
+    padding: 24px 32px;
+    display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap;
+  }
+  .delete-actions .btn { min-width: 130px; justify-content: center; }
+  .btn-danger {
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    color: #fff; border: none;
+    box-shadow: 0 4px 16px rgba(239,68,68,0.35);
+  }
+  .btn-danger:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(239,68,68,0.45); }
+
+  @media (max-width: 600px) {
+    .delete-card-header, .contact-preview, .delete-warnings, .delete-actions {
+      padding-left: 20px; padding-right: 20px;
+    }
+    .delete-actions { flex-direction: column; }
+    .delete-actions .btn { width: 100%; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="delete-page">
+  <div class="delete-card">
+
+    <!-- Header -->
+    <div class="delete-card-header">
+      <div class="delete-warning-icon">
+        <i class="fas fa-trash-alt"></i>
+      </div>
+      <h2>Delete Contact?</h2>
+      <p>
+        This action is <strong>permanent</strong> and cannot be undone.
+        All information for this contact will be removed.
+      </p>
+    </div>
+
+    <!-- Contact Preview -->
+    <div class="contact-preview">
+      {% if contact.avatar %}
+        <img src="{{ contact.avatar.url }}" class="preview-avatar" alt="{{ contact.full_name }}">
+      {% else %}
+        <div class="preview-avatar-placeholder">{{ contact.initials }}</div>
+      {% endif %}
+      <div class="preview-info">
+        <div class="preview-name">{{ contact.full_name }}</div>
+        <div class="preview-meta">
+          {% if contact.email %}{{ contact.email }}{% endif %}
+          {% if contact.email and contact.phone_primary %} · {% endif %}
+          {% if contact.phone_primary %}{{ contact.phone_primary }}{% endif %}
+          {% if contact.group %} · <span style="color:{{ contact.group.color }};">{{ contact.group.name }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- What will be deleted -->
+    <div class="delete-warnings">
+      <p style="font-size:0.8rem; font-weight:700; color:var(--text-3); letter-spacing:1px; text-transform:uppercase; margin-bottom:12px;">
+        The following will be permanently deleted:
+      </p>
+      <ul>
+        <li><i class="fas fa-user"></i> Contact profile and all personal information</li>
+        <li><i class="fas fa-history"></i> All {{ contact.interactions.count }} logged interaction{{ contact.interactions.count|pluralize }}</li>
+        <li><i class="fas fa-image"></i> Profile photo (if any)</li>
+        <li><i class="fas fa-sticky-note"></i> Private notes</li>
+      </ul>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="delete-actions">
+      <a href="{% url 'contacts:contact_detail' contact.pk %}" class="btn btn-ghost">
+        <i class="fas fa-arrow-left"></i> Keep Contact
+      </a>
+      <form method="post" style="margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">
+          <i class="fas fa-trash-alt"></i> Yes, Delete
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

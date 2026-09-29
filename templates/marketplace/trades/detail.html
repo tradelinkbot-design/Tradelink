@@ -1,0 +1,510 @@
+{% extends "base.html" %}
+{% block title %}{{ category.name }} Jobs — TradeLink NG{% endblock %}
+{% block nav_trades %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* =====================================================
+     TRADE DETAIL — /trades/<slug>/
+  ===================================================== */
+
+  .page-hero {
+    padding-top: calc(var(--nav-h) + 64px);
+    padding-bottom: 64px;
+    position: relative; z-index: 1;
+  }
+  .container {
+    max-width: 1200px; margin: 0 auto;
+    padding: 0 clamp(20px,4vw,48px);
+  }
+  .breadcrumb {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.82rem; color: var(--text-3);
+    margin-bottom: 28px;
+  }
+  .breadcrumb a { color: var(--text-3); text-decoration: none; transition: var(--t); }
+  .breadcrumb a:hover { color: var(--amber); }
+  .breadcrumb i { font-size: 0.65rem; }
+
+  .hero-row {
+    display: flex; align-items: flex-start;
+    gap: 28px; flex-wrap: wrap;
+  }
+  .hero-icon {
+    width: 72px; height: 72px; border-radius: 20px;
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem; color: var(--amber); flex-shrink: 0;
+    box-shadow: 0 8px 32px rgba(245,158,11,0.12);
+  }
+  .hero-text h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 900; line-height: 1.1;
+    letter-spacing: -1.5px; margin-bottom: 10px;
+  }
+  .amber-text {
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-text p {
+    color: var(--text-2); font-size: 0.95rem;
+    line-height: 1.75; max-width: 560px; margin-bottom: 20px;
+  }
+  .hero-pills { display: flex; gap: 10px; flex-wrap: wrap; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.8rem; font-weight: 600;
+    padding: 5px 14px; border-radius: var(--r-pill);
+    border: 1px solid var(--border-subtle);
+    background: var(--surface-1); color: var(--text-2);
+  }
+  .pill.amber { color: var(--amber); border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.08); }
+  .pill.green  { color: var(--emerald); border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.08); }
+  .pill i { font-size: 0.72rem; }
+
+  /* ===== LAYOUT ===== */
+  .detail-layout {
+    padding: 64px 0 96px;
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 40px;
+    align-items: start;
+    position: relative; z-index: 1;
+  }
+
+  /* ===== SECTION HEADERS ===== */
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 0.78rem; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--amber); margin-bottom: 12px;
+  }
+  .eyebrow::before {
+    content: ''; display: block; width: 20px; height: 2px;
+    background: var(--amber); border-radius: 2px;
+  }
+  .block-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.4rem; font-weight: 800;
+    letter-spacing: -0.5px; margin-bottom: 20px;
+  }
+
+  /* ===== JOB LIST ===== */
+  .jobs-block { margin-bottom: 48px; }
+  .job-list { display: flex; flex-direction: column; gap: 12px; }
+  .job-card {
+    padding: 22px 24px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center; gap: 18px;
+    cursor: pointer; text-decoration: none;
+    transition: var(--t);
+  }
+  .job-logo {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; color: var(--amber); flex-shrink: 0;
+  }
+  .job-info { min-width: 0; }
+  .job-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1rem; font-weight: 700;
+    color: var(--text-1); margin-bottom: 6px; transition: var(--t);
+  }
+  .job-card:hover .job-title { color: var(--amber); }
+  .job-meta {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    font-size: 0.8rem; color: var(--text-3); align-items: center;
+  }
+  .job-meta-item { display: flex; align-items: center; gap: 4px; }
+  .job-meta-item i { font-size: 0.72rem; }
+  .job-right {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+    flex-shrink: 0;
+  }
+  .job-pay {
+    font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 700;
+    color: var(--amber); white-space: nowrap;
+  }
+  .job-pay small {
+    font-family: 'Outfit', sans-serif; font-size: 0.72rem;
+    color: var(--text-3); font-weight: 400;
+  }
+  .job-tag {
+    font-size: 0.73rem; padding: 3px 10px;
+    border-radius: var(--r-pill); font-weight: 600;
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    color: var(--text-3);
+  }
+  .job-tag.full-time  { color: var(--emerald); border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.07); }
+  .job-tag.contract   { color: var(--sky);     border-color: rgba(56,189,248,0.3); background: rgba(56,189,248,0.07); }
+  .job-tag.once-off   { color: var(--orange);  border-color: rgba(249,115,22,0.3); background: rgba(249,115,22,0.07); }
+  .job-tag.part-time  { color: var(--amber);   border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.07); }
+
+  /* Pagination */
+  .pagination {
+    display: flex; align-items: center; gap: 6px;
+    justify-content: center; margin-top: 32px;
+    flex-wrap: wrap;
+  }
+  .page-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 36px; height: 36px; padding: 0 10px;
+    border-radius: var(--r-md); font-size: 0.85rem; font-weight: 600;
+    text-decoration: none; transition: var(--t);
+    color: var(--text-2); background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+  }
+  .page-btn:hover { background: var(--surface-2); border-color: var(--border-strong); color: var(--text-1); }
+  .page-btn.active { background: linear-gradient(135deg,var(--amber),var(--orange)); color: #0C0A08; border-color: transparent; }
+  .page-btn.disabled { opacity: 0.35; pointer-events: none; }
+
+  /* ===== WORKERS SIDEBAR BLOCK ===== */
+  .sidebar-sticky {
+    position: sticky; top: calc(var(--nav-h) + 24px);
+    display: flex; flex-direction: column; gap: 24px;
+  }
+  .sidebar-card {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl); padding: 24px; overflow: hidden;
+    position: relative;
+  }
+  .sidebar-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--surface-1) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .sidebar-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1rem; font-weight: 800; margin-bottom: 16px;
+    position: relative;
+  }
+  .worker-mini {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    text-decoration: none; transition: var(--t);
+  }
+  .worker-mini:last-child { border-bottom: none; padding-bottom: 0; }
+  .worker-mini:hover .wm-name { color: var(--amber); }
+  .wm-avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: linear-gradient(135deg,var(--amber),var(--orange));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; font-weight: 800; color: #0C0A08;
+    flex-shrink: 0;
+  }
+  .wm-info { min-width: 0; flex: 1; }
+  .wm-name {
+    font-size: 0.88rem; font-weight: 600; color: var(--text-1);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: var(--t);
+  }
+  .wm-meta { font-size: 0.75rem; color: var(--text-3); margin-top: 2px; }
+  .avail-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--emerald); flex-shrink: 0;
+  }
+
+  .sidebar-cta {
+    background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(249,115,22,0.08));
+    border: 1px solid rgba(245,158,11,0.2);
+  }
+  .sidebar-cta h3 {
+    font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 800;
+    margin-bottom: 8px; position: relative;
+  }
+  .sidebar-cta p {
+    font-size: 0.83rem; color: var(--text-2); margin-bottom: 16px;
+    line-height: 1.65; position: relative;
+  }
+  .sidebar-cta .btn { width: 100%; justify-content: center; position: relative; }
+
+  /* ===== EMPTY STATE ===== */
+  .empty-state {
+    text-align: center; padding: 60px 24px; color: var(--text-3);
+  }
+  .empty-state i {
+    font-size: 2.5rem; color: var(--border-strong);
+    margin-bottom: 16px; display: block;
+  }
+  .empty-state h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.2rem; color: var(--text-2); margin-bottom: 8px;
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 900px) {
+    .detail-layout { grid-template-columns: 1fr; }
+    .sidebar-sticky { position: static; }
+  }
+  @media (max-width: 600px) {
+    .hero-row { flex-direction: column; }
+    .job-card { grid-template-columns: auto 1fr; }
+    .job-right { display: none; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- PAGE HERO -->
+<section class="page-hero">
+  <div class="container">
+    <div class="breadcrumb">
+      <a href="{% url 'home' %}">Home</a>
+      <i class="fas fa-chevron-right"></i>
+      <a href="{% url 'marketplace:trade_list' %}">Trades</a>
+      <i class="fas fa-chevron-right"></i>
+      <span>{{ category.name }}</span>
+    </div>
+
+    <div class="hero-row fade-up">
+      <div class="hero-icon">
+        {% if category.icon_class %}
+          <i class="{{ category.icon_class }}"></i>
+        {% else %}
+          <i class="fas fa-tools"></i>
+        {% endif %}
+      </div>
+      <div class="hero-text">
+        <h1>{{ category.name }}<br><span class="amber-text">Jobs in Nigeria</span></h1>
+        {% if category.description %}
+          <p>{{ category.description }}</p>
+        {% endif %}
+        <div class="hero-pills">
+          <span class="pill amber">
+            <i class="fas fa-briefcase"></i>
+            {{ jobs.paginator.count }} Active Job{{ jobs.paginator.count|pluralize }}
+          </span>
+          <span class="pill green">
+            <i class="fas fa-users"></i>
+            {{ workers|length }} Available Worker{{ workers|length|pluralize }}
+          </span>
+          {% if category.skills.count %}
+            <span class="pill">
+              <i class="fas fa-tag"></i>
+              {{ category.skills.count }} Skill{{ category.skills.count|pluralize }}
+            </span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MAIN CONTENT -->
+<div class="container">
+  <div class="detail-layout">
+
+    <!-- LEFT: JOB LISTINGS -->
+    <main>
+      <div class="jobs-block">
+        <p class="eyebrow">Open Positions</p>
+        <h2 class="block-title">
+          {{ jobs.paginator.count }} Job{{ jobs.paginator.count|pluralize }}
+          in <span class="amber-text">{{ category.name }}</span>
+        </h2>
+
+        {% if jobs %}
+          <div class="job-list">
+            {% for job in jobs %}
+              <a href="{% url 'marketplace:job_detail' pk=job.pk %}" class="card job-card fade-up">
+                <div class="job-logo">
+                  {% if job.employer.logo %}
+                    <img src="{{ job.employer.logo.url }}" alt="{{ job.employer }}"
+                         style="width:100%;height:100%;object-fit:cover;border-radius:12px;">
+                  {% else %}
+                    <i class="fas fa-building"></i>
+                  {% endif %}
+                </div>
+
+                <div class="job-info">
+                  <div class="job-title">{{ job.title }}</div>
+                  <div class="job-meta">
+                    <span class="job-meta-item">
+                      <i class="fas fa-building"></i>
+                      {{ job.employer.company_name|default:job.employer.user.username }}
+                    </span>
+                    {% if job.state %}
+                      <span class="job-meta-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        {{ job.get_state_display }}
+                      </span>
+                    {% endif %}
+                    {% if job.is_remote %}
+                      <span class="job-meta-item" style="color:var(--sky);">
+                        <i class="fas fa-wifi"></i> Remote
+                      </span>
+                    {% endif %}
+                    <span class="job-meta-item">
+                      <i class="far fa-clock"></i>
+                      {{ job.created|timesince }} ago
+                    </span>
+                    {% if job.deadline %}
+                      <span class="job-meta-item" style="color:var(--orange);">
+                        <i class="fas fa-hourglass-half"></i>
+                        Closes {{ job.deadline|date:"M d" }}
+                      </span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="job-right">
+                  {% if job.pay_min or job.pay_max %}
+                    <div class="job-pay">
+                      {% if job.pay_min and job.pay_max %}
+                        ₦{{ job.pay_min|floatformat:"0" }}–{{ job.pay_max|floatformat:"0" }}
+                      {% elif job.pay_min %}
+                        ₦{{ job.pay_min|floatformat:"0" }}+
+                      {% endif %}
+                      <small>/{{ job.get_pay_type_display }}</small>
+                    </div>
+                  {% elif job.pay_type == 'negotiable' %}
+                    <div class="job-pay">Negotiable</div>
+                  {% endif %}
+                  <span class="job-tag {% if job.job_type == 'full_time' %}full-time{% elif job.job_type == 'contract' %}contract{% elif job.job_type == 'once_off' %}once-off{% elif job.job_type == 'part_time' %}part-time{% endif %}">
+                    {{ job.get_job_type_display }}
+                  </span>
+                </div>
+              </a>
+            {% endfor %}
+          </div>
+
+          <!-- PAGINATION -->
+          {% if jobs.has_other_pages %}
+            <div class="pagination">
+              {% if jobs.has_previous %}
+                <a href="?page={{ jobs.previous_page_number }}" class="page-btn">
+                  <i class="fas fa-chevron-left"></i>
+                </a>
+              {% else %}
+                <span class="page-btn disabled"><i class="fas fa-chevron-left"></i></span>
+              {% endif %}
+
+              {% for num in jobs.paginator.page_range %}
+                {% if jobs.number == num %}
+                  <span class="page-btn active">{{ num }}</span>
+                {% elif num > jobs.number|add:'-3' and num < jobs.number|add:'3' %}
+                  <a href="?page={{ num }}" class="page-btn">{{ num }}</a>
+                {% endif %}
+              {% endfor %}
+
+              {% if jobs.has_next %}
+                <a href="?page={{ jobs.next_page_number }}" class="page-btn">
+                  <i class="fas fa-chevron-right"></i>
+                </a>
+              {% else %}
+                <span class="page-btn disabled"><i class="fas fa-chevron-right"></i></span>
+              {% endif %}
+            </div>
+          {% endif %}
+
+        {% else %}
+          <div class="empty-state">
+            <i class="fas fa-briefcase"></i>
+            <h3>No active jobs right now</h3>
+            <p>Be the first to post a {{ category.name }} job in Nigeria.</p>
+            <a href="{% url 'marketplace:job_create' %}" class="btn btn-primary" style="margin-top:20px;">
+              <i class="fas fa-plus"></i> Post a Job
+            </a>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- SKILLS IN THIS TRADE -->
+      {% if category.skills.all %}
+        <div style="margin-top:8px;">
+          <p class="eyebrow">Related Skills</p>
+          <h3 class="block-title" style="font-size:1.15rem;">Skills under {{ category.name }}</h3>
+          <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            {% for skill in category.skills.all %}
+              <span style="font-size:0.82rem; padding:5px 14px;
+                    background:var(--surface-1); border:1px solid var(--border-subtle);
+                    border-radius:var(--r-pill); color:var(--text-2);">
+                {{ skill.name }}
+              </span>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    </main>
+
+    <!-- RIGHT: SIDEBAR -->
+    <aside>
+      <div class="sidebar-sticky">
+
+        <!-- AVAILABLE WORKERS -->
+        {% if workers %}
+          <div class="sidebar-card">
+            <div class="sidebar-title">
+              <p class="eyebrow" style="margin-bottom:8px;">Top Workers</p>
+              Available {{ category.name }}s
+            </div>
+            {% for worker in workers %}
+              <a href="{% url 'marketplace:worker_profile_public' pk=worker.pk %}" class="worker-mini">
+                <div class="wm-avatar">
+                  {% if worker.photo %}
+                    <img src="{{ worker.photo.url }}" alt="{{ worker.user.get_full_name }}"
+                         style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                  {% else %}
+                    {{ worker.user.first_name.0|upper }}{{ worker.user.last_name.0|upper }}
+                  {% endif %}
+                </div>
+                <div class="wm-info">
+                  <div class="wm-name">{{ worker.user.get_full_name|default:worker.user.username }}</div>
+                  <div class="wm-meta">
+                    {% if worker.state %}{{ worker.get_state_display }} · {% endif %}
+                    {{ worker.get_experience_level_display }}
+                  </div>
+                </div>
+                {% if worker.availability == 'available' %}
+                  <div class="avail-dot" title="Available Now"></div>
+                {% endif %}
+              </a>
+            {% endfor %}
+            <a href="{% url 'marketplace:trade_list' %}"
+               style="display:block; text-align:center; font-size:0.82rem;
+                      color:var(--amber); margin-top:16px; text-decoration:none;
+                      transition:var(--t);">
+              View all trades <i class="fas fa-arrow-right" style="font-size:0.7rem;"></i>
+            </a>
+          </div>
+        {% endif %}
+
+        <!-- POST A JOB CTA -->
+        <div class="sidebar-card sidebar-cta">
+          <h3>Hiring a {{ category.name }}?</h3>
+          <p>Post your job in minutes and get matched with verified {{ category.name }}s across Nigeria.</p>
+          <a href="{% url 'marketplace:job_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Post a Job — Free
+          </a>
+        </div>
+
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.animationPlayState = 'running';
+      }
+    });
+  }, { threshold: 0.08 });
+
+  document.querySelectorAll('.fade-up').forEach((el, i) => {
+    el.style.animationPlayState = 'paused';
+    el.style.animationDelay = `${i * 60}ms`;
+    observer.observe(el);
+  });
+</script>
+{% endblock %}

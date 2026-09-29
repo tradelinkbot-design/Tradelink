@@ -1,0 +1,1180 @@
+{% extends "base.html" %}
+{% block title %}Post a Job — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+/* =====================================================
+   JOB CREATE — TradeLink NG
+   Context: form (JobForm), unread_count
+   Job is published ACTIVE immediately on valid submit.
+===================================================== */
+
+/* ── PAGE SHELL ── */
+.jc-page { padding-top: var(--nav-h); min-height: 100vh; }
+
+/* ── PAGE HEADER ── */
+.jc-header {
+  background: linear-gradient(
+    180deg,
+    rgba(249,115,22,0.05) 0%,
+    rgba(245,158,11,0.02) 60%,
+    transparent 100%
+  );
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 40px 0 36px;
+  position: relative; overflow: hidden;
+}
+.jc-header::before {
+  content: '';
+  position: absolute; top: -100px; right: -60px;
+  width: 400px; height: 400px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(249,115,22,0.07), transparent 65%);
+  pointer-events: none;
+}
+.jc-header-inner {
+  max-width: 1100px; margin: 0 auto;
+  padding: 0 clamp(20px,5vw,64px);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 20px; flex-wrap: wrap;
+}
+.jc-header-left { display: flex; align-items: center; gap: 18px; }
+.jc-header-icon {
+  width: 56px; height: 56px; border-radius: 16px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--orange), var(--amber));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; color: #0C0A08;
+  box-shadow: 0 6px 24px rgba(249,115,22,0.3);
+}
+.jc-header-title {
+  font-family: 'Fraunces', serif; font-size: 1.55rem;
+  font-weight: 900; letter-spacing: -0.5px; color: var(--text-1);
+  margin-bottom: 3px;
+}
+.jc-header-sub { font-size: 0.85rem; color: var(--text-2); }
+.jc-header-sub a { color: var(--amber); text-decoration: none; transition: var(--t); }
+.jc-header-sub a:hover { color: var(--amber-light); text-decoration: underline; }
+
+/* Live badge shown when form is valid */
+.jc-live-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: rgba(16,185,129,0.10); border: 1px solid rgba(16,185,129,0.22);
+  border-radius: var(--r-pill); padding: 7px 16px;
+  font-size: 0.78rem; font-weight: 700; color: #6EE7B7;
+  flex-shrink: 0;
+}
+.jc-live-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--emerald); flex-shrink: 0;
+  animation: pulseDot 2s ease-in-out infinite;
+}
+
+/* ── BODY LAYOUT ── */
+.jc-body {
+  max-width: 1100px; margin: 0 auto;
+  padding: 44px clamp(20px,5vw,64px) 80px;
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 40px; align-items: start;
+}
+
+/* ── MESSAGES ── */
+.jc-messages { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 10px; }
+.jc-msg {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 18px; border-radius: var(--r-lg); font-size: 0.88rem;
+}
+.jc-msg-success { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); color: #6ee7b7; }
+.jc-msg-error   { background: rgba(239,68,68,0.08);  border: 1px solid rgba(239,68,68,0.2);  color: #fca5a5; }
+.jc-msg i { font-size: 0.85rem; margin-top: 2px; flex-shrink: 0; }
+
+/* ── SECTION CARD ── */
+.jc-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); overflow: hidden; margin-bottom: 24px;
+}
+.jc-card:last-child { margin-bottom: 0; }
+.jc-card-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+}
+.jc-card-header::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--orange), var(--amber));
+}
+.jc-card-title {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 800;
+  color: var(--text-1);
+}
+.jc-card-icon {
+  width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+  background: rgba(249,115,22,0.10); border: 1px solid rgba(249,115,22,0.18);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; color: var(--orange);
+}
+.jc-card-body { padding: 24px; }
+
+/* ── FORM FIELDS ── */
+.jc-field-grid   { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.jc-field-grid .jc-field-full { grid-column: 1 / -1; }
+.jc-pay-grid     { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+.jc-field { display: flex; flex-direction: column; gap: 7px; }
+.jc-label {
+  font-size: 0.82rem; font-weight: 600; color: var(--text-2);
+  display: flex; align-items: center; gap: 6px;
+}
+.jc-label-required { color: var(--amber); font-size: 0.75rem; }
+.jc-help { font-size: 0.77rem; color: var(--text-3); margin-top: -2px; }
+
+.jc-input,
+.jc-select,
+.jc-textarea {
+  width: 100%;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); color: var(--text-1);
+  font-family: 'Outfit', sans-serif; font-size: 0.92rem;
+  transition: var(--t); outline: none;
+}
+.jc-input   { padding: 11px 14px; }
+.jc-select  {
+  padding: 11px 14px; cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(250,245,235,0.3)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center;
+}
+.jc-textarea { padding: 11px 14px; resize: vertical; min-height: 140px; }
+.jc-input:focus, .jc-select:focus, .jc-textarea:focus {
+  border-color: var(--amber);
+  background: rgba(245,158,11,0.04);
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+}
+.jc-input::placeholder, .jc-textarea::placeholder { color: var(--text-3); }
+.jc-select option { background: var(--bg-card); color: var(--text-1); }
+
+/* Field error */
+.jc-field.has-error .jc-input,
+.jc-field.has-error .jc-select,
+.jc-field.has-error .jc-textarea {
+  border-color: rgba(239,68,68,0.5);
+  background: rgba(239,68,68,0.04);
+}
+.jc-field-error {
+  font-size: 0.77rem; color: #fca5a5;
+  display: flex; align-items: center; gap: 5px; margin-top: 2px;
+}
+.jc-field-error i { font-size: 0.7rem; }
+
+/* Checkbox row (is_remote) */
+.jc-checkbox-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); cursor: pointer; transition: var(--t);
+}
+.jc-checkbox-row:hover { border-color: var(--border-strong); background: var(--surface-1); }
+.jc-checkbox-row input[type="checkbox"] {
+  width: 18px; height: 18px; accent-color: var(--amber); cursor: pointer; flex-shrink: 0;
+}
+.jc-checkbox-label { font-size: 0.9rem; color: var(--text-2); font-weight: 500; cursor: pointer; }
+.jc-checkbox-row:has(input:checked) {
+  background: rgba(245,158,11,0.07); border-color: rgba(245,158,11,0.25);
+}
+.jc-checkbox-row:has(input:checked) .jc-checkbox-label { color: var(--amber); }
+
+/* Pay prefix (₦) */
+.jc-input-prefix { position: relative; }
+.jc-input-prefix .jc-prefix-sym {
+  position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+  font-size: 0.85rem; color: var(--text-3); pointer-events: none;
+}
+.jc-input-prefix .jc-input { padding-left: 28px; }
+
+/* ── SKILLS SECTION ── */
+.jc-skills-panel {
+  background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); padding: 16px;
+  min-height: 80px;
+}
+.jc-skills-empty {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.85rem; color: var(--text-3);
+  padding: 8px 0;
+}
+.jc-skills-empty i { font-size: 0.9rem; }
+.jc-skills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+.jc-skill-check {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 13px;
+  background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md); cursor: pointer; transition: var(--t);
+  font-size: 0.83rem; color: var(--text-2);
+}
+.jc-skill-check:hover { border-color: var(--border-strong); background: var(--surface-1); }
+.jc-skill-check input[type="checkbox"] {
+  width: 15px; height: 15px; accent-color: var(--amber); cursor: pointer; flex-shrink: 0;
+}
+.jc-skill-check input:checked + span { color: var(--text-1); font-weight: 600; }
+.jc-skill-check:has(input:checked) {
+  border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.06);
+}
+.jc-skills-loading {
+  display: none; align-items: center; gap: 10px;
+  font-size: 0.83rem; color: var(--text-3);
+}
+.jc-skills-loading i { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── SUBMIT BAR ── (NO fade-up — same fix as all other edit templates) */
+.jc-submit-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+  padding: 20px 24px;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl);
+  position: sticky; bottom: 20px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+  backdrop-filter: blur(12px);
+  z-index: 10;
+  opacity: 1 !important;
+  transform: none !important;
+}
+.jc-submit-hint { font-size: 0.8rem; color: var(--text-3); }
+.jc-submit-hint i { color: var(--orange); margin-right: 5px; }
+.jc-submit-actions { display: flex; gap: 12px; align-items: center; }
+.jc-btn-cancel {
+  padding: 11px 22px;
+  background: transparent; border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md); color: var(--text-2);
+  font-family: 'Outfit', sans-serif; font-size: 0.9rem; font-weight: 600;
+  cursor: pointer; text-decoration: none; transition: var(--t);
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.jc-btn-cancel:hover { background: var(--surface-1); color: var(--text-1); border-color: var(--border-strong); }
+.jc-btn-save {
+  padding: 11px 28px;
+  background: linear-gradient(135deg, var(--orange), var(--amber));
+  border: none; border-radius: var(--r-md);
+  color: #0C0A08; font-family: 'Outfit', sans-serif;
+  font-size: 0.92rem; font-weight: 700;
+  cursor: pointer; transition: var(--t);
+  display: inline-flex; align-items: center; gap: 8px;
+  box-shadow: 0 4px 20px rgba(249,115,22,0.3);
+}
+.jc-btn-save:hover { filter: brightness(1.06); transform: translateY(-1px); box-shadow: 0 8px 28px rgba(249,115,22,0.4); }
+.jc-btn-save:active { transform: translateY(0); }
+
+/* ── SIDEBAR ── */
+.jc-sidebar { display: flex; flex-direction: column; gap: 18px; }
+
+.jc-tip-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 20px; overflow: hidden; position: relative;
+}
+.jc-tip-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(249,115,22,0.04), transparent 70%);
+  pointer-events: none;
+}
+.jc-tip-title {
+  font-family: 'Fraunces', serif; font-size: 0.92rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.jc-tip-title i { color: var(--orange); font-size: 0.82rem; }
+.jc-tip-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.jc-tip-item {
+  display: flex; align-items: flex-start; gap: 9px;
+  font-size: 0.82rem; color: var(--text-2); line-height: 1.55;
+}
+.jc-tip-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--orange); flex-shrink: 0; margin-top: 7px;
+}
+
+/* Live preview card */
+.jc-preview-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 20px;
+}
+.jc-preview-title-text {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 700;
+  color: var(--text-1); margin-bottom: 8px; line-height: 1.3;
+}
+.jc-preview-row {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 0.78rem; color: var(--text-3); margin-bottom: 5px;
+}
+.jc-preview-row i { font-size: 0.7rem; width: 12px; text-align: center; }
+.jc-preview-pay {
+  font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 700;
+  color: var(--amber); margin-top: 10px;
+}
+.jc-preview-pay small { font-family: 'Outfit', sans-serif; font-size: 0.72rem; color: var(--text-3); font-weight: 400; }
+
+/* Quick links */
+.jc-quick-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 20px;
+}
+.jc-quick-title {
+  font-family: 'Fraunces', serif; font-size: 0.92rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.jc-quick-title i { color: var(--orange); font-size: 0.82rem; }
+.jc-quick-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--r-md);
+  text-decoration: none; color: var(--text-2);
+  font-size: 0.86rem; font-weight: 500;
+  transition: var(--t); margin-bottom: 4px;
+}
+.jc-quick-link:last-child { margin-bottom: 0; }
+.jc-quick-link:hover { background: var(--surface-1); color: var(--text-1); }
+.jc-quick-link i { width: 16px; text-align: center; color: var(--text-3); font-size: 0.78rem; }
+.jc-quick-link:hover i { color: var(--orange); }
+.jc-quick-badge {
+  margin-left: auto; font-size: 0.7rem; font-weight: 600;
+  padding: 2px 8px; border-radius: var(--r-pill);
+  background: var(--surface-1); border: 1px solid var(--border-subtle); color: var(--text-3);
+}
+
+/* AI info box */
+.jc-ai-box {
+  background: linear-gradient(135deg, rgba(245,158,11,0.06), rgba(249,115,22,0.04));
+  border: 1px solid rgba(245,158,11,0.18);
+  border-radius: var(--r-xl); padding: 18px 20px;
+}
+.jc-ai-box-title {
+  font-size: 0.82rem; font-weight: 700; color: var(--amber);
+  display: flex; align-items: center; gap: 7px; margin-bottom: 10px;
+}
+.jc-ai-box p { font-size: 0.8rem; color: var(--text-2); line-height: 1.65; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .jc-body { grid-template-columns: 1fr; }
+  .jc-sidebar { order: -1; }
+  .jc-field-grid { grid-template-columns: 1fr; }
+  .jc-pay-grid   { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  .jc-header-inner { flex-direction: column; align-items: flex-start; }
+  .jc-submit-bar   { position: static; flex-direction: column; align-items: stretch; }
+  .jc-submit-actions { flex-direction: column; }
+  .jc-btn-cancel, .jc-btn-save { justify-content: center; }
+  .jc-pay-grid { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="jc-page">
+
+  {# ── PAGE HEADER ── #}
+  <div class="jc-header">
+    <div class="jc-header-inner">
+      <div class="jc-header-left">
+        <div class="jc-header-icon">
+          <i class="fas fa-briefcase"></i>
+        </div>
+        <div>
+          <div class="jc-header-title">Post a New Job</div>
+          <div class="jc-header-sub">
+            <a href="{% url 'marketplace:employer_dashboard' %}">
+              <i class="fas fa-chevron-left" style="font-size:0.7rem;"></i> Dashboard
+            </a>
+            &nbsp;·&nbsp; Your listing goes live immediately after posting
+          </div>
+        </div>
+      </div>
+      <div class="jc-live-badge">
+        <span class="jc-live-dot"></span>
+        Posts live immediately
+      </div>
+    </div>
+  </div>
+
+  {# ── BODY ── #}
+  <div class="jc-body">
+
+    {# ── DJANGO MESSAGES ── #}
+    {% if messages %}
+    <div class="jc-messages">
+      {% for msg in messages %}
+      <div class="jc-msg {% if msg.tags == 'success' %}jc-msg-success{% else %}jc-msg-error{% endif %}">
+        <i class="fas {% if msg.tags == 'success' %}fa-circle-check{% else %}fa-circle-exclamation{% endif %}"></i>
+        {{ msg }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+
+    <div>
+      <form
+        method="POST"
+        action="{% url 'marketplace:job_create' %}"
+        id="jobCreateForm"
+        novalidate
+      >
+        {% csrf_token %}
+
+        {# ─── 1. Trade & Title ─── #}
+        <div class="jc-card fade-up">
+          <div class="jc-card-header">
+            <div class="jc-card-icon"><i class="fas fa-hard-hat"></i></div>
+            <div class="jc-card-title">Trade &amp; Job Title</div>
+          </div>
+          <div class="jc-card-body">
+            <div class="jc-field-grid">
+
+              {# Trade Category #}
+              <div class="jc-field {% if form.trade_category.errors %}has-error{% endif %}">
+                <label class="jc-label" for="{{ form.trade_category.id_for_label }}">
+                  Trade Category <span class="jc-label-required">✱</span>
+                </label>
+                <select
+                  name="{{ form.trade_category.html_name }}"
+                  id="{{ form.trade_category.id_for_label }}"
+                  class="jc-select"
+                  id="tradeCategorySelect"
+                >
+                  <option value="">— Select a trade —</option>
+                  {% for val, label in form.trade_category.field.choices %}
+                    {% if val %}
+                    <option value="{{ val }}"
+                      {% if form.trade_category.value|stringformat:"s" == val|stringformat:"s" %}selected{% endif %}>
+                      {{ label }}
+                    </option>
+                    {% endif %}
+                  {% endfor %}
+                </select>
+                {% if form.trade_category.errors %}
+                  <span class="jc-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.trade_category.errors.0 }}
+                  </span>
+                {% else %}
+                  <span class="jc-help">Choosing the right trade ensures your job reaches the right workers.</span>
+                {% endif %}
+              </div>
+
+              {# Job Title #}
+              <div class="jc-field {% if form.title.errors %}has-error{% endif %}">
+                <label class="jc-label" for="{{ form.title.id_for_label }}">
+                  Job Title <span class="jc-label-required">✱</span>
+                </label>
+                <input
+                  type="text"
+                  name="{{ form.title.html_name }}"
+                  id="jobTitleInput"
+                  value="{{ form.title.value|default:'' }}"
+                  class="jc-input"
+                  placeholder="e.g. Senior Electrician — Industrial"
+                  maxlength="256"
+                >
+                {% if form.title.errors %}
+                  <span class="jc-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.title.errors.0 }}
+                  </span>
+                {% else %}
+                  <span class="jc-help">Be specific — good titles get 40% more applications.</span>
+                {% endif %}
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {# ─── 2. Required Skills (dynamic — loaded by JS when trade changes) ─── #}
+        <div class="jc-card fade-up d1">
+          <div class="jc-card-header">
+            <div class="jc-card-icon"><i class="fas fa-tools"></i></div>
+            <div class="jc-card-title">Required Skills</div>
+            <span id="skillsSelectedCount"
+                  style="margin-left:auto; font-size:0.78rem; font-weight:600;
+                         color:var(--amber); background:rgba(245,158,11,0.1);
+                         border:1px solid rgba(245,158,11,0.2);
+                         border-radius:var(--r-pill); padding:2px 10px;
+                         display:none;">
+              0 selected
+            </span>
+          </div>
+          <div class="jc-card-body" style="padding-top:16px;">
+
+            <p style="font-size:0.8rem; color:var(--text-3); margin-bottom:16px;">
+              <i class="fas fa-brain" style="color:var(--amber); margin-right:5px;"></i>
+              Our AI uses these skills to match your job to the most suitable workers.
+              The more accurate you are, the better your matches.
+            </p>
+
+            {# Loading spinner — shown while fetching skills #}
+            <div class="jc-skills-loading" id="skillsLoading">
+              <i class="fas fa-circle-notch"></i>
+              <span>Loading skills…</span>
+            </div>
+
+            {# Skills panel — populated by JS #}
+            <div class="jc-skills-panel" id="skillsPanel">
+              <div class="jc-skills-empty" id="skillsEmpty">
+                <i class="fas fa-arrow-up"></i>
+                <span>Select a trade category above to see available skills.</span>
+              </div>
+              {# If form was submitted with errors, re-render the existing checked skills #}
+              <div class="jc-skills-grid" id="skillsGrid" style="display:none;">
+                {% for choice in form.required_skills %}
+                  <label class="jc-skill-check">
+                    {{ choice.tag }}
+                    <span>{{ choice.choice_label }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+
+            {% if form.required_skills.errors %}
+              <span class="jc-field-error" style="margin-top:8px;">
+                <i class="fas fa-circle-exclamation"></i> {{ form.required_skills.errors.0 }}
+              </span>
+            {% endif %}
+          </div>
+        </div>
+
+        {# ─── 3. Job Description ─── #}
+        <div class="jc-card fade-up d2">
+          <div class="jc-card-header">
+            <div class="jc-card-icon"><i class="fas fa-align-left"></i></div>
+            <div class="jc-card-title">Job Description</div>
+          </div>
+          <div class="jc-card-body">
+            <div class="jc-field {% if form.description.errors %}has-error{% endif %}">
+              <label class="jc-label" for="{{ form.description.id_for_label }}">
+                Full Description <span class="jc-label-required">✱</span>
+              </label>
+              <textarea
+                name="{{ form.description.html_name }}"
+                id="{{ form.description.id_for_label }}"
+                rows="7"
+                class="jc-textarea"
+                placeholder="Describe the role in detail:&#10;• What the worker will be doing day-to-day&#10;• Tools, materials, or equipment involved&#10;• Experience and qualifications required&#10;• Site conditions and working hours&#10;• Anything that helps the right person self-select"
+                maxlength="5000"
+              >{{ form.description.value|default:'' }}</textarea>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                {% if form.description.errors %}
+                  <span class="jc-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.description.errors.0 }}
+                  </span>
+                {% else %}
+                  <span class="jc-help">
+                    This is the primary text our AI reads to match workers. More detail = better matches.
+                  </span>
+                {% endif %}
+                <span id="descCount" style="font-size:0.74rem; color:var(--text-3); flex-shrink:0; margin-left:12px;">
+                  0 / 5000
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# ─── 4. Job Type & Pay ─── #}
+        <div class="jc-card fade-up d2">
+          <div class="jc-card-header">
+            <div class="jc-card-icon"><i class="fas fa-naira-sign"></i></div>
+            <div class="jc-card-title">Job Type &amp; Pay</div>
+          </div>
+          <div class="jc-card-body">
+
+            {# Job type + Pay type on one row #}
+            <div class="jc-field-grid" style="margin-bottom:20px;">
+
+              <div class="jc-field {% if form.job_type.errors %}has-error{% endif %}">
+                <label class="jc-label" for="{{ form.job_type.id_for_label }}">
+                  Job Type <span class="jc-label-required">✱</span>
+                </label>
+                <select
+                  name="{{ form.job_type.html_name }}"
+                  id="{{ form.job_type.id_for_label }}"
+                  class="jc-select"
+                  id="jobTypeSelect"
+                >
+                  {% for val, label in form.job_type.field.choices %}
+                  <option value="{{ val }}"
+                    {% if form.job_type.value == val %}selected{% endif %}>
+                    {{ label }}
+                  </option>
+                  {% endfor %}
+                </select>
+                {% if form.job_type.errors %}
+                  <span class="jc-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.job_type.errors.0 }}
+                  </span>
+                {% endif %}
+              </div>
+
+              <div class="jc-field {% if form.pay_type.errors %}has-error{% endif %}">
+                <label class="jc-label" for="{{ form.pay_type.id_for_label }}">
+                  Pay Structure <span class="jc-label-required">✱</span>
+                </label>
+                <select
+                  name="{{ form.pay_type.html_name }}"
+                  id="{{ form.pay_type.id_for_label }}"
+                  class="jc-select"
+                  id="payTypeSelect"
+                >
+                  {% for val, label in form.pay_type.field.choices %}
+                  <option value="{{ val }}"
+                    {% if form.pay_type.value == val %}selected{% endif %}>
+                    {{ label }}
+                  </option>
+                  {% endfor %}
+                </select>
+                {% if form.pay_type.errors %}
+                  <span class="jc-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.pay_type.errors.0 }}
+                  </span>
+                {% endif %}
+              </div>
+
+            </div>
+
+            {# Pay range + slots on one row #}
+            <div class="jc-pay-grid">
+
+              <div class="jc-field {% if form.pay_min.errors %}has-error{% endif %}">
+                <label class="jc-label" for="{{ form.pay_min.id_for_label }}">Min Pay (₦)</label>
+                <div class="jc-input-prefix">
+                  <span class="jc-prefix-sym">₦</span>
+                  <input
+                    type="number" min="0" step="1000"
+                    name="{{ form.pay_min.html_name }}"
+                    id="{{ form.pay_min.id_for_label }}"
+                    value="{{ form.pay_min.value|default:'' }}"
+                    class="jc-input"
+                    placeholder="e.g. 150000"
+                    id="payMinInput"
+                  >
+                </div>
+                {% if form.pay_min.errors %}
+                  <span class="jc-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.pay_min.errors.0 }}
+                  </span>
+                {% else %}
+                  <span class="jc-help">Leave blank if negotiable.</span>
+                {% endif %}
+              </div>
+
+              <div class="jc-field {% if form.pay_max.errors %}has-error{% endif %}">
+                <label class="jc-label" for="{{ form.pay_max.id_for_label }}">Max Pay (₦)</label>
+                <div class="jc-input-prefix">
+                  <span class="jc-prefix-sym">₦</span>
+                  <input
+                    type="number" min="0" step="1000"
+                    name="{{ form.pay_max.html_name }}"
+                    id="{{ form.pay_max.id_for_label }}"
+                    value="{{ form.pay_max.value|default:'' }}"
+                    class="jc-input"
+                    placeholder="e.g. 280000"
+                    id="payMaxInput"
+                  >
+                </div>
+                {% if form.pay_max.errors %}
+                  <span class="jc-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.pay_max.errors.0 }}
+                  </span>
+                {% endif %}
+              </div>
+
+              <div class="jc-field {% if form.slots.errors %}has-error{% endif %}">
+                <label class="jc-label" for="{{ form.slots.id_for_label }}">
+                  Workers Needed
+                </label>
+                <input
+                  type="number" min="1" max="999"
+                  name="{{ form.slots.html_name }}"
+                  id="{{ form.slots.id_for_label }}"
+                  value="{{ form.slots.value|default:'1' }}"
+                  class="jc-input"
+                  placeholder="1"
+                >
+                {% if form.slots.errors %}
+                  <span class="jc-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.slots.errors.0 }}
+                  </span>
+                {% else %}
+                  <span class="jc-help">How many people you're hiring.</span>
+                {% endif %}
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {# ─── 5. Location & Remote ─── #}
+        <div class="jc-card fade-up d3">
+          <div class="jc-card-header">
+            <div class="jc-card-icon"><i class="fas fa-location-dot"></i></div>
+            <div class="jc-card-title">Location</div>
+          </div>
+          <div class="jc-card-body">
+            <div class="jc-field-grid">
+
+              {# State #}
+              <div class="jc-field {% if form.state.errors %}has-error{% endif %}">
+                <label class="jc-label" for="{{ form.state.id_for_label }}">State</label>
+                <select
+                  name="{{ form.state.html_name }}"
+                  id="{{ form.state.id_for_label }}"
+                  class="jc-select"
+                  id="stateSelect"
+                >
+                  <option value="">— Select State —</option>
+                  {% for val, label in form.state.field.choices %}
+                    {% if val %}
+                    <option value="{{ val }}"
+                      {% if form.state.value == val %}selected{% endif %}>
+                      {{ label }}
+                    </option>
+                    {% endif %}
+                  {% endfor %}
+                </select>
+                {% if form.state.errors %}
+                  <span class="jc-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.state.errors.0 }}
+                  </span>
+                {% endif %}
+              </div>
+
+              {# LGA #}
+              <div class="jc-field {% if form.lga.errors %}has-error{% endif %}">
+                <label class="jc-label" for="{{ form.lga.id_for_label }}">
+                  Local Government Area (LGA)
+                </label>
+                <input
+                  type="text"
+                  name="{{ form.lga.html_name }}"
+                  id="{{ form.lga.id_for_label }}"
+                  value="{{ form.lga.value|default:'' }}"
+                  class="jc-input"
+                  placeholder="e.g. Victoria Island"
+                >
+                {% if form.lga.errors %}
+                  <span class="jc-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.lga.errors.0 }}
+                  </span>
+                {% endif %}
+              </div>
+
+              {# Remote toggle — full width #}
+              <div class="jc-field-full">
+                <label class="jc-checkbox-row">
+                  <input
+                    type="checkbox"
+                    name="{{ form.is_remote.html_name }}"
+                    id="{{ form.is_remote.id_for_label }}"
+                    {% if form.is_remote.value %}checked{% endif %}
+                  >
+                  <span class="jc-checkbox-label">
+                    <i class="fas fa-wifi" style="color:var(--sky); margin-right:6px;"></i>
+                    This job can be done remotely
+                  </span>
+                </label>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {# ─── 6. Deadline ─── #}
+        <div class="jc-card fade-up d3">
+          <div class="jc-card-header">
+            <div class="jc-card-icon"><i class="fas fa-calendar-days"></i></div>
+            <div class="jc-card-title">Application Deadline</div>
+          </div>
+          <div class="jc-card-body">
+            <div class="jc-field-grid">
+
+              <div class="jc-field {% if form.deadline.errors %}has-error{% endif %}">
+                <label class="jc-label" for="{{ form.deadline.id_for_label }}">
+                  Closing Date
+                </label>
+                <input
+                  type="date"
+                  name="{{ form.deadline.html_name }}"
+                  id="{{ form.deadline.id_for_label }}"
+                  value="{{ form.deadline.value|default:'' }}"
+                  class="jc-input"
+                  style="color-scheme: dark;"
+                >
+                {% if form.deadline.errors %}
+                  <span class="jc-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.deadline.errors.0 }}
+                  </span>
+                {% else %}
+                  <span class="jc-help">
+                    Optional. The job will be automatically marked as expired past this date.
+                  </span>
+                {% endif %}
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {# ─── STICKY SUBMIT BAR ─── #}
+        <div class="jc-submit-bar">
+          <div class="jc-submit-hint">
+            <i class="fas fa-bolt"></i>
+            Your job goes <strong style="color:var(--emerald);">live immediately</strong>
+            and our AI starts matching workers in seconds.
+          </div>
+          <div class="jc-submit-actions">
+            <a href="{% url 'marketplace:employer_dashboard' %}" class="jc-btn-cancel">
+              <i class="fas fa-xmark"></i> Cancel
+            </a>
+            <button type="submit" class="jc-btn-save">
+              <i class="fas fa-rocket"></i> Post Job Now
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>{# /left column #}
+
+   
+    <div class="jc-sidebar">
+
+      {# ─── Live preview card ─── #}
+      <div class="jc-preview-card fade-up">
+        <p style="font-size:0.65rem; font-weight:700; letter-spacing:2px;
+                  text-transform:uppercase; color:var(--text-3); margin-bottom:14px;">
+          Live Preview
+        </p>
+        <div class="jc-preview-title-text" id="previewTitle">
+          Your job title will appear here
+        </div>
+        <div class="jc-preview-row" id="previewTrade">
+          <i class="fas fa-hard-hat"></i>
+          <span style="color:var(--text-3);">No trade selected</span>
+        </div>
+        <div class="jc-preview-row" id="previewLocation">
+          <i class="fas fa-location-dot"></i>
+          <span style="color:var(--text-3);">Location not set</span>
+        </div>
+        <div class="jc-preview-row" id="previewJobType">
+          <i class="fas fa-briefcase"></i>
+          <span style="color:var(--text-3);">Job type not set</span>
+        </div>
+        <div class="jc-preview-pay" id="previewPay" style="display:none;"></div>
+      </div>
+
+      {# ─── AI info box ─── #}
+      <div class="jc-ai-box fade-up d1">
+        <div class="jc-ai-box-title">
+          <i class="fas fa-brain"></i> AI Matching
+        </div>
+        <p>
+          As soon as you post, our AI encodes your job description and starts ranking
+          all workers in this trade by compatibility — sending the best matches to the
+          top of their dashboard within seconds.
+        </p>
+      </div>
+
+      {# ─── Posting tips ─── #}
+      <div class="jc-tip-card fade-up d2">
+        <div class="jc-tip-title">
+          <i class="fas fa-lightbulb"></i> Tips for Great Listings
+        </div>
+        <ul class="jc-tip-list">
+          <li class="jc-tip-item">
+            <span class="jc-tip-dot"></span>
+            Use a specific title — "Senior Electrician" beats "Electrician Needed".
+          </li>
+          <li class="jc-tip-item">
+            <span class="jc-tip-dot"></span>
+            Be detailed in your description — our AI reads every word to find the best fit.
+          </li>
+          <li class="jc-tip-item">
+            <span class="jc-tip-dot"></span>
+            Select all relevant required skills — this is the biggest factor in match quality.
+          </li>
+          <li class="jc-tip-item">
+            <span class="jc-tip-dot"></span>
+            Always include a pay range — listings with pay get 3× more applicants.
+          </li>
+          <li class="jc-tip-item">
+            <span class="jc-tip-dot"></span>
+            Set a deadline to create urgency and keep your listing fresh.
+          </li>
+        </ul>
+      </div>
+
+      {# ─── Quick links ─── #}
+      <div class="jc-quick-card fade-up d3">
+        <div class="jc-quick-title">
+          <i class="fas fa-link"></i> Quick Links
+        </div>
+        <a href="{% url 'marketplace:employer_dashboard' %}" class="jc-quick-link">
+          <i class="fas fa-gauge-high"></i> Dashboard
+        </a>
+        <a href="{% url 'marketplace:employer_profile_edit' %}" class="jc-quick-link">
+          <i class="fas fa-building"></i> Company Profile
+        </a>
+        <a href="{% url 'marketplace:job_list' %}" class="jc-quick-link">
+          <i class="fas fa-briefcase"></i> Browse All Jobs
+        </a>
+        <a href="{% url 'marketplace:notifications' %}" class="jc-quick-link">
+          <i class="fas fa-bell"></i> Notifications
+          {% if unread_count %}
+            <span class="jc-quick-badge">{{ unread_count }}</span>
+          {% endif %}
+        </a>
+      </div>
+
+    </div>{# /sidebar #}
+
+  </div>{# /jc-body #}
+</div>{# /jc-page #}
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+/* ─────────────────────────────────────────────────────────────────────
+   SKILLS DATA — all active skills grouped by trade category UUID,
+   injected server-side from the trade_category field queryset.
+   We iterate over all categories and their skills here so no extra
+   API endpoint is needed.
+───────────────────────────────────────────────────────────────────── */
+const SKILLS_BY_CAT = {};
+{% for cat in form.trade_category.field.queryset %}
+  SKILLS_BY_CAT["{{ cat.pk }}"] = [
+    {% for skill in cat.skills.all %}
+      {% if skill.is_active %}
+        { id: "{{ skill.pk }}", name: "{{ skill.name|escapejs }}" },
+      {% endif %}
+    {% endfor %}
+  ];
+{% endfor %}
+
+/* ─────────────────────────────────────────────────────────────────────
+   ALREADY-CHECKED skills (when form is re-rendered after POST errors)
+───────────────────────────────────────────────────────────────────── */
+const ALREADY_CHECKED = new Set([
+  {% for choice in form.required_skills %}
+    {% if choice.data.selected %}"{{ choice.data.value }}",{% endif %}
+  {% endfor %}
+]);
+
+/* ─────────────────────────────────────────────────────────────────────
+   DOM REFS
+───────────────────────────────────────────────────────────────────── */
+const tradeSel      = document.getElementById('tradeCategorySelect') ||
+                      document.querySelector('[name="trade_category"]');
+const skillsPanel   = document.getElementById('skillsPanel');
+const skillsGrid    = document.getElementById('skillsGrid');
+const skillsEmpty   = document.getElementById('skillsEmpty');
+const skillsLoading = document.getElementById('skillsLoading');
+const skillsCount   = document.getElementById('skillsSelectedCount');
+
+/* ─────────────────────────────────────────────────────────────────────
+   RENDER SKILLS for a given category UUID
+───────────────────────────────────────────────────────────────────── */
+function renderSkills(catId) {
+  const skills = SKILLS_BY_CAT[catId] || [];
+
+  // Clear existing
+  skillsGrid.innerHTML = '';
+  skillsEmpty.style.display  = 'none';
+  skillsLoading.style.display = 'none';
+
+  if (!catId || skills.length === 0) {
+    skillsEmpty.style.display = 'flex';
+    skillsEmpty.querySelector('span').textContent =
+      catId ? 'No specific skills listed for this trade.' : 'Select a trade category above to see available skills.';
+    skillsGrid.style.display = 'none';
+    skillsCount.style.display = 'none';
+    return;
+  }
+
+  skills.forEach(skill => {
+    const label = document.createElement('label');
+    label.className = 'jc-skill-check';
+
+    const cb = document.createElement('input');
+    cb.type  = 'checkbox';
+    cb.name  = 'required_skills';
+    cb.value = skill.id;
+    if (ALREADY_CHECKED.has(skill.id)) cb.checked = true;
+    cb.addEventListener('change', updateSkillCount);
+
+    const span = document.createElement('span');
+    span.textContent = skill.name;
+
+    label.appendChild(cb);
+    label.appendChild(span);
+    skillsGrid.appendChild(label);
+  });
+
+  skillsGrid.style.display = 'grid';
+  skillsCount.style.display = 'inline-flex';
+  updateSkillCount();
+}
+
+function updateSkillCount() {
+  const n = skillsGrid.querySelectorAll('input[type="checkbox"]:checked').length;
+  skillsCount.textContent = `${n} selected`;
+}
+
+/* Trigger on trade category change */
+if (tradeSel) {
+  tradeSel.addEventListener('change', function() {
+    renderSkills(this.value);
+    updatePreview();
+  });
+
+  // On page load — render if a category is already selected (POST error re-render)
+  if (tradeSel.value) {
+    renderSkills(tradeSel.value);
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────
+   DESCRIPTION CHARACTER COUNTER
+───────────────────────────────────────────────────────────────────── */
+const descEl    = document.getElementById('{{ form.description.id_for_label }}');
+const descCount = document.getElementById('descCount');
+if (descEl && descCount) {
+  const updateDesc = () => descCount.textContent = descEl.value.length + ' / 5000';
+  descEl.addEventListener('input', updateDesc);
+  updateDesc();
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────
+   LIVE SIDEBAR PREVIEW
+───────────────────────────────────────────────────────────────────── */
+const previewTitle    = document.getElementById('previewTitle');
+const previewTrade    = document.getElementById('previewTrade');
+const previewLocation = document.getElementById('previewLocation');
+const previewJobType  = document.getElementById('previewJobType');
+const previewPay      = document.getElementById('previewPay');
+
+const titleInput  = document.getElementById('jobTitleInput');
+const stateSel    = document.getElementById('stateSelect') ||
+                    document.querySelector('[name="state"]');
+const jobTypeSel  = document.getElementById('jobTypeSelect') ||
+                    document.querySelector('[name="job_type"]');
+const payTypeSel  = document.getElementById('payTypeSelect') ||
+                    document.querySelector('[name="pay_type"]');
+const payMinInput = document.getElementById('payMinInput') ||
+                    document.querySelector('[name="pay_min"]');
+const payMaxInput = document.getElementById('payMaxInput') ||
+                    document.querySelector('[name="pay_max"]');
+
+function fmtNum(n) {
+  if (!n) return '';
+  return Number(n).toLocaleString('en-NG');
+}
+
+function updatePreview() {
+  // Title
+  if (titleInput && previewTitle) {
+    previewTitle.textContent = titleInput.value.trim() || 'Your job title will appear here';
+  }
+
+  // Trade
+  if (tradeSel && previewTrade) {
+    const opt = tradeSel.options[tradeSel.selectedIndex];
+    previewTrade.querySelector('span').textContent =
+      tradeSel.value ? opt.textContent.trim() : 'No trade selected';
+    previewTrade.querySelector('span').style.color =
+      tradeSel.value ? 'var(--text-2)' : 'var(--text-3)';
+  }
+
+  // Location
+  if (stateSel && previewLocation) {
+    const opt = stateSel.options[stateSel.selectedIndex];
+    previewLocation.querySelector('span').textContent =
+      stateSel.value ? opt.textContent.trim() : 'Location not set';
+    previewLocation.querySelector('span').style.color =
+      stateSel.value ? 'var(--text-2)' : 'var(--text-3)';
+  }
+
+  // Job type
+  if (jobTypeSel && previewJobType) {
+    const opt = jobTypeSel.options[jobTypeSel.selectedIndex];
+    previewJobType.querySelector('span').textContent =
+      jobTypeSel.value ? opt.textContent.trim() : 'Job type not set';
+    previewJobType.querySelector('span').style.color =
+      jobTypeSel.value ? 'var(--text-2)' : 'var(--text-3)';
+  }
+
+  // Pay
+  if (previewPay) {
+    const min  = payMinInput ? payMinInput.value.trim() : '';
+    const max  = payMaxInput ? payMaxInput.value.trim() : '';
+    const type = payTypeSel  ? payTypeSel.options[payTypeSel.selectedIndex].textContent.trim() : '';
+
+    if (min || max) {
+      let payText = '';
+      if (min && max)   payText = `₦${fmtNum(min)} – ₦${fmtNum(max)}`;
+      else if (min)     payText = `From ₦${fmtNum(min)}`;
+      else              payText = `Up to ₦${fmtNum(max)}`;
+      previewPay.innerHTML = `${payText} <small>/ ${type}</small>`;
+      previewPay.style.display = 'block';
+    } else if (payTypeSel && payTypeSel.value === 'negotiable') {
+      previewPay.textContent   = 'Negotiable';
+      previewPay.style.display = 'block';
+    } else {
+      previewPay.style.display = 'none';
+    }
+  }
+}
+
+// Attach listeners
+[titleInput, stateSel, jobTypeSel, payTypeSel, payMinInput, payMaxInput].forEach(el => {
+  if (el) el.addEventListener('input', updatePreview);
+  if (el) el.addEventListener('change', updatePreview);
+});
+updatePreview(); // initial run
+
+
+/* ─────────────────────────────────────────────────────────────────────
+   SCROLL-TRIGGERED FADE-UP
+───────────────────────────────────────────────────────────────────── */
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.style.animationPlayState = 'running';
+      obs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.06 });
+
+document.querySelectorAll('.fade-up').forEach((el, i) => {
+  el.style.animationPlayState = 'paused';
+  el.style.animationDelay = el.style.animationDelay || (i * 0.07) + 's';
+  obs.observe(el);
+});
+
+
+/* ─────────────────────────────────────────────────────────────────────
+   AUTO-DISMISS MESSAGES
+───────────────────────────────────────────────────────────────────── */
+document.querySelectorAll('.jc-msg').forEach(el => {
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.4s';
+    el.style.opacity    = '0';
+    setTimeout(() => el.remove(), 420);
+  }, 5000);
+});
+</script>
+{% endblock %}

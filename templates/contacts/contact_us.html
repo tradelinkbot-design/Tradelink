@@ -1,0 +1,822 @@
+{% extends "base.html" %}
+{% block title %}Contact & Support — TradeLink NG{% endblock %}
+{% block nav_contacts %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* =====================================================
+     CONTACT US & SUPPORT PAGE
+  ===================================================== */
+  .contact-page {
+    padding-top: calc(var(--nav-h) + 24px);
+    padding-bottom: 96px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── HERO BANNER ── */
+  .contact-hero {
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto 48px;
+    padding: 24px 16px 0;
+  }
+  .contact-hero .eyebrow {
+    justify-content: center;
+    margin-bottom: 12px;
+  }
+  .contact-hero h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(2rem, 5vw, 3.4rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -1px;
+    margin-bottom: 16px;
+  }
+  .contact-hero p {
+    color: var(--text-2);
+    font-size: clamp(1rem, 2vw, 1.15rem);
+    line-height: 1.7;
+    max-width: 620px;
+    margin: 0 auto;
+  }
+
+  /* ── QUICK CONTACT CHANNELS ── */
+  .channels-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    margin-bottom: 56px;
+  }
+  .channel-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    transition: var(--t);
+    text-decoration: none;
+    color: inherit;
+    position: relative;
+    overflow: hidden;
+  }
+  .channel-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--surface-1) 0%, transparent 60%);
+    opacity: 0;
+    transition: var(--t);
+    pointer-events: none;
+  }
+  .channel-card:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+  }
+  .channel-card:hover::before {
+    opacity: 1;
+  }
+  .channel-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    flex-shrink: 0;
+  }
+  .channel-icon.wa {
+    background: rgba(37, 211, 102, 0.12);
+    color: #25D366;
+    border: 1px solid rgba(37, 211, 102, 0.25);
+  }
+  .channel-icon.call {
+    background: rgba(245, 158, 11, 0.12);
+    color: var(--amber);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+  }
+  .channel-icon.mail {
+    background: rgba(56, 189, 248, 0.12);
+    color: var(--sky);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+  }
+  .channel-icon.office {
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--emerald);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+  }
+  .channel-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-1);
+    margin-bottom: 4px;
+  }
+  .channel-desc {
+    color: var(--text-2);
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+  .channel-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: var(--r-pill);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .channel-badge.pulse {
+    background: rgba(37, 211, 102, 0.12);
+    color: #25D366;
+  }
+  .channel-badge.pulse::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #25D366;
+    animation: pulseDot 2s infinite;
+  }
+
+  /* ── MAIN CONTENT LAYOUT ── */
+  .contact-main-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 36px;
+    align-items: start;
+    margin-bottom: 72px;
+  }
+
+  /* ── FORM CONTAINER ── */
+  .contact-form-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: clamp(24px, 4vw, 44px);
+    position: relative;
+    box-shadow: var(--shadow-sm);
+  }
+  .contact-form-card h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+  .contact-form-card .form-subtitle {
+    color: var(--text-2);
+    font-size: 0.95rem;
+    margin-bottom: 32px;
+  }
+
+  /* Form Fields */
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  .form-row.full {
+    grid-template-columns: 1fr;
+  }
+  .field-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .field-box label {
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--text-2);
+  }
+  .field-box label span.req {
+    color: var(--amber);
+  }
+  .input-icon-wrap {
+    position: relative;
+  }
+  .input-icon-wrap i {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-3);
+    font-size: 0.95rem;
+    pointer-events: none;
+    transition: var(--t);
+  }
+  .input-icon-wrap:focus-within i {
+    color: var(--amber);
+  }
+  .contact-input {
+    width: 100%;
+    padding: 13px 16px 13px 46px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    color: var(--text-1);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    transition: var(--t);
+  }
+  .contact-input:focus {
+    border-color: var(--amber);
+    background: rgba(245, 158, 11, 0.04);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
+  }
+  .contact-input::placeholder {
+    color: var(--text-3);
+  }
+  .contact-select {
+    width: 100%;
+    padding: 13px 16px 13px 46px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    color: var(--text-1);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    cursor: pointer;
+    transition: var(--t);
+  }
+  .contact-select:focus {
+    border-color: var(--amber);
+    background: rgba(245, 158, 11, 0.04);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
+  }
+  .contact-select option {
+    background: var(--bg-card);
+    color: var(--text-1);
+    padding: 10px;
+  }
+  .contact-textarea {
+    width: 100%;
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    color: var(--text-1);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    resize: vertical;
+    min-height: 128px;
+    transition: var(--t);
+  }
+  .contact-textarea:focus {
+    border-color: var(--amber);
+    background: rgba(245, 158, 11, 0.04);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
+  }
+  .contact-textarea::placeholder {
+    color: var(--text-3);
+  }
+  .field-error-msg {
+    color: #F87171;
+    font-size: 0.8rem;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* Submit Button */
+  .submit-wrap {
+    margin-top: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .security-notice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-3);
+    font-size: 0.82rem;
+  }
+  .security-notice i {
+    color: var(--emerald);
+  }
+
+  /* ── SIDEBAR INFO CARDS ── */
+  .contact-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .side-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .side-card-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-1);
+  }
+  .side-card-title i {
+    color: var(--amber);
+    font-size: 1rem;
+  }
+  .info-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 0;
+  }
+  .info-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .info-item-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--amber);
+    font-size: 0.88rem;
+    flex-shrink: 0;
+  }
+  .info-item-text strong {
+    display: block;
+    color: var(--text-1);
+    font-size: 0.92rem;
+    margin-bottom: 2px;
+  }
+  .info-item-text span {
+    color: var(--text-2);
+    font-size: 0.84rem;
+    line-height: 1.45;
+  }
+
+  /* Hours pill badge */
+  .hours-badge {
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    padding: 12px 16px;
+    border-radius: var(--r-lg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+    font-size: 0.85rem;
+  }
+  .hours-badge span:first-child {
+    color: var(--text-2);
+  }
+  .hours-badge span:last-child {
+    color: var(--amber);
+    font-weight: 600;
+  }
+
+  /* ── FAQ SECTION ── */
+  .faq-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: clamp(32px, 5vw, 56px);
+    margin-top: 24px;
+  }
+  .faq-header {
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto 40px;
+  }
+  .faq-header h3 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.5rem, 3vw, 2.2rem);
+    font-weight: 800;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+  .faq-header p {
+    color: var(--text-2);
+    font-size: 0.95rem;
+  }
+  .faq-accordion {
+    max-width: 820px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .faq-item {
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    transition: var(--t);
+  }
+  .faq-item:hover {
+    border-color: var(--border-strong);
+  }
+  .faq-question {
+    padding: 18px 22px;
+    font-weight: 600;
+    font-size: 0.98rem;
+    color: var(--text-1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+  }
+  .faq-question i {
+    color: var(--amber);
+    transition: transform 0.28s ease;
+    font-size: 0.85rem;
+  }
+  .faq-item.active .faq-question i {
+    transform: rotate(180deg);
+  }
+  .faq-answer {
+    padding: 0 22px 18px;
+    color: var(--text-2);
+    font-size: 0.9rem;
+    line-height: 1.65;
+    display: none;
+  }
+  .faq-item.active .faq-answer {
+    display: block;
+  }
+
+  /* ── SUCCESS BANNER ── */
+  .alert-banner {
+    padding: 16px 20px;
+    border-radius: var(--r-lg);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #6EE7B7;
+    font-size: 0.92rem;
+    animation: fadeUp 0.4s ease both;
+  }
+  .alert-banner i {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  /* ── RESPONSIVE TWEAKS ── */
+  @media (max-width: 960px) {
+    .contact-main-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 600px) {
+    .form-row {
+      grid-template-columns: 1fr;
+    }
+    .channels-grid {
+      grid-template-columns: 1fr;
+    }
+    .submit-wrap {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .submit-wrap .btn {
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="contact-page">
+  <div class="container">
+
+    <!-- ── 1. HERO ── -->
+    <header class="contact-hero fade-up">
+      <div class="eyebrow"><i class="fas fa-headset"></i> Support & Inquiries</div>
+      <h1>Get in Touch With <span class="amber-text">TradeLink NG</span></h1>
+      <p>
+        Have questions about artisan verification, milestone payments, or posting a job?
+        Our dedicated support team is active across Lagos, Abuja, and all Nigerian states.
+      </p>
+    </header>
+
+    <!-- ── 2. QUICK CONTACT CHANNELS ── -->
+    <div class="channels-grid fade-up d1">
+
+      <!-- WhatsApp -->
+      <a href="https://wa.me/2348008723354?text=Hello%20TradeLink%20NG%20Support,%20I%20need%20assistance" 
+         target="_blank" 
+         rel="noopener noreferrer" 
+         class="channel-card">
+        <div class="channel-icon wa">
+          <i class="fab fa-whatsapp"></i>
+        </div>
+        <div>
+          <div class="channel-title">WhatsApp Support</div>
+          <p class="channel-desc">Chat directly with a support agent for immediate response.</p>
+        </div>
+        <span class="channel-badge pulse">Typical reply in 15 mins</span>
+      </a>
+
+      <!-- Phone Support -->
+      <a href="tel:{{ whatsapp_number }}" class="channel-card">
+        <div class="channel-icon call">
+          <i class="fas fa-phone-alt"></i>
+        </div>
+        <div>
+          <div class="channel-title">Direct Phone Line</div>
+          <p class="channel-desc">{{ phone_display }}</p>
+        </div>
+        <span class="channel-badge" style="background:rgba(245,158,11,0.1);color:var(--amber);">Mon – Sat · 8am – 6pm</span>
+      </a>
+
+      <!-- Email -->
+      <a href="mailto:{{ support_email }}" class="channel-card">
+        <div class="channel-icon mail">
+          <i class="fas fa-envelope"></i>
+        </div>
+        <div>
+          <div class="channel-title">Email Helpdesk</div>
+          <p class="channel-desc">{{ support_email }}</p>
+        </div>
+        <span class="channel-badge" style="background:rgba(56,189,248,0.1);color:var(--sky);">Guaranteed 24hr reply</span>
+      </a>
+
+      <!-- Office Hub -->
+      <div class="channel-card">
+        <div class="channel-icon office">
+          <i class="fas fa-map-marker-alt"></i>
+        </div>
+        <div>
+          <div class="channel-title">Support Hubs</div>
+          <p class="channel-desc">Victoria Island, Lagos & CBD, Abuja, Nigeria</p>
+        </div>
+        <span class="channel-badge" style="background:rgba(16,185,129,0.1);color:var(--emerald);">Nigeria-wide coverage</span>
+      </div>
+
+    </div>
+
+    <!-- ── MESSAGES / NOTIFICATIONS ── -->
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert-banner">
+          <i class="fas fa-check-circle"></i>
+          <div>{{ message|safe }}</div>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- ── 3. MAIN FORM & SIDEBAR ── -->
+    <div class="contact-main-grid">
+
+      <!-- Left Column: Form Card -->
+      <div class="contact-form-card fade-up d2">
+        <h2>Send Us a Message</h2>
+        <p class="form-subtitle">Fill in the form below and our team will get right back to you.</p>
+
+        <form method="post" action="{% url 'contacts:contact_us' %}" novalidate>
+          {% csrf_token %}
+
+          <!-- Row 1: Name & Email -->
+          <div class="form-row">
+            <div class="field-box">
+              <label for="{{ form.name.id_for_label }}">Your Full Name <span class="req">*</span></label>
+              <div class="input-icon-wrap">
+                <i class="fas fa-user"></i>
+                <input type="text" 
+                       name="{{ form.name.name }}" 
+                       id="{{ form.name.id_for_label }}"
+                       value="{{ form.name.value|default:'' }}" 
+                       class="contact-input" 
+                       placeholder="e.g. Chukwuma Adebayo" 
+                       required>
+              </div>
+              {% for error in form.name.errors %}
+                <span class="field-error-msg"><i class="fas fa-exclamation-circle"></i> {{ error }}</span>
+              {% endfor %}
+            </div>
+
+            <div class="field-box">
+              <label for="{{ form.email.id_for_label }}">Email Address <span class="req">*</span></label>
+              <div class="input-icon-wrap">
+                <i class="fas fa-envelope"></i>
+                <input type="email" 
+                       name="{{ form.email.name }}" 
+                       id="{{ form.email.id_for_label }}"
+                       value="{{ form.email.value|default:'' }}" 
+                       class="contact-input" 
+                       placeholder="name@example.com" 
+                       required>
+              </div>
+              {% for error in form.email.errors %}
+                <span class="field-error-msg"><i class="fas fa-exclamation-circle"></i> {{ error }}</span>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Row 2: Phone & Category -->
+          <div class="form-row">
+            <div class="field-box">
+              <label for="{{ form.phone.id_for_label }}">Phone Number / WhatsApp</label>
+              <div class="input-icon-wrap">
+                <i class="fas fa-phone"></i>
+                <input type="tel" 
+                       name="{{ form.phone.name }}" 
+                       id="{{ form.phone.id_for_label }}"
+                       value="{{ form.phone.value|default:'' }}" 
+                       class="contact-input" 
+                       placeholder="+234 800 000 0000">
+              </div>
+              {% for error in form.phone.errors %}
+                <span class="field-error-msg"><i class="fas fa-exclamation-circle"></i> {{ error }}</span>
+              {% endfor %}
+            </div>
+
+            <div class="field-box">
+              <label for="{{ form.category.id_for_label }}">Inquiry Topic <span class="req">*</span></label>
+              <div class="input-icon-wrap">
+                <i class="fas fa-tag"></i>
+                <select name="{{ form.category.name }}" id="{{ form.category.id_for_label }}" class="contact-select" required>
+                  {% for val, label in form.category.field.choices %}
+                    <option value="{{ val }}" {% if form.category.value == val %}selected{% endif %}>
+                      {{ label }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+              {% for error in form.category.errors %}
+                <span class="field-error-msg"><i class="fas fa-exclamation-circle"></i> {{ error }}</span>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Row 3: Subject -->
+          <div class="form-row full">
+            <div class="field-box">
+              <label for="{{ form.subject.id_for_label }}">Subject <span class="req">*</span></label>
+              <div class="input-icon-wrap">
+                <i class="fas fa-heading"></i>
+                <input type="text" 
+                       name="{{ form.subject.name }}" 
+                       id="{{ form.subject.id_for_label }}"
+                       value="{{ form.subject.value|default:'' }}" 
+                       class="contact-input" 
+                       placeholder="Brief summary of your question or issue" 
+                       required>
+              </div>
+              {% for error in form.subject.errors %}
+                <span class="field-error-msg"><i class="fas fa-exclamation-circle"></i> {{ error }}</span>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Row 4: Message -->
+          <div class="form-row full">
+            <div class="field-box">
+              <label for="{{ form.message.id_for_label }}">Detailed Message <span class="req">*</span></label>
+              <textarea name="{{ form.message.name }}" 
+                        id="{{ form.message.id_for_label }}" 
+                        class="contact-textarea" 
+                        placeholder="Tell us how we can assist you in detail..." 
+                        required>{{ form.message.value|default:'' }}</textarea>
+              {% for error in form.message.errors %}
+                <span class="field-error-msg"><i class="fas fa-exclamation-circle"></i> {{ error }}</span>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Action bar -->
+          <div class="submit-wrap">
+            <div class="security-notice">
+              <i class="fas fa-shield-alt"></i>
+              <span>Your message is encrypted & reviewed by human support.</span>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg">
+              <i class="fas fa-paper-plane"></i> Send Message
+            </button>
+          </div>
+
+        </form>
+      </div>
+
+      <!-- Right Column: Sidebar Info -->
+      <aside class="contact-sidebar fade-up d3">
+
+        <!-- Why Contact Us Card -->
+        <div class="side-card">
+          <h3 class="side-card-title"><i class="fas fa-hands-helping"></i> Why Contact Us?</h3>
+          <ul class="info-list">
+            <li class="info-item">
+              <div class="info-item-icon"><i class="fas fa-id-badge"></i></div>
+              <div class="info-item-text">
+                <strong>Artisan Verification</strong>
+                <span>Assistance submitting NIN, trade certificates, or requesting badge upgrades.</span>
+              </div>
+            </li>
+            <li class="info-item">
+              <div class="info-item-icon"><i class="fas fa-lock"></i></div>
+              <div class="info-item-text">
+                <strong>Milestone Escrow Assistance</strong>
+                <span>Help with funding milestones, approving completion, or payout questions.</span>
+              </div>
+            </li>
+            <li class="info-item">
+              <div class="info-item-icon"><i class="fas fa-balance-scale"></i></div>
+              <div class="info-item-text">
+                <strong>Dispute Mediation</strong>
+                <span>Neutral resolution for both clients and technicians when expectations diverge.</span>
+              </div>
+            </li>
+          </ul>
+
+          <div class="hours-badge">
+            <span><i class="far fa-clock"></i> Support Hours</span>
+            <span>Mon–Sat: 8:00 AM – 6:00 PM</span>
+          </div>
+        </div>
+
+        <!-- Trust & Security Card -->
+        <div class="side-card" style="border-color: rgba(245, 158, 11, 0.25); background: linear-gradient(135deg, rgba(24,20,16,0.95), rgba(19,16,8,0.95));">
+          <h3 class="side-card-title" style="color: var(--amber);">
+            <i class="fas fa-check-shield"></i> Safe & Secure Nigeria
+          </h3>
+          <p style="color: var(--text-2); font-size: 0.88rem; line-height: 1.6; margin-bottom: 16px;">
+            TradeLink NG never asks for your bank password, debit card PIN, or BVN over chat or phone. All official communications come from <strong>@tradelink.ng</strong>.
+          </p>
+          <a href="{% url 'marketplace:job_list' %}" class="btn btn-outline btn-sm" style="width: 100%; justify-content: center;">
+            <i class="fas fa-search"></i> Browse Available Jobs
+          </a>
+        </div>
+
+      </aside>
+
+    </div>
+
+    <!-- ── 4. FAQ SECTION ── -->
+    <section class="faq-section fade-up d4">
+      <div class="faq-header">
+        <span class="eyebrow"><i class="fas fa-question-circle"></i> Quick Answers</span>
+        <h3>Frequently Asked Questions</h3>
+        <p>Instant answers to the most common questions from Nigerian artisans and employers.</p>
+      </div>
+
+      <div class="faq-accordion" id="faqAccordion">
+        {% for faq in faqs %}
+          <div class="faq-item {% if forloop.first %}active{% endif %}">
+            <div class="faq-question">
+              <span>{{ faq.q }}</span>
+              <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+              {{ faq.a }}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+
+  </div><!-- /.container -->
+</div><!-- /.contact-page -->
+
+<script>
+  // Interactive FAQ Accordion
+  document.querySelectorAll('.faq-question').forEach(header => {
+    header.addEventListener('click', () => {
+      const item = header.parentElement;
+      const isActive = item.classList.contains('active');
+      
+      // Close all others
+      document.querySelectorAll('.faq-item').forEach(other => other.classList.remove('active'));
+      
+      // Toggle current
+      if (!isActive) {
+        item.classList.add('active');
+      }
+    });
+  });
+</script>
+{% endblock %}

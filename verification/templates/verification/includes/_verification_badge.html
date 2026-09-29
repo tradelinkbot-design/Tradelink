@@ -1,0 +1,23 @@
+{# verification/templates/verification/includes/_verification_badge.html #}
+{# Reusable inline trust badge — pass `vp` as the VerificationProfile instance #}
+{# Usage: {% include "verification/includes/_verification_badge.html" with vp=vp %} #}
+
+{% if vp %}
+  {% if vp.level == 3 %}
+    <span class="ver-badge ver-badge--green" title="Trusted Business — CAC & BVN Verified">
+      <i class="fas fa-building"></i> Trusted Business
+    </span>
+  {% elif vp.level == 2 %}
+    <span class="ver-badge ver-badge--gold" title="Enhanced Verified — BVN & NIN checked">
+      <i class="fas fa-shield-alt"></i> Enhanced
+    </span>
+  {% elif vp.level == 1 %}
+    <span class="ver-badge ver-badge--blue" title="Identity Verified — NIN checked by Dojah">
+      <i class="fas fa-id-card"></i> ID Verified
+    </span>
+  {% else %}
+    <span class="ver-badge ver-badge--grey" title="This user has not been verified">
+      <i class="fas fa-user-slash"></i> Unverified
+    </span>
+  {% endif %}
+{% endif %}

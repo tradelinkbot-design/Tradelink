@@ -1,0 +1,148 @@
+<style>
+  /* Cookie Consent Styles */
+  .cookie-consent {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    width: calc(100% - 48px);
+    max-width: 400px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-xl);
+    padding: 24px;
+    box-shadow: var(--shadow-lg);
+    z-index: 9999;
+    transform: translateY(120%);
+    opacity: 0;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .cookie-consent.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  .cookie-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .cookie-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(245, 158, 11, 0.12);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--amber);
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .cookie-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text-1);
+    margin: 0;
+  }
+
+  .cookie-body {
+    font-size: 0.9rem;
+    color: var(--text-2);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .cookie-body a {
+    color: var(--amber);
+    text-decoration: none;
+    font-weight: 500;
+    transition: var(--t);
+  }
+  
+  .cookie-body a:hover {
+    color: var(--orange);
+    text-decoration: underline;
+  }
+
+  .cookie-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+  }
+
+  .cookie-actions .btn {
+    flex: 1;
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
+
+  @media (max-width: 640px) {
+    .cookie-consent {
+      bottom: 16px;
+      left: 16px;
+      width: calc(100% - 32px);
+      padding: 20px;
+    }
+    
+    .cookie-actions {
+      flex-direction: column;
+    }
+  }
+</style>
+
+<div class="cookie-consent" id="cookieConsent">
+  <div class="cookie-header">
+    <div class="cookie-icon">
+      <i class="fas fa-cookie-bite"></i>
+    </div>
+    <h3 class="cookie-title">We value your privacy</h3>
+  </div>
+  <p class="cookie-body">
+    We use cookies to enhance your browsing experience, serve personalized content, and analyze our traffic. By clicking "Accept All", you consent to our use of cookies. <a href="#">Learn more</a>
+  </p>
+  <div class="cookie-actions">
+    <button class="btn btn-ghost" id="cookieDecline">Decline</button>
+    <button class="btn btn-primary" id="cookieAccept">Accept All</button>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const cookieConsent = document.getElementById('cookieConsent');
+    const btnAccept = document.getElementById('cookieAccept');
+    const btnDecline = document.getElementById('cookieDecline');
+    
+    const consentKey = 'tradelink_cookie_consent';
+    
+    // Check if consent has already been given or declined
+    if (!localStorage.getItem(consentKey)) {
+      // Small delay to make the entrance animation noticeable
+      setTimeout(() => {
+        cookieConsent.classList.add('show');
+      }, 1000);
+    }
+    
+    const hideBanner = () => {
+      cookieConsent.classList.remove('show');
+      // Store in localStorage that user has made a choice
+      localStorage.setItem(consentKey, 'true');
+    };
+
+    btnAccept.addEventListener('click', () => {
+      // In a real app, you might trigger actual cookie setting logic here
+      hideBanner();
+    });
+
+    btnDecline.addEventListener('click', () => {
+      // Handle decline logic here
+      hideBanner();
+    });
+  });
+</script>

@@ -1,0 +1,56 @@
+# --- Python / Django ---
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+db.sqlite3
+/staticfiles/
+/media/
+
+# --- Virtual Environments ---
+.venv/
+env/
+venv/
+ENV/
+bin/
+lib/
+include/
+.hf_cache/
+
+# --- Secret Keys & Credentials ---
+# Never commit your .env file or specific secrets!
+.env
+.python-version
+secrets.json
+
+# --- AI / Machine Learning ---
+# Exclude heavy model weights if you downloaded them locally
+*.pt
+*.pth
+*.bin
+*.h5
+__pycache__/
+*.pyc
+.env
+/models/
+
+# --- Databases (Exclude local DBs) ---
+*.db
+*.sqlite3
+
+# --- Static & Media ---
+# We use Cloudinary/WhiteNoise, so we don't need local uploads in Git
+/media/
+/static_root/
+/staticfiles/
+
+# --- IDEs / Editors ---
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# --- Logs ---
+*.log
+celerybeat-schedule

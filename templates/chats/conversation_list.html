@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+{% block title %}Messages{% if total_unread %} ({{ total_unread }}){% endif %} — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* =====================================================
+     CHATS — CONVERSATION LIST (INBOX)  v2
+  ===================================================== */
+
+  .inbox-page {
+    padding-top: calc(var(--nav-h) + clamp(32px, 5vw, 56px));
+    padding-bottom: clamp(56px, 8vw, 96px);
+    position: relative; z-index: 1;
+  }
+
+  .inbox-container {
+    max-width: 740px; margin: 0 auto;
+    padding: 0 clamp(16px, 4vw, 48px);
+  }
+
+  /* ── Page header ── */
+  .inbox-header {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 20px;
+  }
+  .inbox-header h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.7rem, 4vw, 2.3rem);
+    font-weight: 800; letter-spacing: -0.5px;
+    color: var(--text-1);
+  }
+  .unread-total-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 28px; height: 28px; padding: 0 9px;
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    color: #0C0A08; font-size: 0.78rem; font-weight: 800;
+    border-radius: var(--r-pill);
+    box-shadow: 0 4px 14px rgba(245,158,11,0.3);
+  }
+
+  /* ── Search bar ── */
+  .inbox-search-wrap {
+    position: relative; margin-bottom: 20px;
+  }
+  .inbox-search-wrap i {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--text-3); font-size: 0.85rem; pointer-events: none;
+  }
+  #inboxSearch {
+    width: 100%; padding: 11px 14px 11px 40px;
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-pill);
+    color: var(--text-1); font-family: 'Outfit', sans-serif; font-size: 0.9rem;
+    outline: none; transition: border-color 0.2s;
+  }
+  #inboxSearch::placeholder { color: var(--text-3); }
+  #inboxSearch:focus { border-color: rgba(245,158,11,0.35); }
+
+  /* ── Flash messages ── */
+  .msg-bar { margin-bottom: 20px; }
+  .msg-inner {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 18px; border-radius: var(--r-md);
+    font-size: 0.88rem; font-weight: 500; margin-bottom: 8px;
+  }
+  .msg-success { background: rgba(16,185,129,0.1);  border: 1px solid rgba(16,185,129,0.2); color: #6EE7B7; }
+  .msg-error   { background: rgba(239,68,68,0.1);   border: 1px solid rgba(239,68,68,0.2);  color: #FCA5A5; }
+  .msg-info    { background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.2); color: #7DD3FC; }
+
+  /* ── Conversation item ── */
+  .conv-list { display: flex; flex-direction: column; gap: 6px; }
+
+  .conv-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 18px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    text-decoration: none; color: inherit;
+    transition: var(--t); position: relative; overflow: hidden;
+  }
+  .conv-item:hover {
+    border-color: var(--border-strong);
+    background: rgba(24,20,16,0.97);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
+  .conv-item.has-unread {
+    border-left: 3px solid var(--amber);
+  }
+  /* Hide items that don't match search */
+  .conv-item.hidden { display: none; }
+
+  /* ── Avatar ── */
+  .conv-avatar-wrap { position: relative; flex-shrink: 0; }
+  .conv-avatar {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; font-weight: 800; color: #0C0A08;
+  }
+  .conv-online-dot {
+    position: absolute; bottom: -2px; right: -2px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--emerald);
+    border: 2px solid var(--bg-card);
+    box-shadow: 0 0 0 2px rgba(16,185,129,0.2);
+  }
+
+  /* ── Body ── */
+  .conv-body { flex: 1; min-width: 0; }
+
+  .conv-top {
+    display: flex; align-items: baseline;
+    justify-content: space-between; gap: 8px;
+    margin-bottom: 2px;
+  }
+  .conv-name {
+    font-weight: 700; font-size: 0.94rem; color: var(--text-1);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .conv-time {
+    font-size: 0.72rem; color: var(--text-3);
+    flex-shrink: 0; white-space: nowrap;
+  }
+
+  .conv-product {
+    font-size: 0.73rem; color: var(--amber);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-bottom: 2px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .conv-product i { font-size: 0.6rem; opacity: 0.8; }
+
+  .conv-preview {
+    font-size: 0.83rem; color: var(--text-3);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .conv-preview.bold { color: var(--text-2); font-weight: 600; }
+  .conv-preview em   { font-style: italic; opacity: 0.7; }
+
+  /* ── Unread badge ── */
+  .conv-badge {
+    flex-shrink: 0; margin-left: 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 20px; padding: 0 6px;
+    background: var(--amber); color: #0C0A08;
+    font-size: 0.68rem; font-weight: 800;
+    border-radius: var(--r-pill);
+  }
+
+  /* ── No results ── */
+  .no-results {
+    display: none; text-align: center;
+    padding: 40px 24px; color: var(--text-3); font-size: 0.9rem;
+  }
+  .no-results.visible { display: block; }
+
+  /* ── Empty state ── */
+  .inbox-empty {
+    text-align: center; padding: 72px 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+  }
+  .inbox-empty .empty-icon {
+    width: 72px; height: 72px; border-radius: 20px;
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+  }
+  .inbox-empty .empty-icon i { font-size: 1.8rem; color: var(--text-3); }
+  .inbox-empty h3 {
+    font-family: 'Fraunces', serif; font-size: 1.3rem; font-weight: 700;
+    color: var(--text-1); margin-bottom: 8px;
+  }
+  .inbox-empty p {
+    color: var(--text-3); font-size: 0.9rem; margin-bottom: 28px; line-height: 1.6;
+  }
+
+  @media (max-width: 480px) {
+    .conv-item   { padding: 12px 14px; }
+    .conv-avatar { width: 44px; height: 44px; font-size: 1rem; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="inbox-page">
+  <div class="inbox-container">
+
+    <!-- Flash messages -->
+    {% if messages %}
+    <div class="msg-bar fade-up">
+      {% for message in messages %}
+      <div class="msg-inner msg-{{ message.tags }}">
+        <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-times-circle{% else %}fa-info-circle{% endif %}"></i>
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Header -->
+    <div class="inbox-header fade-up">
+      <h1>Messages</h1>
+      {% if total_unread %}
+      <span class="unread-total-badge" title="{{ total_unread }} unread">{{ total_unread }}</span>
+      {% endif %}
+    </div>
+
+    {% if conv_data %}
+    <!-- Search -->
+    <div class="inbox-search-wrap fade-up">
+      <i class="fas fa-search"></i>
+      <input type="text" id="inboxSearch" placeholder="Search conversations…" autocomplete="off">
+    </div>
+
+    <!-- Conversation list -->
+    <div class="conv-list" id="convList">
+      {% for item in conv_data %}
+      <a href="{% url 'chats:conversation_detail' pk=item.conversation.pk %}"
+         class="conv-item {% if item.unread_count %}has-unread{% endif %} fade-up"
+         style="animation-delay: {{ forloop.counter0 }}0ms;"
+         data-name="{% if item.other_user %}{{ item.other_user.get_full_name|lower|default:item.other_user.username|lower }}{% endif %}"
+         data-product="{% if item.conversation.product %}{{ item.conversation.product.title|lower }}{% endif %}">
+
+        <!-- Avatar + online dot -->
+        <div class="conv-avatar-wrap">
+          <div class="conv-avatar">
+            {% if item.other_user %}
+              {{ item.other_user.get_full_name|default:item.other_user.username|slice:":1"|upper }}
+            {% else %}?{% endif %}
+          </div>
+          {% if item.other_online %}
+          <div class="conv-online-dot" title="Online now"></div>
+          {% endif %}
+        </div>
+
+        <!-- Body -->
+        <div class="conv-body">
+          <div class="conv-top">
+            <span class="conv-name">
+              {% if item.other_user %}
+                {{ item.other_user.get_full_name|default:item.other_user.username }}
+              {% else %}
+                Deleted account
+              {% endif %}
+            </span>
+            {% if item.last_message %}
+            <span class="conv-time">{{ item.last_message.created_at|timesince }} ago</span>
+            {% endif %}
+          </div>
+
+          {% if item.conversation.product %}
+          <div class="conv-product">
+            <i class="fas fa-tag"></i>
+            {{ item.conversation.product.title|truncatechars:44 }}
+          </div>
+          {% endif %}
+
+          <div class="conv-preview {% if item.unread_count %}bold{% endif %}">
+            {% if item.last_message %}
+              {% if item.last_message.is_deleted %}
+                <em>Message deleted</em>
+              {% elif item.last_message.message_type == 'system' %}
+                <i class="fas fa-circle-info" style="font-size:0.67rem;margin-right:3px;color:var(--sky);"></i>{{ item.last_message.body|truncatechars:58 }}
+              {% else %}
+                {% if item.last_message.sender == request.user %}<span style="color:var(--text-3)">You: </span>{% endif %}
+                {% if item.last_message.body %}{{ item.last_message.body|truncatechars:58 }}{% else %}<i class="fas fa-image" style="margin-right:4px;font-size:0.78rem;"></i>Image{% endif %}
+              {% endif %}
+            {% else %}
+              <em>No messages yet — say hello!</em>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Unread count -->
+        {% if item.unread_count %}
+        <span class="conv-badge" aria-label="{{ item.unread_count }} unread">{{ item.unread_count }}</span>
+        {% else %}
+        <i class="fas fa-chevron-right" style="color:var(--text-3);font-size:0.73rem;flex-shrink:0;"></i>
+        {% endif %}
+
+      </a>
+      {% endfor %}
+    </div>
+
+    <!-- No search results message -->
+    <div class="no-results" id="noResults">
+      <i class="fas fa-search" style="font-size:1.4rem;margin-bottom:10px;display:block;opacity:0.4;"></i>
+      No conversations match your search.
+    </div>
+
+    {% else %}
+    <!-- Empty state -->
+    <div class="inbox-empty fade-up d1">
+      <div class="empty-icon">
+        <i class="fas fa-comments"></i>
+      </div>
+      <h3>No conversations yet</h3>
+      <p>
+        Click <strong style="color:var(--amber);">"Message Seller"</strong> on any product listing<br>
+        to start chatting with a seller.
+      </p>
+      <a href="{% url 'mktplace:product_list' %}" class="btn btn-primary">
+        <i class="fas fa-store"></i> Browse Marketplace
+      </a>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if conv_data %}
+<script>
+(function () {
+  const searchInput = document.getElementById('inboxSearch');
+  const items       = document.querySelectorAll('#convList .conv-item');
+  const noResults   = document.getElementById('noResults');
+
+  if (!searchInput) return;
+
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    let visible = 0;
+
+    items.forEach(item => {
+      const name    = (item.dataset.name    || '').toLowerCase();
+      const product = (item.dataset.product || '').toLowerCase();
+      const matches = !q || name.includes(q) || product.includes(q);
+      item.classList.toggle('hidden', !matches);
+      if (matches) visible++;
+    });
+
+    noResults.classList.toggle('visible', visible === 0 && q.length > 0);
+  });
+
+  // Clear on Escape
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      searchInput.value = '';
+      searchInput.dispatchEvent(new Event('input'));
+      searchInput.blur();
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

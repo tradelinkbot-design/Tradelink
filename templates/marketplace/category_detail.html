@@ -1,0 +1,457 @@
+{% extends "base.html" %}
+{% block title %}{{ category.name }} — Trade Equipment Marketplace | TradeLink NG{% endblock %}
+{% block nav_marketplace %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* =====================================================
+     MARKETPLACE — CATEGORY DETAIL
+  ===================================================== */
+  .cat-detail-hero {
+    padding-top: calc(var(--nav-h) + clamp(32px, 5vw, 60px));
+    padding-bottom: clamp(32px, 4vw, 48px);
+    position: relative;
+    z-index: 1;
+    border-bottom: 1px solid var(--border-subtle);
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.03) 0%, transparent 100%);
+  }
+
+  /* Breadcrumb */
+  .mkt-crumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.84rem;
+    color: var(--text-3);
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .mkt-crumbs a {
+    color: var(--text-2);
+    text-decoration: none;
+    transition: var(--t);
+  }
+  .mkt-crumbs a:hover {
+    color: var(--amber);
+  }
+  .mkt-crumbs i {
+    font-size: 0.65rem;
+  }
+
+  .cat-hero-content {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 28px;
+    flex-wrap: wrap;
+  }
+  .cat-header-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    max-width: 760px;
+  }
+  .cat-detail-icon {
+    width: 68px;
+    height: 68px;
+    border-radius: 20px;
+    background: var(--surface-1);
+    border: 1px solid var(--border-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    color: var(--amber);
+    flex-shrink: 0;
+    box-shadow: 0 4px 20px rgba(245, 158, 11, 0.15);
+  }
+  .cat-detail-info h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 8px;
+  }
+  .cat-detail-info p {
+    color: var(--text-2);
+    font-size: 0.98rem;
+    line-height: 1.65;
+  }
+  .cat-hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  /* ── Products Section ── */
+  .cat-products-wrap {
+    padding-top: 40px;
+    padding-bottom: clamp(64px, 8vw, 96px);
+    position: relative;
+    z-index: 1;
+  }
+  .cat-results-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .cat-results-count {
+    color: var(--text-2);
+    font-size: 0.92rem;
+  }
+  .cat-results-count strong {
+    color: var(--text-1);
+  }
+
+  /* ── Product Grid ── */
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 22px;
+  }
+
+  .pcard {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+    transition: var(--t);
+    position: relative;
+  }
+  .pcard:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(245,158,11,0.08);
+  }
+
+  .pcard-img {
+    height: 190px;
+    position: relative;
+    background: var(--surface-1);
+    overflow: hidden;
+  }
+  .pcard-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.35s ease;
+  }
+  .pcard:hover .pcard-img img {
+    transform: scale(1.04);
+  }
+  .pcard-no-img {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-3);
+    gap: 6px;
+    font-size: 0.85rem;
+  }
+  .pcard-no-img i {
+    font-size: 2rem;
+  }
+  .pcard-condition {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    padding: 3px 10px;
+    border-radius: var(--r-pill);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .cond-new { background: rgba(16, 185, 129, 0.85); color: #fff; }
+  .cond-like_new { background: rgba(56, 189, 248, 0.85); color: #fff; }
+  .cond-good { background: rgba(245, 158, 11, 0.85); color: #0C0A08; }
+  .cond-fair { background: rgba(249, 115, 22, 0.85); color: #fff; }
+  .cond-for_parts { background: rgba(107, 114, 128, 0.85); color: #fff; }
+
+  .pcard-body {
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .pcard-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-1);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .pcard-seller {
+    font-size: 0.82rem;
+    color: var(--text-2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pcard-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .pcard-price {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: var(--amber);
+  }
+  .pcard-location {
+    font-size: 0.78rem;
+    color: var(--text-3);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── Empty State ── */
+  .cat-empty {
+    text-align: center;
+    padding: clamp(64px, 10vw, 96px) 24px;
+    grid-column: 1 / -1;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+  }
+  .cat-empty-icon {
+    width: 76px;
+    height: 76px;
+    border-radius: 20px;
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--text-3);
+    margin: 0 auto 20px;
+  }
+  .cat-empty h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .cat-empty p {
+    color: var(--text-2);
+    font-size: 0.92rem;
+    max-width: 480px;
+    margin: 0 auto 24px;
+    line-height: 1.6;
+  }
+
+  /* ── Pagination ── */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 44px;
+    flex-wrap: wrap;
+  }
+  .page-btn {
+    min-width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-card);
+    color: var(--text-2);
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition: var(--t);
+    padding: 0 12px;
+  }
+  .page-btn:hover {
+    border-color: var(--border-strong);
+    color: var(--text-1);
+    background: var(--surface-1);
+  }
+  .page-btn.current {
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    border-color: transparent;
+    color: #0C0A08;
+    font-weight: 700;
+  }
+  .page-btn.disabled {
+    opacity: 0.3;
+    pointer-events: none;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ── HERO / CATEGORY HEADER ── -->
+<section class="cat-detail-hero">
+  <div class="container">
+    
+    <!-- Breadcrumbs -->
+    <nav class="mkt-crumbs fade-up">
+      <a href="{% url 'home' %}">Home</a>
+      <i class="fas fa-chevron-right"></i>
+      <a href="{% url 'mktplace:product_list' %}">Marketplace</a>
+      <i class="fas fa-chevron-right"></i>
+      <a href="{% url 'mktplace:category_list' %}">Categories</a>
+      <i class="fas fa-chevron-right"></i>
+      <span>{{ category.name }}</span>
+    </nav>
+
+    <div class="cat-hero-content fade-up d1">
+      <div class="cat-header-left">
+        <div class="cat-detail-icon">
+          <i class="{{ category.icon_class|default:'fas fa-tools' }}"></i>
+        </div>
+        <div class="cat-detail-info">
+          <h1>{{ category.name }}</h1>
+          <p>{{ category.description|default:"Browse genuine equipment, tools, and supplies available in this category across Nigeria." }}</p>
+        </div>
+      </div>
+
+      <div class="cat-hero-actions">
+        <a href="{% url 'mktplace:product_create' %}?category={{ category.slug }}" class="btn btn-primary">
+          <i class="fas fa-plus"></i> List in This Category
+        </a>
+        <a href="{% url 'mktplace:category_list' %}" class="btn btn-ghost">
+          <i class="fas fa-th-large"></i> All Categories
+        </a>
+      </div>
+    </div>
+
+  </div><!-- /.container -->
+</section>
+
+<!-- ── PRODUCT LISTINGS SECTION ── -->
+<section class="cat-products-wrap">
+  <div class="container">
+    
+    <div class="cat-results-bar">
+      <p class="cat-results-count">
+        Showing <strong>{{ products|length }}</strong> of <strong>{{ page_obj.paginator.count|default:products|length }}</strong> listing{{ page_obj.paginator.count|default:products|length|pluralize }}
+      </p>
+
+      <a href="{% url 'mktplace:product_list' %}?category={{ category.slug }}" class="btn btn-ghost btn-sm">
+        <i class="fas fa-sliders-h"></i> Advanced Filter
+      </a>
+    </div>
+
+    <!-- Product Grid -->
+    <div class="product-grid">
+      {% for product in products %}
+      {% with cover=product.images.all|first %}
+      <a href="{% url 'mktplace:product_detail' pk=product.pk %}" class="pcard fade-up">
+        
+        <div class="pcard-img">
+          {% if cover %}
+            <img src="{{ cover.image.url }}" alt="{{ product.title }}" loading="lazy">
+          {% else %}
+            <div class="pcard-no-img">
+              <i class="fas fa-tools"></i>
+              <span>No image</span>
+            </div>
+          {% endif %}
+          <span class="pcard-condition cond-{{ product.condition }}">
+            {{ product.get_condition_display }}
+          </span>
+        </div>
+
+        <div class="pcard-body">
+          <div>
+            <p class="pcard-title">{{ product.title }}</p>
+            <p class="pcard-seller">
+              <i class="fas fa-user-circle"></i>
+              {{ product.seller.user.get_full_name|default:product.seller.user.username }}
+              {% if product.seller.is_verified %}
+                <i class="fas fa-badge-check" style="color:var(--amber);font-size:0.7rem;" title="Verified seller"></i>
+              {% endif %}
+            </p>
+          </div>
+
+          <div class="pcard-footer">
+            <span class="pcard-price">₦{{ product.price|floatformat:0 }}</span>
+            {% if product.state %}
+            <span class="pcard-location">
+              <i class="fas fa-map-marker-alt"></i>
+              {{ product.state }}{% if product.lga %}, {{ product.lga }}{% endif %}
+            </span>
+            {% endif %}
+          </div>
+        </div>
+
+      </a>
+      {% endwith %}
+      {% empty %}
+      <div class="cat-empty">
+        <div class="cat-empty-icon"><i class="fas fa-box-open"></i></div>
+        <h3>No Equipment Listed in {{ category.name }} Yet</h3>
+        <p>
+          Be the first artisan or supplier to list tools, equipment, or supplies in this category and connect with thousands of buyers across Nigeria.
+        </p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+          <a href="{% url 'mktplace:product_create' %}?category={{ category.slug }}" class="btn btn-primary">
+            <i class="fas fa-tag"></i> List Equipment Now
+          </a>
+          <a href="{% url 'mktplace:category_list' %}" class="btn btn-outline">
+            <i class="fas fa-arrow-left"></i> Back to All Categories
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="pagination">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="page-btn"><i class="fas fa-chevron-left"></i></a>
+      {% else %}
+        <span class="page-btn disabled"><i class="fas fa-chevron-left"></i></span>
+      {% endif %}
+
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+          <span class="page-btn current">{{ num }}</span>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+          <a href="?page={{ num }}" class="page-btn">{{ num }}</a>
+        {% endif %}
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="page-btn"><i class="fas fa-chevron-right"></i></a>
+      {% else %}
+        <span class="page-btn disabled"><i class="fas fa-chevron-right"></i></span>
+      {% endif %}
+    </div>
+    {% endif %}
+
+  </div><!-- /.container -->
+</section>
+{% endblock %}

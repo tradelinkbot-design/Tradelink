@@ -1,0 +1,113 @@
+# ── PIP CONFIGURATION ────────────────────────────────────────────────────────
+# This ensures Render/Pip can find the CPU-optimized versions of Torch
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+# ── CORE DJANGO ──────────────────────────────────────────────────────────────
+Django==5.0.4
+asgiref==3.11.0
+sqlparse==0.5.4
+
+# ── DATABASE ──────────────────────────────────────────────────────────────────
+psycopg2-binary==2.9.11
+dj-database-url==2.1.0
+
+# ── AUTHENTICATION ────────────────────────────────────────────────────────────
+django-allauth==65.13.1
+PyJWT==2.8.0
+oauthlib==3.3.1
+requests-oauthlib==2.0.0
+
+# ── ADMIN UI ──────────────────────────────────────────────────────────────────
+django-jazzmin==3.0.0
+
+# ── ASYNC / WEBSOCKETS (DJANGO CHANNELS) ──────────────────────────────────────
+channels==4.3.2
+channels_redis==4.3.0
+daphne==4.2.1
+
+# ── CELERY + REDIS ────────────────────────────────────────────────────────────
+celery==5.6.0
+django-celery-beat==2.8.1
+django_celery_results==2.6.0
+redis==7.1.0
+django-redis==6.0.0
+kombu==5.6.1
+billiard==4.2.4
+amqp==5.3.1
+vine==5.1.0
+click==8.3.1
+click-didyoumean==0.3.1
+click-plugins==1.1.1.2
+click-repl==0.3.0
+
+# ── AI / ML — CLIP + SENTENCE TRANSFORMERS ────────────────────────────────────
+# Torch components (Using 2.11.0 CPU-stable)
+torch==2.11.0
+torchvision==0.26.0
+torchaudio==2.11.0
+
+sentence-transformers==5.3.0
+transformers==5.3.0
+tokenizers==0.22.2
+huggingface_hub==1.7.1
+safetensors==0.7.0
+timm==1.0.25
+ftfy==6.3.1
+regex==2026.2.28
+Pillow==12.0.0
+numpy==2.2.6
+scikit-learn==1.7.2
+scipy==1.16.3
+joblib==1.5.2
+
+# ── MEDIA / STORAGE ───────────────────────────────────────────────────────────
+# For hosting images on Cloudinary instead of Render's temporary disk
+cloudinary==1.44.1
+django-cloudinary-storage==0.3.0
+
+# ── FORMS & UTILITIES ─────────────────────────────────────────────────────────
+django-crispy-forms==2.1
+crispy-bootstrap4==2024.1
+django-filter==24.2
+django-cors-headers==4.9.0
+whitenoise==6.11.0
+
+# ── ENVIRONMENT & CONFIG ──────────────────────────────────────────────────────
+environs==14.1.1
+python-dotenv==1.2.1
+python-dateutil==2.9.0.post0
+
+# ── EMAIL ─────────────────────────────────────────────────────────────────────
+resend==2.19.0
+
+# ── HTTP & NETWORKING ─────────────────────────────────────────────────────────
+requests==2.31.0
+httpx==0.28.1
+certifi==2025.11.12
+urllib3==2.6.0
+charset-normalizer==3.4.0
+idna==3.11
+
+# ── MESSAGING PROVIDERS ───────────────────────────────────────────────────────
+# Twilio SDK — for WhatsApp / SMS via Twilio (BOT_PROVIDER=twilio)
+twilio>=9.0.0
+
+# ── PRODUCTION SERVER ─────────────────────────────────────────────────────────
+gunicorn==21.2.0
+Twisted==25.5.0
+twilio>=9.0.0
+# ── UTILITIES ─────────────────────────────────────────────────────────────────
+pytz==2025.2
+django-phonenumber-field==8.0.0
+phonenumbers==8.13.55
+tzdata==2025.2
+six==1.17.0
+packaging==25.0
+tqdm==4.67.1
+filelock==3.19.1
+pydantic==2.12.5
+pydantic_core==2.41.5
+annotated-types==0.7.0
+typing_extensions==4.15.0
+uvicorn[standard]
+qrcode[pil]==8.0

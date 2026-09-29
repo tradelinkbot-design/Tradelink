@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Submit Review — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+.rv-page { padding-top: var(--nav-h); min-height: 100vh; background: var(--bg-body); }
+.rv-header {
+  background: linear-gradient(180deg, rgba(245,158,11,0.05) 0%, transparent 100%);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 40px 0 30px;
+}
+.rv-header-inner {
+  max-width: 600px; margin: 0 auto;
+  padding: 0 20px; text-align: center;
+}
+.rv-title {
+  font-family: 'Fraunces', serif; font-size: 1.8rem; font-weight: 900;
+  color: var(--text-1); margin-bottom: 8px;
+}
+.rv-subtitle { font-size: 0.9rem; color: var(--text-2); }
+.rv-body {
+  max-width: 600px; margin: 0 auto;
+  padding: 40px 20px 80px;
+}
+.rv-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 30px;
+}
+
+/* Form Styles */
+.rv-field { margin-bottom: 24px; }
+.rv-label {
+  display: block; font-size: 0.88rem; font-weight: 600; color: var(--text-2);
+  margin-bottom: 8px;
+}
+.rv-select, .rv-textarea {
+  width: 100%;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); color: var(--text-1);
+  font-family: 'Outfit', sans-serif; font-size: 0.95rem;
+  padding: 12px 16px; outline: none; transition: 0.2s;
+}
+.rv-select:focus, .rv-textarea:focus {
+  border-color: var(--amber); background: rgba(245,158,11,0.04);
+}
+.rv-textarea { resize: vertical; min-height: 120px; }
+
+/* Star Rating Radio Buttons */
+.rv-rating-wrap {
+  display: flex; gap: 10px; flex-direction: row-reverse; justify-content: flex-end;
+}
+.rv-rating-wrap input[type="radio"] { display: none; }
+.rv-rating-wrap label {
+  font-size: 2rem; color: var(--border-strong); cursor: pointer; transition: 0.2s;
+}
+.rv-rating-wrap label:hover,
+.rv-rating-wrap label:hover ~ label,
+.rv-rating-wrap input[type="radio"]:checked ~ label {
+  color: var(--amber);
+}
+
+.rv-btn-submit {
+  width: 100%; padding: 14px;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  border: none; border-radius: var(--r-lg);
+  color: #0C0A08; font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 700;
+  cursor: pointer; transition: 0.2s;
+}
+.rv-btn-submit:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+.rv-error { color: #fca5a5; font-size: 0.8rem; margin-top: 6px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rv-page">
+  <div class="rv-header">
+    <div class="rv-header-inner">
+      <div class="rv-title">Leave a Review</div>
+      <div class="rv-subtitle">For job: <strong>{{ job.title }}</strong></div>
+    </div>
+  </div>
+
+  <div class="rv-body">
+    {% if messages %}
+      {% for msg in messages %}
+        <div style="padding:12px; margin-bottom:20px; border-radius:8px; background:rgba(16,185,129,0.1); border:1px solid var(--emerald); color:var(--emerald);">
+          {{ msg }}
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <div class="rv-card">
+      <form method="POST">
+        {% csrf_token %}
+        
+        <div class="rv-field">
+          <label class="rv-label">Reviewing</label>
+          {% if targets|length == 1 %}
+            {% with t=targets.0 %}
+              <input type="hidden" name="reviewee_id" value="{% if review_type == 'employer_to_worker' %}{{ t.worker.user.pk }}{% else %}{{ t.user.pk }}{% endif %}">
+              <div class="rv-select" style="background:var(--surface-1); color:var(--text-2); cursor:not-allowed;">
+                {% if review_type == 'employer_to_worker' %}
+                  {{ t.worker.user.get_full_name|default:t.worker.user.username }}
+                {% else %}
+                  {{ t.company_name|default:t.user.username }}
+                {% endif %}
+              </div>
+            {% endwith %}
+          {% else %}
+            <select name="reviewee_id" required class="rv-select">
+              <option value="">— Select who you are reviewing —</option>
+              {% for t in targets %}
+                {% if review_type == 'employer_to_worker' %}
+                  <option value="{{ t.worker.user.pk }}">{{ t.worker.user.get_full_name|default:t.worker.user.username }}</option>
+                {% else %}
+                  <option value="{{ t.user.pk }}">{{ t.company_name|default:t.user.username }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          {% endif %}
+        </div>
+
+        <div class="rv-field">
+          <label class="rv-label">Rating</label>
+          <div class="rv-rating-wrap">
+            <input type="radio" id="star5" name="rating" value="5" required />
+            <label for="star5" title="5 stars"><i class="fas fa-star"></i></label>
+            <input type="radio" id="star4" name="rating" value="4" />
+            <label for="star4" title="4 stars"><i class="fas fa-star"></i></label>
+            <input type="radio" id="star3" name="rating" value="3" />
+            <label for="star3" title="3 stars"><i class="fas fa-star"></i></label>
+            <input type="radio" id="star2" name="rating" value="2" />
+            <label for="star2" title="2 stars"><i class="fas fa-star"></i></label>
+            <input type="radio" id="star1" name="rating" value="1" />
+            <label for="star1" title="1 star"><i class="fas fa-star"></i></label>
+          </div>
+          {% if form.rating.errors %}
+            <div class="rv-error">{{ form.rating.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="rv-field">
+          <label class="rv-label">Comment</label>
+          <textarea name="comment" class="rv-textarea" placeholder="Share your experience working with them..." required></textarea>
+          {% if form.comment.errors %}
+            <div class="rv-error">{{ form.comment.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="rv-btn-submit">Submit Review</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

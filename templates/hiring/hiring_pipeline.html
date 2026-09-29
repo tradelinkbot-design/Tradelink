@@ -1,0 +1,421 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Hiring Pipeline — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  .pipeline-page {
+    min-height: 100vh;
+    padding: calc(var(--nav-h) + 40px) clamp(16px, 4vw, 48px) 80px;
+    max-width: 1400px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .pipeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .pipeline-title-box h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+  .pipeline-title-box p {
+    color: var(--text-2);
+    font-size: 0.95rem;
+  }
+
+  /* Kanban board */
+  .kanban-board {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 18px;
+    align-items: flex-start;
+    overflow-x: auto;
+    padding-bottom: 24px;
+  }
+  @media (max-width: 1200px) {
+    .kanban-board {
+      grid-template-columns: repeat(5, 280px);
+    }
+  }
+
+  .kanban-column {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 520px;
+  }
+  .column-header {
+    padding: 16px 18px;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .column-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .column-body {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-grow: 1;
+  }
+
+  /* Candidate item in column */
+  .candidate-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    padding: 14px;
+    transition: var(--t);
+  }
+  .candidate-card:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .candidate-top {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .candidate-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--surface-2);
+    border: 1px solid var(--amber);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--amber);
+    flex-shrink: 0;
+  }
+  .candidate-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .candidate-name {
+    font-weight: 700;
+    color: var(--text-1);
+    font-size: 0.92rem;
+    text-decoration: none;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .candidate-name:hover {
+    color: var(--amber);
+  }
+  .candidate-trade {
+    color: var(--amber);
+    font-size: 0.78rem;
+  }
+
+  .candidate-meta {
+    font-size: 0.76rem;
+    color: var(--text-3);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .candidate-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .column-empty {
+    text-align: center;
+    padding: 40px 10px;
+    color: var(--text-3);
+    font-size: 0.82rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pipeline-page">
+
+  <div class="pipeline-header">
+    <div class="pipeline-title-box">
+      <div class="eyebrow">Candidate Tracking</div>
+      <h1 class="section-title">Hiring <span class="amber-text">Pipeline</span></h1>
+      <p>Visual workflow tracking all direct candidate interactions and hiring progress.</p>
+    </div>
+    <div>
+      <a href="{% url 'hiring:outreach_list' %}" class="btn btn-ghost">
+        <i class="fas fa-list"></i> Table View
+      </a>
+      <a href="{% url 'hiring:talent_search' %}" class="btn btn-primary" style="margin-left: 8px;">
+        <i class="fas fa-search"></i> Find Candidates
+      </a>
+    </div>
+  </div>
+
+  <div class="kanban-board">
+
+    {# ── 1. Outreach Sent ── #}
+    <div class="kanban-column">
+      <div class="column-header">
+        <div class="column-title">
+          <span class="status-dot" style="background: var(--amber);"></span>
+          <span>Outreach Sent</span>
+        </div>
+        <span class="badge badge-amber">{{ pipeline.sent|length }}</span>
+      </div>
+      <div class="column-body">
+        {% for item in pipeline.sent %}
+          <div class="candidate-card">
+            <div class="candidate-top">
+              <div class="candidate-avatar">
+                {% if item.worker.user.image %}
+                  <img src="{{ item.worker.user.image.url }}">
+                {% else %}
+                  {{ item.worker.user.username|first|upper }}
+                {% endif %}
+              </div>
+              <div style="min-width: 0;">
+                <a href="{% url 'hiring:worker_detail' item.worker.pk %}" class="candidate-name">
+                  {{ item.worker.user.get_full_name|default:item.worker.user.username }}
+                </a>
+                <div class="candidate-trade">{{ item.worker.trade_category.name|default:"Trades" }}</div>
+              </div>
+            </div>
+            <div class="candidate-meta">
+              <span>{{ item.sent_at|naturaltime }}</span>
+              {% if item.salary_offer %}<span>₦{{ item.salary_offer|intcomma }}</span>{% endif %}
+            </div>
+            <div class="candidate-footer">
+              <a href="{% url 'hiring:worker_detail' item.worker.pk %}" class="btn btn-ghost btn-sm" style="padding: 4px 10px; font-size: 0.74rem;">View Profile</a>
+            </div>
+          </div>
+        {% empty %}
+          <div class="column-empty">No pending outreach</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# ── 2. Viewed ── #}
+    <div class="kanban-column">
+      <div class="column-header">
+        <div class="column-title">
+          <span class="status-dot" style="background: var(--sky);"></span>
+          <span>Viewed by Worker</span>
+        </div>
+        <span class="badge badge-sky">{{ pipeline.viewed|length }}</span>
+      </div>
+      <div class="column-body">
+        {% for item in pipeline.viewed %}
+          <div class="candidate-card">
+            <div class="candidate-top">
+              <div class="candidate-avatar">
+                {% if item.worker.user.image %}
+                  <img src="{{ item.worker.user.image.url }}">
+                {% else %}
+                  {{ item.worker.user.username|first|upper }}
+                {% endif %}
+              </div>
+              <div style="min-width: 0;">
+                <a href="{% url 'hiring:worker_detail' item.worker.pk %}" class="candidate-name">
+                  {{ item.worker.user.get_full_name|default:item.worker.user.username }}
+                </a>
+                <div class="candidate-trade">{{ item.worker.trade_category.name|default:"Trades" }}</div>
+              </div>
+            </div>
+            <div class="candidate-meta">
+              <span>{{ item.sent_at|naturaltime }}</span>
+            </div>
+            <div class="candidate-footer">
+              <a href="{% url 'hiring:worker_detail' item.worker.pk %}" class="btn btn-ghost btn-sm" style="padding: 4px 10px; font-size: 0.74rem;">View Profile</a>
+            </div>
+          </div>
+        {% empty %}
+          <div class="column-empty">No viewed outreach</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# ── 3. Interested ── #}
+    <div class="kanban-column">
+      <div class="column-header">
+        <div class="column-title">
+          <span class="status-dot" style="background: var(--emerald);"></span>
+          <span>Interested / Accepted</span>
+        </div>
+        <span class="badge badge-green">{{ pipeline.interested|length }}</span>
+      </div>
+      <div class="column-body">
+        {% for item in pipeline.interested %}
+          <div class="candidate-card">
+            <div class="candidate-top">
+              <div class="candidate-avatar">
+                {% if item.worker.user.image %}
+                  <img src="{{ item.worker.user.image.url }}">
+                {% else %}
+                  {{ item.worker.user.username|first|upper }}
+                {% endif %}
+              </div>
+              <div style="min-width: 0;">
+                <a href="{% url 'hiring:worker_detail' item.worker.pk %}" class="candidate-name">
+                  {{ item.worker.user.get_full_name|default:item.worker.user.username }}
+                </a>
+                <div class="candidate-trade">{{ item.worker.trade_category.name|default:"Trades" }}</div>
+              </div>
+            </div>
+            {% if item.worker_reply %}
+              <div style="background: rgba(16, 185, 129, 0.08); border-radius: var(--r-sm); padding: 6px 8px; font-size: 0.75rem; color: var(--emerald); margin-bottom: 8px;">
+                "{{ item.worker_reply|truncatechars:45 }}"
+              </div>
+            {% endif %}
+            <div class="candidate-footer">
+              <a href="{% url 'hiring:worker_detail' item.worker.pk %}" class="btn btn-ghost btn-sm" style="padding: 4px 10px; font-size: 0.74rem;">Profile</a>
+              <button class="btn btn-primary btn-sm js-hired-btn" data-url="{% url 'hiring:update_stage' item.pk %}" style="padding: 4px 10px; font-size: 0.74rem;">
+                <i class="fas fa-check"></i> Hired
+              </button>
+            </div>
+          </div>
+        {% empty %}
+          <div class="column-empty">No positive replies yet</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# ── 4. Hired ── #}
+    <div class="kanban-column">
+      <div class="column-header">
+        <div class="column-title">
+          <span class="status-dot" style="background: #3B82F6;"></span>
+          <span>Hired</span>
+        </div>
+        <span class="badge badge-sky">{{ pipeline.hired|length }}</span>
+      </div>
+      <div class="column-body">
+        {% for item in pipeline.hired %}
+          <div class="candidate-card" style="border-left: 2px solid var(--emerald);">
+            <div class="candidate-top">
+              <div class="candidate-avatar">
+                {% if item.worker.user.image %}
+                  <img src="{{ item.worker.user.image.url }}">
+                {% else %}
+                  {{ item.worker.user.username|first|upper }}
+                {% endif %}
+              </div>
+              <div style="min-width: 0;">
+                <a href="{% url 'hiring:worker_detail' item.worker.pk %}" class="candidate-name">
+                  {{ item.worker.user.get_full_name|default:item.worker.user.username }}
+                </a>
+                <div class="candidate-trade">{{ item.worker.trade_category.name|default:"Trades" }}</div>
+              </div>
+            </div>
+            <div class="candidate-meta">
+              <span style="color: var(--emerald); font-weight: 600;"><i class="fas fa-check-circle"></i> Onboarded</span>
+              {% if item.salary_offer %}<span>₦{{ item.salary_offer|intcomma }}/mo</span>{% endif %}
+            </div>
+          </div>
+        {% empty %}
+          <div class="column-empty">No candidates marked hired</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# ── 5. Declined ── #}
+    <div class="kanban-column">
+      <div class="column-header">
+        <div class="column-title">
+          <span class="status-dot" style="background: var(--text-3);"></span>
+          <span>Declined</span>
+        </div>
+        <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-3);">{{ pipeline.declined|length }}</span>
+      </div>
+      <div class="column-body">
+        {% for item in pipeline.declined %}
+          <div class="candidate-card" style="opacity: 0.7;">
+            <div class="candidate-top">
+              <div class="candidate-avatar">
+                {% if item.worker.user.image %}
+                  <img src="{{ item.worker.user.image.url }}">
+                {% else %}
+                  {{ item.worker.user.username|first|upper }}
+                {% endif %}
+              </div>
+              <div style="min-width: 0;">
+                <span class="candidate-name">
+                  {{ item.worker.user.get_full_name|default:item.worker.user.username }}
+                </span>
+                <div class="candidate-trade">{{ item.worker.trade_category.name|default:"Trades" }}</div>
+              </div>
+            </div>
+          </div>
+        {% empty %}
+          <div class="column-empty">No declined offers</div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+{% block extra_scripts %}
+<script>
+  document.querySelectorAll('.js-hired-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      if (!confirm('Mark candidate as Hired?')) return;
+      fetch(this.dataset.url, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ status: 'hired' })
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d.status) location.reload();
+      });
+    });
+  });
+</script>
+{% endblock %}
+{% endblock %}

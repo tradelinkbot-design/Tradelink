@@ -1,0 +1,5 @@
+sk_test_166306c4fa6512b95030917dbcfaaa25866d2ff0 pk_test_d487748abaabb52e28f3c13481053902f78f0e1d http://127.0.0.1:8000/escrow/paystack/callback/ sk_test_166306c4fa6512b95030917dbcfaaa25866d2ff0
+[TradeLink] Loading sentence-transformer (sync)...
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|##########| 199/199 [00:00<00:00, 7560.80it/s]
+[TradeLink] [OK] Model ready.
+Cleared 3 old recipient codes.

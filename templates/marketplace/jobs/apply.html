@@ -1,0 +1,865 @@
+{% extends "base.html" %}
+{% block title %}Apply — {{ job.title }} — TradeLink NG{% endblock %}
+
+{# ─────────────────────────────────────────────────────────────────────────────
+   Context — JobApplyView:
+     job          — Job (title, employer, trade_category, required_skills,
+                    state, lga, job_type, pay_min, pay_max, pay_type,
+                    deadline, slots, applications_count, is_remote, description)
+     form         — JobApplicationForm  (fields: cover_note)
+                    re-rendered on POST validation failure with form.errors
+     unread_count — int
+
+   POST action → marketplace:job_apply pk=job.pk
+   On success  → redirect to marketplace:worker_applications
+   On error    → re-render this template with form.errors populated
+───────────────────────────────────────────────────────────────────────────── #}
+
+{% block extra_head %}
+<style>
+/* =====================================================
+   JOB APPLY PAGE — TradeLink NG
+   A focused, two-column conversion page.
+   Left:  job summary card (what you're applying for)
+   Right: cover note form  (what you're submitting)
+===================================================== */
+
+/* ── PAGE SHELL ── */
+.ja-page { padding-top: var(--nav-h); min-height: 100vh; position: relative; z-index: 1; }
+
+/* ── BREADCRUMB ── */
+.ja-crumb {
+  padding: 18px 0;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.ja-crumb-inner {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.82rem; color: var(--text-3);
+}
+.ja-crumb a {
+  color: var(--text-3); text-decoration: none;
+  display: flex; align-items: center; gap: 5px;
+  transition: var(--t);
+}
+.ja-crumb a:hover { color: var(--amber); }
+.ja-crumb-sep { font-size: 0.6rem; }
+
+/* ── HERO HEADER ── */
+.ja-hero {
+  padding: 40px 0 36px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: linear-gradient(
+    160deg,
+    rgba(245,158,11,0.05) 0%,
+    rgba(249,115,22,0.02) 50%,
+    transparent 100%
+  );
+  position: relative; overflow: hidden;
+}
+.ja-hero::before {
+  content: '';
+  position: absolute; top: -60px; right: -80px;
+  width: 360px; height: 360px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,158,11,0.07), transparent 65%);
+  pointer-events: none;
+}
+
+.ja-hero-inner {
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+}
+.ja-hero-logo {
+  width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.35rem; overflow: hidden;
+}
+.ja-hero-logo img { width: 100%; height: 100%; object-fit: cover; }
+
+.ja-hero-text { flex: 1; min-width: 0; }
+.ja-step-label {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--amber);
+  display: flex; align-items: center; gap: 7px; margin-bottom: 6px;
+}
+.ja-step-label::before {
+  content: ''; display: block; width: 14px; height: 2px;
+  background: var(--amber); border-radius: 2px;
+}
+.ja-hero-title {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(1.3rem, 2.5vw, 1.85rem);
+  font-weight: 900; letter-spacing: -0.5px; line-height: 1.15;
+  color: var(--text-1); margin-bottom: 5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ja-hero-employer {
+  font-size: 0.87rem; color: var(--text-3);
+  display: flex; align-items: center; gap: 6px;
+}
+.ja-hero-employer i { font-size: 0.72rem; }
+.ja-hero-employer a {
+  color: var(--amber); text-decoration: none; transition: var(--t);
+}
+.ja-hero-employer a:hover { color: var(--amber-light); }
+
+/* Step tracker */
+.ja-steps {
+  display: flex; align-items: center; gap: 0; flex-shrink: 0;
+}
+.ja-step {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.78rem; font-weight: 600;
+}
+.ja-step-dot {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.7rem; font-weight: 800; flex-shrink: 0;
+  border: 2px solid var(--border-subtle);
+  background: var(--bg-card); color: var(--text-3);
+}
+.ja-step.done .ja-step-dot  { background: var(--emerald); border-color: var(--emerald); color: #fff; }
+.ja-step.active .ja-step-dot {
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  border-color: var(--amber); color: #0C0A08;
+}
+.ja-step-name { color: var(--text-3); }
+.ja-step.done .ja-step-name   { color: var(--emerald); }
+.ja-step.active .ja-step-name { color: var(--amber); }
+.ja-step-connector {
+  width: 32px; height: 2px; background: var(--border-subtle);
+  margin: 0 4px; flex-shrink: 0;
+}
+.ja-step-connector.done { background: var(--emerald); }
+
+/* ── BODY ── */
+.ja-body { padding: 44px 0 80px; }
+.ja-layout {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 32px; align-items: start;
+}
+
+/* ── LEFT: FORM COLUMN ── */
+.ja-form-col { display: flex; flex-direction: column; gap: 0; }
+
+/* Form card */
+.ja-form-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); overflow: hidden; position: relative;
+}
+.ja-form-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--amber), var(--orange));
+}
+
+.ja-form-header {
+  padding: 28px 32px 22px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.ja-form-header-title {
+  font-family: 'Fraunces', serif; font-size: 1.2rem; font-weight: 800;
+  margin-bottom: 5px; display: flex; align-items: center; gap: 9px;
+}
+.ja-form-header-title i { color: var(--amber); font-size: 0.95rem; }
+.ja-form-header-sub {
+  font-size: 0.85rem; color: var(--text-2); line-height: 1.6;
+}
+
+/* Cover note textarea */
+.ja-form-body { padding: 24px 32px 28px; }
+
+.ja-field-label {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 0.83rem; font-weight: 600; color: var(--text-2);
+  margin-bottom: 8px;
+}
+.ja-field-optional {
+  font-size: 0.73rem; font-weight: 400; color: var(--text-3);
+}
+.ja-field-char-count {
+  font-size: 0.73rem; font-weight: 600; color: var(--text-3);
+  transition: color 0.2s;
+}
+.ja-field-char-count.warn { color: var(--amber); }
+.ja-field-char-count.over { color: #F87171; }
+
+.ja-textarea {
+  width: 100%; padding: 14px 16px; min-height: 160px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); color: var(--text-1);
+  font-family: 'Outfit', sans-serif; font-size: 0.93rem;
+  line-height: 1.7; transition: var(--t); outline: none; resize: vertical;
+}
+.ja-textarea:focus {
+  border-color: var(--amber);
+  background: rgba(245,158,11,0.03);
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+}
+.ja-textarea::placeholder { color: var(--text-3); }
+.ja-textarea.has-error {
+  border-color: rgba(239,68,68,0.55);
+}
+.ja-textarea.has-error:focus {
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.1);
+  border-color: #EF4444;
+}
+
+.ja-field-error {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.78rem; color: #FCA5A5; margin-top: 6px;
+}
+
+.ja-field-hint {
+  display: flex; align-items: flex-start; gap: 7px;
+  margin-top: 10px; font-size: 0.79rem; color: var(--text-3); line-height: 1.6;
+}
+.ja-field-hint i { color: var(--amber); font-size: 0.72rem; margin-top: 2px; flex-shrink: 0; }
+
+/* Writing prompts */
+.ja-prompts {
+  display: flex; flex-direction: column; gap: 7px;
+  margin-top: 16px;
+}
+.ja-prompt-label {
+  font-size: 0.73rem; font-weight: 700; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 2px;
+}
+.ja-prompt-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md); font-size: 0.78rem; color: var(--text-2);
+  cursor: pointer; transition: var(--t); text-align: left;
+  font-family: 'Outfit', sans-serif;
+}
+.ja-prompt-chip:hover {
+  background: var(--surface-2); border-color: var(--border-strong);
+  color: var(--text-1);
+}
+.ja-prompt-chip i { color: var(--amber); font-size: 0.65rem; flex-shrink: 0; }
+
+/* Form footer */
+.ja-form-footer {
+  padding: 20px 32px 26px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+
+/* Submit button */
+.ja-btn-submit {
+  flex: 1; min-width: 180px; padding: 14px 28px;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  border: none; border-radius: var(--r-lg); color: #0C0A08;
+  font-family: 'Outfit', sans-serif; font-size: 0.97rem; font-weight: 800;
+  letter-spacing: 0.2px; cursor: pointer; transition: var(--t);
+  box-shadow: 0 5px 22px rgba(245,158,11,0.3);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.ja-btn-submit:hover:not(:disabled) {
+  box-shadow: 0 8px 32px rgba(245,158,11,0.45);
+  transform: translateY(-2px); filter: brightness(1.06);
+}
+.ja-btn-submit:disabled {
+  opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none;
+}
+
+/* Cancel link */
+.ja-btn-cancel {
+  padding: 13px 20px; border-radius: var(--r-lg);
+  background: transparent; border: 1px solid var(--border-subtle);
+  color: var(--text-2); font-family: 'Outfit', sans-serif;
+  font-size: 0.9rem; font-weight: 600; cursor: pointer;
+  text-decoration: none; transition: var(--t);
+  display: flex; align-items: center; gap: 7px;
+}
+.ja-btn-cancel:hover {
+  background: var(--surface-1); border-color: var(--border-strong);
+  color: var(--text-1);
+}
+
+/* What happens next */
+.ja-what-next {
+  margin-top: 14px; padding: 14px 16px; border-radius: var(--r-md);
+  background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.15);
+  display: flex; gap: 10px; align-items: flex-start; font-size: 0.8rem;
+  color: var(--text-2); line-height: 1.6;
+}
+.ja-what-next i { color: var(--emerald); font-size: 0.85rem; flex-shrink: 0; margin-top: 1px; }
+
+/* ── RIGHT: JOB SUMMARY CARD ── */
+.ja-sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+.ja-job-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); overflow: hidden; position: relative;
+  position: sticky; top: calc(var(--nav-h) + 24px);
+}
+.ja-job-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(245,158,11,0.04), transparent 60%);
+  pointer-events: none;
+}
+
+.ja-job-card-header {
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.ja-job-card-label {
+  font-size: 0.68rem; font-weight: 700; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px;
+}
+.ja-job-card-title {
+  font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 4px; line-height: 1.3;
+}
+.ja-job-card-employer {
+  font-size: 0.82rem; color: var(--text-3);
+  display: flex; align-items: center; gap: 5px;
+}
+
+/* Pay highlight */
+.ja-pay-block {
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: baseline; gap: 6px;
+}
+.ja-pay-val {
+  font-family: 'Fraunces', serif; font-size: 1.4rem; font-weight: 900;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.ja-pay-unit {
+  font-size: 0.78rem; color: var(--text-3); font-family: 'Outfit', sans-serif;
+}
+
+/* Info list */
+.ja-info-list { padding: 0 24px; }
+.ja-info-row {
+  display: flex; align-items: center; gap: 11px;
+  padding: 11px 0; border-bottom: 1px solid var(--border-subtle);
+}
+.ja-info-row:last-child { border-bottom: none; }
+.ja-info-ico {
+  width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.77rem; color: var(--amber);
+}
+.ja-info-label { font-size: 0.72rem; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+.ja-info-val   { font-size: 0.87rem; color: var(--text-1); font-weight: 600; margin-top: 1px; }
+
+/* Required skills */
+.ja-skills-block {
+  padding: 14px 24px;
+  border-top: 1px solid var(--border-subtle);
+}
+.ja-skills-block-label {
+  font-size: 0.68rem; font-weight: 700; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px;
+}
+.ja-skills-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ja-skill-chip {
+  display: inline-flex; padding: 4px 11px;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-pill); font-size: 0.75rem;
+  font-weight: 500; color: var(--text-2);
+}
+
+/* Employer mini */
+.ja-employer-link {
+  display: flex; align-items: center; gap: 11px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-subtle);
+  text-decoration: none; color: inherit; transition: var(--t);
+}
+.ja-employer-link:hover { background: rgba(255,255,255,0.02); }
+.ja-employer-logo-sm {
+  width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.95rem; overflow: hidden;
+}
+.ja-employer-logo-sm img { width: 100%; height: 100%; object-fit: cover; }
+.ja-employer-name { font-weight: 700; font-size: 0.87rem; margin-bottom: 1px; }
+.ja-employer-type { font-size: 0.74rem; color: var(--text-3); }
+.ja-employer-arrow { margin-left: auto; color: var(--text-3); font-size: 0.7rem; transition: var(--t); }
+.ja-employer-link:hover .ja-employer-arrow { color: var(--amber); transform: translateX(3px); }
+
+/* ── MESSAGES ── */
+.ja-messages {
+  position: fixed; top: calc(var(--nav-h) + 16px); right: 20px;
+  z-index: 3000; display: flex; flex-direction: column; gap: 10px;
+  max-width: 380px; pointer-events: none;
+}
+.ja-msg {
+  padding: 12px 18px; border-radius: var(--r-lg);
+  font-size: 0.87rem; font-weight: 600;
+  display: flex; align-items: center; gap: 10px;
+  box-shadow: var(--shadow-md); pointer-events: all; cursor: pointer;
+  animation: jaMsgIn 0.35s var(--ease) both;
+}
+.ja-msg-success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #6EE7B7; }
+.ja-msg-error   { background: rgba(239,68,68,0.15);  border: 1px solid rgba(239,68,68,0.3);  color: #FCA5A5; }
+.ja-msg-info    { background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.25); color: var(--sky); }
+@keyframes jaMsgIn { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:translateX(0); } }
+
+/* ── FADE-UP ── */
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(18px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.fade-up { animation: fadeUp 0.55s cubic-bezier(0.4,0,0.2,1) both; }
+.d1 { animation-delay: .1s; } .d2 { animation-delay: .2s; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .ja-layout { grid-template-columns: 1fr; }
+  .ja-job-card { position: static; }
+  .ja-sidebar { order: -1; }
+}
+@media (max-width: 560px) {
+  .ja-form-body  { padding: 20px 20px 24px; }
+  .ja-form-footer { padding: 16px 20px 22px; flex-direction: column-reverse; }
+  .ja-btn-submit  { width: 100%; }
+  .ja-btn-cancel  { width: 100%; justify-content: center; }
+  .ja-form-header { padding: 22px 20px 18px; }
+  .ja-info-list   { padding: 0 18px; }
+  .ja-job-card-header { padding: 18px 18px 14px; }
+  .ja-pay-block   { padding: 12px 18px; }
+  .ja-skills-block { padding: 12px 18px; }
+  .ja-employer-link { padding: 14px 18px; }
+  .ja-steps { display: none; }
+}
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+{# ── Floating messages ── #}
+{% if messages %}
+<div class="ja-messages">
+  {% for message in messages %}
+  <div class="ja-msg ja-msg-{{ message.tags }}" onclick="this.remove()">
+    {% if 'success' in message.tags %}<i class="fas fa-circle-check"></i>
+    {% elif 'error' in message.tags %}<i class="fas fa-circle-exclamation"></i>
+    {% else %}<i class="fas fa-circle-info"></i>{% endif %}
+    {{ message }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="ja-page">
+
+  {# ── Breadcrumb ── #}
+  <div class="ja-crumb">
+    <div class="container">
+      <div class="ja-crumb-inner">
+        <a href="{% url 'marketplace:job_list' %}">
+          <i class="fas fa-briefcase" style="font-size:0.68rem;"></i>
+          Find Work
+        </a>
+        <span class="ja-crumb-sep"><i class="fas fa-chevron-right"></i></span>
+        <a href="{% url 'marketplace:job_detail' pk=job.pk %}">
+          {{ job.title|truncatechars:40 }}
+        </a>
+        <span class="ja-crumb-sep"><i class="fas fa-chevron-right"></i></span>
+        <span style="color:var(--amber);font-weight:600;">Apply</span>
+      </div>
+    </div>
+  </div>
+
+  {# ── Hero header ── #}
+  <div class="ja-hero">
+    <div class="container">
+      <div class="ja-hero-inner">
+
+        {# Employer logo #}
+        <div class="ja-hero-logo">
+          {% if job.employer.logo %}
+            <img src="{{ job.employer.logo.url }}" alt="{{ job.employer }}">
+          {% else %}
+            <i class="fas fa-building" style="color:var(--text-3);"></i>
+          {% endif %}
+        </div>
+
+        {# Title #}
+        <div class="ja-hero-text">
+          <div class="ja-step-label">Applying Now</div>
+          <div class="ja-hero-title">{{ job.title }}</div>
+          <div class="ja-hero-employer">
+            <i class="fas fa-building"></i>
+            <a href="{% url 'marketplace:employer_profile_public' pk=job.employer.pk %}">
+              {{ job.employer.company_name|default:job.employer.user.username }}
+            </a>
+            {% if job.employer.is_verified %}
+              <i class="fas fa-circle-check" style="color:var(--emerald);font-size:0.68rem;"></i>
+            {% endif %}
+            {% if job.state %}
+              <span style="color:var(--border-strong);">·</span>
+              <i class="fas fa-map-pin"></i>
+              {{ job.get_state_display }}
+            {% endif %}
+          </div>
+        </div>
+
+        {# 3-step progress tracker #}
+        <div class="ja-steps">
+          <div class="ja-step done">
+            <div class="ja-step-dot">
+              <i class="fas fa-check" style="font-size:0.6rem;"></i>
+            </div>
+            <span class="ja-step-name">Profile</span>
+          </div>
+          <div class="ja-step-connector done"></div>
+          <div class="ja-step active">
+            <div class="ja-step-dot">2</div>
+            <span class="ja-step-name">Apply</span>
+          </div>
+          <div class="ja-step-connector"></div>
+          <div class="ja-step">
+            <div class="ja-step-dot">3</div>
+            <span class="ja-step-name">Submitted</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>{# /hero #}
+
+
+  {# ── Body ── #}
+  <div class="ja-body">
+    <div class="container">
+      <div class="ja-layout">
+
+        {# ──────────────── LEFT: FORM ──────────────── #}
+        <div class="ja-form-col">
+          <div class="ja-form-card fade-up">
+
+            {# Form header #}
+            <div class="ja-form-header">
+              <div class="ja-form-header-title">
+                <i class="fas fa-paper-plane"></i>
+                Your Application
+              </div>
+              <div class="ja-form-header-sub">
+                Your full profile — bio, trade, skills, location, and portfolio — will be
+                sent to the employer automatically.
+                The cover note below is your chance to add a personal message.
+              </div>
+            </div>
+
+            {# Form body #}
+            <form method="POST" id="applyForm"
+                  action="{% url 'marketplace:job_apply' pk=job.pk %}">
+              {% csrf_token %}
+
+              <div class="ja-form-body">
+
+                {# Cover note field #}
+                <div>
+                  <div class="ja-field-label">
+                    <span>
+                      Cover Note
+                      <span class="ja-field-optional">— optional</span>
+                    </span>
+                    <span class="ja-field-char-count" id="charCount">0 / 1000</span>
+                  </div>
+
+                  <textarea
+                    name="cover_note"
+                    id="coverNote"
+                    class="ja-textarea {% if form.cover_note.errors %}has-error{% endif %}"
+                    placeholder="Briefly introduce yourself and explain why you are a great fit for this job…"
+                    maxlength="1000"
+                    rows="6"
+                  >{% if form.cover_note.value %}{{ form.cover_note.value }}{% endif %}</textarea>
+
+                  {% if form.cover_note.errors %}
+                  <div class="ja-field-error">
+                    <i class="fas fa-circle-exclamation"></i>
+                    {{ form.cover_note.errors.0 }}
+                  </div>
+                  {% endif %}
+
+                  <div class="ja-field-hint">
+                    <i class="fas fa-lightbulb"></i>
+                    <span>
+                      A well-written note significantly increases your chance of being shortlisted.
+                      Mention your relevant experience, availability, and what sets you apart.
+                    </span>
+                  </div>
+                </div>
+
+                {# Writing prompt chips — click to append to textarea #}
+                <div class="ja-prompts">
+                  <div class="ja-prompt-label">Quick prompts — click to add</div>
+                  <div style="display:flex;flex-wrap:wrap;gap:7px;">
+                    <button type="button" class="ja-prompt-chip"
+                            onclick="appendPrompt('I have [X] years of experience in {{ job.trade_category.name|default:'this trade' }} and have worked on similar projects before.')">
+                      <i class="fas fa-plus"></i> My experience
+                    </button>
+                    <button type="button" class="ja-prompt-chip"
+                            onclick="appendPrompt('I am available to start immediately and can work on your schedule.')">
+                      <i class="fas fa-plus"></i> Availability
+                    </button>
+                    <button type="button" class="ja-prompt-chip"
+                            onclick="appendPrompt('I bring my own tools and equipment for this type of work.')">
+                      <i class="fas fa-plus"></i> My tools
+                    </button>
+                    <button type="button" class="ja-prompt-chip"
+                            onclick="appendPrompt('I am based in {{ job.state|default:'your area' }} and can reach the site easily.')">
+                      <i class="fas fa-plus"></i> My location
+                    </button>
+                  </div>
+                </div>
+
+              </div>{# /form-body #}
+
+              {# Form footer: submit + cancel #}
+              <div class="ja-form-footer">
+                <a href="{% url 'marketplace:job_detail' pk=job.pk %}"
+                   class="ja-btn-cancel">
+                  <i class="fas fa-arrow-left" style="font-size:0.75rem;"></i>
+                  Back to Job
+                </a>
+                <button type="submit" class="ja-btn-submit" id="submitBtn">
+                  <i class="fas fa-paper-plane"></i>
+                  Submit Application
+                </button>
+              </div>
+
+            </form>{# /applyForm #}
+
+          </div>{# /form-card #}
+
+          {# What happens next — below the form #}
+          <div class="ja-what-next fade-up d1">
+            <i class="fas fa-circle-check"></i>
+            <span>
+              After submitting, the employer will be notified immediately.
+              You can track your application status in
+              <a href="{% url 'marketplace:worker_applications' %}"
+                 style="color:var(--amber);text-decoration:none;font-weight:600;">
+                My Applications</a>.
+              You can withdraw a pending application at any time.
+            </span>
+          </div>
+
+        </div>{# /form-col #}
+
+
+        {# ──────────────── RIGHT: JOB SUMMARY ──────────────── #}
+        <div class="ja-sidebar">
+          <div class="ja-job-card fade-up d2">
+
+            {# Header #}
+            <div class="ja-job-card-header">
+              <div class="ja-job-card-label">You are applying for</div>
+              <div class="ja-job-card-title">{{ job.title }}</div>
+              <div class="ja-job-card-employer">
+                <i class="fas fa-building" style="font-size:0.68rem;"></i>
+                {{ job.employer.company_name|default:job.employer.user.username }}
+                {% if job.employer.is_verified %}
+                  <i class="fas fa-circle-check" style="color:var(--emerald);font-size:0.64rem;margin-left:2px;"></i>
+                {% endif %}
+              </div>
+            </div>
+
+            {# Pay — prominent display #}
+            {% if job.pay_min %}
+            <div class="ja-pay-block">
+              <div class="ja-pay-val">
+                ₦{{ job.pay_min|floatformat:0 }}
+                {% if job.pay_max %} – ₦{{ job.pay_max|floatformat:0 }}{% endif %}
+              </div>
+              <div class="ja-pay-unit">/ {{ job.get_pay_type_display }}</div>
+            </div>
+            {% endif %}
+
+            {# Info rows #}
+            <div class="ja-info-list">
+              <div class="ja-info-row">
+                <div class="ja-info-ico"><i class="fas fa-clock"></i></div>
+                <div>
+                  <div class="ja-info-label">Job Type</div>
+                  <div class="ja-info-val">{{ job.get_job_type_display }}</div>
+                </div>
+              </div>
+
+              {% if job.trade_category %}
+              <div class="ja-info-row">
+                <div class="ja-info-ico"><i class="fas fa-layer-group"></i></div>
+                <div>
+                  <div class="ja-info-label">Trade</div>
+                  <div class="ja-info-val">{{ job.trade_category.name }}</div>
+                </div>
+              </div>
+              {% endif %}
+
+              <div class="ja-info-row">
+                <div class="ja-info-ico"><i class="fas fa-map-pin"></i></div>
+                <div>
+                  <div class="ja-info-label">Location</div>
+                  <div class="ja-info-val">
+                    {{ job.get_state_display|default:job.state }}{% if job.lga %}, {{ job.lga }}{% endif %}
+                    {% if job.is_remote %}
+                      <span style="font-size:0.73rem;color:var(--sky);font-weight:600;margin-left:5px;">
+                        <i class="fas fa-globe" style="font-size:0.62rem;"></i> Remote
+                      </span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="ja-info-row">
+                <div class="ja-info-ico"><i class="fas fa-users"></i></div>
+                <div>
+                  <div class="ja-info-label">Positions</div>
+                  <div class="ja-info-val">
+                    {{ job.slots }} worker{{ job.slots|pluralize }} needed
+                    <span style="font-size:0.73rem;color:var(--text-3);margin-left:4px;">
+                      ({{ job.applications_count }} applied)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {% if job.deadline %}
+              <div class="ja-info-row">
+                <div class="ja-info-ico"><i class="fas fa-calendar-xmark"></i></div>
+                <div>
+                  <div class="ja-info-label">Deadline</div>
+                  <div class="ja-info-val">{{ job.deadline|date:"d M Y" }}</div>
+                </div>
+              </div>
+              {% endif %}
+
+            </div>{# /info-list #}
+
+            {# Required skills #}
+            {% if job.required_skills.all %}
+            <div class="ja-skills-block">
+              <div class="ja-skills-block-label">Required Skills</div>
+              <div class="ja-skills-chips">
+                {% for skill in job.required_skills.all %}
+                <span class="ja-skill-chip">{{ skill.name }}</span>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+
+            {# Employer link #}
+            <a href="{% url 'marketplace:employer_profile_public' pk=job.employer.pk %}"
+               class="ja-employer-link">
+              <div class="ja-employer-logo-sm">
+                {% if job.employer.logo %}
+                  <img src="{{ job.employer.logo.url }}" alt="{{ job.employer }}">
+                {% else %}
+                  <i class="fas fa-building" style="color:var(--amber);font-size:0.9rem;"></i>
+                {% endif %}
+              </div>
+              <div>
+                <div class="ja-employer-name">
+                  {{ job.employer.company_name|default:job.employer.user.username }}
+                </div>
+                <div class="ja-employer-type">
+                  {{ job.employer.get_company_type_display }}
+                  {% if job.employer.is_verified %}
+                    · <span style="color:var(--emerald);font-size:0.72rem;font-weight:700;">Verified</span>
+                  {% endif %}
+                </div>
+              </div>
+              <i class="fas fa-chevron-right ja-employer-arrow"></i>
+            </a>
+
+          </div>{# /job-card #}
+        </div>{# /sidebar #}
+
+      </div>{# /layout #}
+    </div>
+  </div>{# /body #}
+
+</div>{# /page #}
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+
+/* ── Character counter ── */
+const textarea  = document.getElementById('coverNote');
+const charCount = document.getElementById('charCount');
+const MAX = 1000;
+
+function updateCount() {
+  const len = textarea.value.length;
+  charCount.textContent = `${len} / ${MAX}`;
+  charCount.classList.toggle('warn', len >= MAX * 0.85 && len < MAX);
+  charCount.classList.toggle('over', len >= MAX);
+}
+
+textarea.addEventListener('input', updateCount);
+updateCount(); // run once to handle pre-filled value on error re-render
+
+
+/* ── Prompt chips: append text to textarea ── */
+function appendPrompt(text) {
+  const ta = document.getElementById('coverNote');
+  const current = ta.value.trim();
+  ta.value = current ? current + '\n\n' + text : text;
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+  updateCount();
+  /* subtle flash to show text was added */
+  ta.style.borderColor = 'var(--amber)';
+  ta.style.boxShadow   = '0 0 0 3px rgba(245,158,11,0.15)';
+  setTimeout(() => {
+    ta.style.borderColor = '';
+    ta.style.boxShadow   = '';
+  }, 600);
+}
+
+
+/* ── Submit button loading state ── */
+document.getElementById('applyForm').addEventListener('submit', function () {
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting…';
+});
+
+
+/* ── Scroll-triggered fade-up ── */
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.style.animationPlayState = 'running';
+      obs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.08 });
+
+document.querySelectorAll('.fade-up').forEach(el => {
+  el.style.animationPlayState = 'paused';
+  obs.observe(el);
+});
+
+
+/* ── Auto-dismiss messages ── */
+document.querySelectorAll('.ja-msg').forEach(el => {
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.4s';
+    el.style.opacity    = '0';
+    setTimeout(() => el.remove(), 420);
+  }, 4000);
+});
+
+</script>
+{% endblock %}

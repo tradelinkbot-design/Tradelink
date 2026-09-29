@@ -1,0 +1,660 @@
+{% extends "base.html" %}
+{% block title %}Notifications — TradeLink NG{% endblock %}
+
+{# ─────────────────────────────────────────────────────────────────────────────
+   Context — NotificationListView:
+     notifications — Page object of Notification rows, ordered -created_at
+                     All are marked is_read=True as soon as this page loads.
+                     Fields: id, notif_type, title, body, data, is_read,
+                             created_at
+     unread_count  — always 0 (view marks all read before rendering)
+
+   NotifType choices:
+     new_match          → fa-bolt          amber
+     application_update → fa-file-pen      sky
+     new_application    → fa-user-plus     emerald
+     new_review         → fa-star          amber
+     job_expiring       → fa-clock         orange
+     profile_tip        → fa-lightbulb     amber
+     system             → fa-circle-info   text-3
+───────────────────────────────────────────────────────────────────────────── #}
+
+{% block extra_head %}
+<style>
+/* =====================================================
+   NOTIFICATIONS LIST — TradeLink NG
+   Context: notifications (page), unread_count
+===================================================== */
+
+/* ── PAGE ── */
+.nl-page { padding-top: var(--nav-h); min-height: 100vh; }
+
+/* ── HERO ── */
+.nl-hero {
+  padding: 44px 0 40px;
+  background: linear-gradient(
+    160deg,
+    rgba(245,158,11,0.05) 0%,
+    rgba(249,115,22,0.02) 50%,
+    transparent 100%
+  );
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative; overflow: hidden;
+}
+.nl-hero::before {
+  content: '';
+  position: absolute; top: -100px; right: -80px;
+  width: 420px; height: 420px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,158,11,0.07), transparent 65%);
+  pointer-events: none;
+}
+.nl-hero-inner {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 20px; flex-wrap: wrap;
+}
+.nl-hero-left {}
+.nl-crumb {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 0.8rem; color: var(--text-3); margin-bottom: 14px;
+}
+.nl-crumb a { color: var(--text-3); text-decoration: none; transition: var(--t); }
+.nl-crumb a:hover { color: var(--amber); }
+.nl-crumb-sep { font-size: 0.6rem; }
+
+.nl-page-title {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  font-weight: 900; letter-spacing: -0.5px;
+  color: var(--text-1); line-height: 1.1; margin-bottom: 8px;
+}
+.nl-page-title i { color: var(--amber); margin-right: 8px; font-size: 85%; }
+.nl-page-sub { font-size: 0.88rem; color: var(--text-3); }
+
+/* Mark-all button */
+.nl-mark-all-form { flex-shrink: 0; align-self: flex-end; }
+.nl-mark-all-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 10px 20px;
+  background: transparent; border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md); color: var(--text-2);
+  font-family: 'Outfit', sans-serif; font-size: 0.86rem; font-weight: 600;
+  cursor: pointer; transition: var(--t);
+}
+.nl-mark-all-btn:hover {
+  background: var(--surface-1); color: var(--text-1);
+  border-color: var(--border-strong);
+}
+
+/* ── BODY ── */
+.nl-body {
+  max-width: 760px; margin: 0 auto;
+  padding: 44px clamp(20px,4vw,48px) 80px;
+}
+
+/* ── TYPE FILTER TABS ── */
+.nl-filter-row {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+.nl-filter-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: var(--r-pill);
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  color: var(--text-2); font-family: 'Outfit', sans-serif;
+  font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: var(--t);
+}
+.nl-filter-btn:hover { border-color: var(--border-strong); color: var(--text-1); }
+.nl-filter-btn.active {
+  background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3);
+  color: var(--amber);
+}
+.nl-filter-btn i { font-size: 0.68rem; }
+
+/* ── NOTIFICATION LIST ── */
+.nl-list { display: flex; flex-direction: column; gap: 0; }
+
+.nl-item {
+  display: flex; align-items: flex-start; gap: 16px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.18s, transform 0.18s;
+  position: relative; cursor: pointer;
+  text-decoration: none; color: inherit;
+}
+.nl-item:first-child { border-top: 1px solid var(--border-subtle); }
+.nl-item:last-child  { border-bottom: none; }
+.nl-item:hover { background: rgba(245,158,11,0.04); transform: translateX(2px); }
+
+/* Dismiss (delete) button */
+.nl-delete-form { flex-shrink: 0; align-self: center; margin-left: auto; }
+.nl-delete-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: transparent; border: 1px solid transparent;
+  color: var(--text-3); font-size: 0.8rem;
+  cursor: pointer; transition: var(--t);
+  flex-shrink: 0;
+}
+.nl-delete-btn:hover {
+  background: rgba(239,68,68,0.10); border-color: rgba(239,68,68,0.25);
+  color: #ef4444;
+}
+
+/* View hint badge */
+.nl-view-hint {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.74rem; font-weight: 600; color: var(--text-3);
+}
+
+/* Unread left glow accent */
+.nl-item.unread::before {
+  content: '';
+  position: absolute; left: -20px; top: 0; bottom: 0; width: 3px;
+  background: linear-gradient(to bottom, var(--amber), var(--orange));
+  border-radius: 0 2px 2px 0;
+}
+
+/* Type icon badge */
+.nl-icon {
+  width: 44px; height: 44px; border-radius: 13px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.95rem;
+}
+.nl-icon.new_match          { background: rgba(245,158,11,0.12); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+.nl-icon.application_update { background: rgba(56,189,248,0.10); color: var(--sky);   border: 1px solid rgba(56,189,248,0.2); }
+.nl-icon.new_application    { background: rgba(16,185,129,0.10); color: var(--emerald); border: 1px solid rgba(16,185,129,0.2); }
+.nl-icon.new_review         { background: rgba(245,158,11,0.12); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+.nl-icon.job_expiring       { background: rgba(249,115,22,0.10); color: var(--orange); border: 1px solid rgba(249,115,22,0.2); }
+.nl-icon.profile_tip        { background: rgba(245,158,11,0.08); color: var(--amber); border: 1px solid rgba(245,158,11,0.15); }
+.nl-icon.system             { background: var(--surface-1);      color: var(--text-3); border: 1px solid var(--border-subtle); }
+
+/* Content */
+.nl-content { flex: 1; min-width: 0; }
+.nl-title {
+  font-size: 0.93rem; font-weight: 700; color: var(--text-1);
+  margin-bottom: 4px; line-height: 1.4;
+  word-break: break-word;
+}
+.nl-item.read .nl-title { color: var(--text-2); font-weight: 600; }
+
+.nl-body-text {
+  font-size: 0.83rem; color: var(--text-3); line-height: 1.6;
+  margin-bottom: 8px; word-break: break-word;
+}
+
+.nl-meta-row {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.nl-time {
+  font-size: 0.75rem; color: var(--text-3);
+  display: flex; align-items: center; gap: 5px;
+}
+.nl-time i { font-size: 0.65rem; }
+
+.nl-type-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: var(--r-pill);
+  font-size: 0.68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.nl-type-badge.new_match          { background: rgba(245,158,11,0.1);  color: var(--amber); }
+.nl-type-badge.application_update { background: rgba(56,189,248,0.1);  color: var(--sky); }
+.nl-type-badge.new_application    { background: rgba(16,185,129,0.1);  color: var(--emerald); }
+.nl-type-badge.new_review         { background: rgba(245,158,11,0.1);  color: var(--amber); }
+.nl-type-badge.job_expiring       { background: rgba(249,115,22,0.1);  color: var(--orange); }
+.nl-type-badge.profile_tip        { background: rgba(245,158,11,0.08); color: var(--amber); }
+.nl-type-badge.system             { background: var(--surface-1);      color: var(--text-3); }
+
+/* CTA link if data has a job_id / application_id */
+.nl-action-link {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.78rem; font-weight: 600; color: var(--amber);
+  text-decoration: none; transition: var(--t);
+  padding: 4px 10px; border-radius: var(--r-md);
+  background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2);
+}
+.nl-action-link:hover { background: rgba(245,158,11,0.15); }
+
+/* Read indicator dot */
+.nl-read-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  margin-top: 6px;
+}
+.nl-item.unread .nl-read-dot { background: var(--amber); box-shadow: 0 0 0 3px rgba(245,158,11,0.15); }
+.nl-item.read   .nl-read-dot { background: var(--border-strong); }
+
+/* ── DATE DIVIDERS ── */
+.nl-date-divider {
+  display: flex; align-items: center; gap: 12px;
+  padding: 20px 0 8px; font-size: 0.74rem; font-weight: 700;
+  color: var(--text-3); text-transform: uppercase; letter-spacing: 1.5px;
+}
+.nl-date-divider::before,
+.nl-date-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border-subtle);
+}
+
+/* ── EMPTY STATE ── */
+.nl-empty {
+  text-align: center; padding: 72px 24px;
+}
+.nl-empty-icon {
+  width: 80px; height: 80px; border-radius: 24px; margin: 0 auto 24px;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; color: var(--text-3);
+}
+.nl-empty-title {
+  font-family: 'Fraunces', serif; font-size: 1.3rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 10px;
+}
+.nl-empty-sub {
+  font-size: 0.9rem; color: var(--text-3); max-width: 380px;
+  margin: 0 auto 28px; line-height: 1.7;
+}
+.nl-empty-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  color: #0C0A08; font-family: 'Outfit', sans-serif;
+  font-size: 0.9rem; font-weight: 700; border-radius: var(--r-md);
+  text-decoration: none; transition: var(--t);
+  box-shadow: 0 4px 20px rgba(245,158,11,0.28);
+}
+.nl-empty-btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
+
+/* ── PAGINATION ── */
+.nl-pagination {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; padding-top: 40px; flex-wrap: wrap;
+}
+.nl-page-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 40px; height: 40px; padding: 0 14px;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md); color: var(--text-2);
+  font-family: 'Outfit', sans-serif; font-size: 0.86rem; font-weight: 600;
+  text-decoration: none; transition: var(--t);
+}
+.nl-page-btn:hover { background: var(--surface-1); color: var(--text-1); border-color: var(--border-strong); }
+.nl-page-btn.active {
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  border-color: transparent; color: #0C0A08; font-weight: 700;
+}
+.nl-page-btn.disabled { opacity: 0.35; pointer-events: none; }
+.nl-page-info {
+  font-size: 0.8rem; color: var(--text-3); padding: 0 6px;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 640px) {
+  .nl-hero { padding: 32px 0 28px; }
+  .nl-hero-inner { flex-direction: column; gap: 16px; }
+  .nl-mark-all-form { width: 100%; }
+  .nl-mark-all-btn  { width: 100%; justify-content: center; }
+  .nl-item { gap: 12px; padding: 16px 0; }
+  .nl-icon { width: 38px; height: 38px; font-size: 0.85rem; border-radius: 11px; }
+  .nl-item.unread::before { left: -16px; }
+  .nl-page-title { font-size: 1.4rem; }
+}
+@media (max-width: 420px) {
+  .nl-body { padding: 32px 16px 60px; }
+  .nl-filter-row { gap: 6px; }
+  .nl-filter-btn { font-size: 0.74rem; padding: 5px 11px; }
+}
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="nl-page">
+
+  {# ── HERO ── #}
+  <section class="nl-hero">
+    <div class="container">
+      <div class="nl-hero-inner">
+        <div class="nl-hero-left fade-up">
+          {# Breadcrumb #}
+          <nav class="nl-crumb">
+            <a href="{% url 'marketplace:dashboard' %}">
+              <i class="fas fa-gauge-high" style="font-size:0.68rem;"></i> Dashboard
+            </a>
+            <span class="nl-crumb-sep"><i class="fas fa-chevron-right" style="font-size:0.58rem;"></i></span>
+            <span style="color:var(--text-2);">Notifications</span>
+          </nav>
+          <h1 class="nl-page-title">
+            <i class="fas fa-bell"></i>Notifications
+          </h1>
+          <p class="nl-page-sub">
+            {% if notifications.paginator.count %}
+              {{ notifications.paginator.count }} notification{{ notifications.paginator.count|pluralize }} total
+              — all marked as read
+            {% else %}
+              You're all caught up — no notifications yet
+            {% endif %}
+          </p>
+        </div>
+
+        {# Mark all read button (still useful for UX clarity) #}
+        {% if notifications.paginator.count %}
+        <form method="POST"
+              action="{% url 'marketplace:notifications_read_all' %}"
+              class="nl-mark-all-form fade-up d1">
+          {% csrf_token %}
+          <button type="submit" class="nl-mark-all-btn">
+            <i class="fas fa-check-double"></i>
+            Mark All Read
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  {# ── BODY ── #}
+  <div class="nl-body">
+
+    {% if notifications.paginator.count %}
+
+      {# ── Client-side type filter tabs ── #}
+      <div class="nl-filter-row" id="filterRow">
+        <button class="nl-filter-btn active" data-filter="all" onclick="filterNotifs(this, 'all')">
+          <i class="fas fa-list"></i> All
+        </button>
+        <button class="nl-filter-btn" data-filter="new_match" onclick="filterNotifs(this, 'new_match')">
+          <i class="fas fa-bolt"></i> Matches
+        </button>
+        <button class="nl-filter-btn" data-filter="application_update" onclick="filterNotifs(this, 'application_update')">
+          <i class="fas fa-file-pen"></i> Applications
+        </button>
+        <button class="nl-filter-btn" data-filter="new_application" onclick="filterNotifs(this, 'new_application')">
+          <i class="fas fa-user-plus"></i> New Applicants
+        </button>
+        <button class="nl-filter-btn" data-filter="new_review" onclick="filterNotifs(this, 'new_review')">
+          <i class="fas fa-star"></i> Reviews
+        </button>
+        <button class="nl-filter-btn" data-filter="job_expiring" onclick="filterNotifs(this, 'job_expiring')">
+          <i class="fas fa-clock"></i> Expiring
+        </button>
+        <button class="nl-filter-btn" data-filter="profile_tip" onclick="filterNotifs(this, 'profile_tip')">
+          <i class="fas fa-lightbulb"></i> Tips
+        </button>
+      </div>
+
+      {# ── Notification list ── #}
+      <div class="nl-list" id="notifList">
+        {% for notif in notifications %}
+
+          {# ── Date divider — injected between days ── #}
+          {% ifchanged notif.created_at|date:"Y-m-d" %}
+          <div class="nl-date-divider">
+            {% if notif.created_at|date:"Y-m-d" == today|date:"Y-m-d" %}
+              Today
+            {% elif notif.created_at|date:"Y-m-d" == yesterday|date:"Y-m-d" %}
+              Yesterday
+            {% else %}
+              {{ notif.created_at|date:"d F Y" }}
+            {% endif %}
+          </div>
+          {% endifchanged %}
+
+          {# ── Notification row — entire card is a link ── #}
+          <a class="nl-item {% if notif.is_read %}read{% else %}unread{% endif %}"
+             data-type="{{ notif.notif_type }}"
+             id="notif-{{ notif.pk }}"
+             href="{{ notif.get_absolute_url }}">
+
+            {# Type icon #}
+            <div class="nl-icon {{ notif.notif_type }}">
+              {% if notif.notif_type == 'new_match' %}
+                <i class="fas fa-bolt"></i>
+              {% elif notif.notif_type == 'application_update' %}
+                <i class="fas fa-file-pen"></i>
+              {% elif notif.notif_type == 'new_application' %}
+                <i class="fas fa-user-plus"></i>
+              {% elif notif.notif_type == 'new_review' %}
+                <i class="fas fa-star"></i>
+              {% elif notif.notif_type == 'job_expiring' %}
+                <i class="fas fa-clock"></i>
+              {% elif notif.notif_type == 'profile_tip' %}
+                <i class="fas fa-lightbulb"></i>
+              {% else %}
+                <i class="fas fa-circle-info"></i>
+              {% endif %}
+            </div>
+
+            {# Content #}
+            <div class="nl-content">
+              <div class="nl-title">{{ notif.title }}</div>
+
+              {% if notif.body %}
+              <div class="nl-body-text">{{ notif.body }}</div>
+              {% endif %}
+
+              <div class="nl-meta-row">
+                <span class="nl-time">
+                  <i class="fas fa-clock"></i>
+                  {{ notif.created_at|timesince }} ago
+                </span>
+
+                <span class="nl-type-badge {{ notif.notif_type }}">
+                  {% if notif.notif_type == 'new_match' %}Job Match
+                  {% elif notif.notif_type == 'application_update' %}Application
+                  {% elif notif.notif_type == 'new_application' %}New Applicant
+                  {% elif notif.notif_type == 'new_review' %}Review
+                  {% elif notif.notif_type == 'job_expiring' %}Expiring
+                  {% elif notif.notif_type == 'profile_tip' %}Profile Tip
+                  {% else %}System
+                  {% endif %}
+                </span>
+
+                <span class="nl-view-hint">
+                  <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i> View
+                </span>
+              </div>{# /meta-row #}
+            </div>{# /content #}
+
+            {# Read dot #}
+            <div class="nl-read-dot"></div>
+
+            {# Delete button (stops click propagation so it doesn't navigate) #}
+            <form class="nl-delete-form"
+                  method="POST"
+                  action="{% url 'marketplace:notification_delete' pk=notif.pk %}"
+                  onclick="event.stopPropagation()">
+              {% csrf_token %}
+              <button type="submit"
+                      class="nl-delete-btn"
+                      title="Dismiss notification"
+                      onclick="dismissNotif(event, this)">
+                <i class="fas fa-xmark"></i>
+              </button>
+            </form>
+
+          </a>{# /nl-item #}
+
+
+        {% endfor %}
+      </div>{# /nl-list #}
+
+      {# ── PAGINATION ── #}
+      {% if notifications.has_other_pages %}
+      <nav class="nl-pagination" aria-label="Notifications pages">
+        {% if notifications.has_previous %}
+        <a href="?page={{ notifications.previous_page_number }}" class="nl-page-btn">
+          <i class="fas fa-chevron-left" style="font-size:0.72rem;"></i>
+        </a>
+        {% else %}
+        <span class="nl-page-btn disabled">
+          <i class="fas fa-chevron-left" style="font-size:0.72rem;"></i>
+        </span>
+        {% endif %}
+
+        {% for num in notifications.paginator.page_range %}
+          {% if notifications.number == num %}
+          <span class="nl-page-btn active">{{ num }}</span>
+          {% elif num > notifications.number|add:"-3" and num < notifications.number|add:"3" %}
+          <a href="?page={{ num }}" class="nl-page-btn">{{ num }}</a>
+          {% endif %}
+        {% endfor %}
+
+        <span class="nl-page-info">
+          Page {{ notifications.number }} of {{ notifications.paginator.num_pages }}
+        </span>
+
+        {% if notifications.has_next %}
+        <a href="?page={{ notifications.next_page_number }}" class="nl-page-btn">
+          <i class="fas fa-chevron-right" style="font-size:0.72rem;"></i>
+        </a>
+        {% else %}
+        <span class="nl-page-btn disabled">
+          <i class="fas fa-chevron-right" style="font-size:0.72rem;"></i>
+        </span>
+        {% endif %}
+      </nav>
+      {% endif %}
+
+    {% else %}
+      {# ── EMPTY STATE ── #}
+      <div class="nl-empty fade-up">
+        <div class="nl-empty-icon">
+          <i class="fas fa-bell-slash"></i>
+        </div>
+        <div class="nl-empty-title">No notifications yet</div>
+        <div class="nl-empty-sub">
+          When employers review your application, new job matches are found,
+          or someone leaves a review, you'll see it here.
+        </div>
+        <a href="{% url 'marketplace:job_list' %}" class="nl-empty-btn">
+          <i class="fas fa-briefcase"></i> Browse Jobs
+        </a>
+      </div>
+    {% endif %}
+
+  </div>{# /nl-body #}
+</div>{# /nl-page #}
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+/* ── Client-side type filter ── */
+function filterNotifs(btn, type) {
+  /* Update active tab */
+  document.querySelectorAll('.nl-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  /* Show / hide items + date dividers */
+  const items     = document.querySelectorAll('.nl-item');
+  const dividers  = document.querySelectorAll('.nl-date-divider');
+
+  /* First show/hide notification rows */
+  items.forEach(item => {
+    if (type === 'all' || item.dataset.type === type) {
+      item.style.display = '';
+    } else {
+      item.style.display = 'none';
+    }
+  });
+
+  /* Hide date dividers that have no visible items after them */
+  dividers.forEach(div => {
+    /* Look for the next sibling items until the next divider or end */
+    let next = div.nextElementSibling;
+    let hasVisible = false;
+    while (next && !next.classList.contains('nl-date-divider')) {
+      if (next.classList.contains('nl-item') && next.style.display !== 'none') {
+        hasVisible = true;
+        break;
+      }
+      next = next.nextElementSibling;
+    }
+    div.style.display = hasVisible ? '' : 'none';
+  });
+
+  /* Show a "no results" message if everything is hidden */
+  const list = document.getElementById('notifList');
+  const noResultsId = 'nl-no-results';
+  let noResults = document.getElementById(noResultsId);
+
+  const anyVisible = [...items].some(i => i.style.display !== 'none');
+  if (!anyVisible) {
+    if (!noResults) {
+      noResults = document.createElement('p');
+      noResults.id = noResultsId;
+      noResults.style.cssText = 'text-align:center;color:var(--text-3);font-size:0.88rem;padding:40px 0;';
+      noResults.textContent   = 'No notifications of this type.';
+      list.appendChild(noResults);
+    }
+    noResults.style.display = '';
+  } else if (noResults) {
+    noResults.style.display = 'none';
+  }
+}
+
+/* ── Scroll-triggered fade-up ── */
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.style.animationPlayState = 'running';
+      obs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.05 });
+document.querySelectorAll('.fade-up').forEach((el, i) => {
+  el.style.animationPlayState = 'paused';
+  el.style.animationDelay = el.style.animationDelay || (i * 0.06) + 's';
+  obs.observe(el);
+});
+
+/* ── Stagger notification rows ── */
+document.querySelectorAll('.nl-item').forEach((el, i) => {
+  el.style.opacity   = '0';
+  el.style.transform = 'translateY(8px)';
+  el.style.transition = `opacity 0.35s ${0.04 + i * 0.04}s, transform 0.35s ${0.04 + i * 0.04}s`;
+  const sObs = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) {
+      el.style.opacity   = '1';
+      el.style.transform = 'translateY(0)';
+      sObs.disconnect();
+    }
+  }, { threshold: 0.05 });
+  sObs.observe(el);
+});
+
+/* ── AJAX soft-delete / dismiss ── */
+function dismissNotif(e, btn) {
+  e.preventDefault();
+  e.stopPropagation();
+
+  const form = btn.closest('form');
+  const item = btn.closest('.nl-item');
+  const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
+  const url  = form.action;
+
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': csrfToken,
+      'X-Requested-With': 'XMLHttpRequest',
+    },
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      /* Animate the row out */
+      item.style.transition = 'opacity 0.3s, max-height 0.4s, padding 0.4s';
+      item.style.overflow   = 'hidden';
+      item.style.maxHeight  = item.offsetHeight + 'px';
+      requestAnimationFrame(() => {
+        item.style.opacity   = '0';
+        item.style.maxHeight = '0';
+        item.style.padding   = '0';
+      });
+      setTimeout(() => item.remove(), 420);
+    }
+  })
+  .catch(() => form.submit()); /* fallback to plain POST on network error */
+}
+</script>
+{% endblock %}

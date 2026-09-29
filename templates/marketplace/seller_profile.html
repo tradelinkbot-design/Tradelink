@@ -1,0 +1,955 @@
+{% extends "base.html" %}
+{% block title %}{{ seller.user.get_full_name|default:seller.user.username }} — Marketplace Seller — TradeLink NG{% endblock %}
+{% block nav_marketplace %}active{% endblock %}
+
+{#
+  Context — SellerPublicProfileView:
+    seller      — WorkerProfile
+                  .user.get_full_name, .user.username, .user.email
+                  .trade_category.name
+                  .bio, .state, .lga, .years_experience, .experience_level
+                  .availability, .is_verified, .profile_completion
+                  .hourly_rate, .daily_rate
+    listings    — QuerySet[Product] status=ACTIVE, prefetch images, [:12]
+    reviews     — QuerySet[ProductReview] [:10]
+                  .reviewer.username / .reviewer.get_full_name
+                  .rating, .comment, .created_at, .product.title
+    avg_rating  — float | None
+    unread_count— int (navbar bell badge)
+#}
+
+{% block extra_head %}
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   MARKETPLACE SELLER PROFILE — TradeLink NG
+   Extends base.html design system (dark amber, Fraunces + Outfit)
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Page shell ──────────────────────────────────────────────────────── */
+.sp-page { padding-top: var(--nav-h); position: relative; z-index: 1; }
+
+/* ── Hero band ───────────────────────────────────────────────────────── */
+.sp-hero {
+  padding: 52px 0 0;
+  background: linear-gradient(
+    160deg,
+    rgba(245,158,11,0.07) 0%,
+    rgba(249,115,22,0.03) 50%,
+    transparent 100%
+  );
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative; overflow: hidden;
+}
+.sp-hero::before {
+  content: '';
+  position: absolute; top: -120px; right: -100px;
+  width: 520px; height: 520px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,158,11,0.07), transparent 65%);
+  pointer-events: none;
+}
+
+/* ── Identity block ──────────────────────────────────────────────────── */
+.sp-identity {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 28px; flex-wrap: wrap;
+  padding-bottom: 36px;
+}
+.sp-avatar-row { display: flex; align-items: center; gap: 22px; }
+.sp-avatar {
+  width: 88px; height: 88px; border-radius: 24px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Fraunces', serif; font-weight: 900; font-size: 2.2rem;
+  color: #0C0A08;
+  box-shadow: 0 8px 32px rgba(245,158,11,0.35);
+  border: 3px solid rgba(245,158,11,0.25);
+}
+.sp-name {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(1.5rem, 4vw, 2.2rem);
+  font-weight: 900; letter-spacing: -0.5px;
+  color: var(--text-1); line-height: 1.1; margin-bottom: 6px;
+}
+.sp-trade {
+  font-size: 0.88rem; color: var(--text-3); font-weight: 500;
+  margin-bottom: 12px;
+  display: flex; align-items: center; gap: 6px;
+}
+.sp-trade i { color: var(--amber); font-size: 0.8rem; }
+.sp-badges { display: flex; flex-wrap: wrap; gap: 7px; }
+.sp-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 11px; border-radius: var(--r-pill);
+  font-size: 0.73rem; font-weight: 700;
+}
+.sp-badge-verified {
+  background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25);
+  color: var(--emerald);
+}
+.sp-badge-avail-available {
+  background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);
+  color: #6EE7B7;
+}
+.sp-badge-avail-busy {
+  background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.2);
+  color: #FDA975;
+}
+.sp-badge-avail-soon {
+  background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2);
+  color: var(--amber-light);
+}
+.sp-badge-avail-unavailable {
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  color: var(--text-3);
+}
+.avail-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: currentColor; flex-shrink: 0;
+}
+.sp-badge-avail-available .avail-dot { animation: pulseDot 2s infinite; }
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.8); }
+}
+.sp-badge-exp {
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  color: var(--text-2);
+}
+.sp-badge-location {
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  color: var(--text-2);
+}
+
+/* Hero CTA buttons */
+.sp-hero-actions { display: flex; gap: 10px; flex-shrink: 0; flex-wrap: wrap; align-items: flex-start; }
+.sp-btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 22px;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  color: #0C0A08; font-family: 'Outfit', sans-serif;
+  font-size: 0.92rem; font-weight: 700; border-radius: var(--r-md);
+  text-decoration: none; transition: var(--t);
+  box-shadow: 0 4px 20px rgba(245,158,11,0.28); white-space: nowrap;
+}
+.sp-btn-primary:hover {
+  filter: brightness(1.06); transform: translateY(-1px);
+  box-shadow: 0 8px 28px rgba(245,158,11,0.38);
+}
+.sp-btn-ghost {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 22px;
+  background: transparent; border: 1px solid var(--border-subtle);
+  color: var(--text-2); font-family: 'Outfit', sans-serif;
+  font-size: 0.92rem; font-weight: 600; border-radius: var(--r-md);
+  text-decoration: none; transition: var(--t); white-space: nowrap;
+}
+.sp-btn-ghost:hover {
+  background: var(--surface-1); color: var(--text-1); border-color: var(--border-strong);
+}
+
+/* ── Stats band ──────────────────────────────────────────────────────── */
+.sp-stats-band {
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-raised);
+}
+.sp-stats-inner {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+}
+.sp-stat {
+  padding: 22px 28px;
+  border-right: 1px solid var(--border-subtle);
+}
+.sp-stat:last-child { border-right: none; }
+.sp-stat-number {
+  font-family: 'Fraunces', serif; font-size: 1.9rem; font-weight: 900;
+  line-height: 1;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.sp-stat-label {
+  font-size: 0.77rem; color: var(--text-3); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 1px; margin-top: 5px;
+}
+.sp-stat-sub {
+  font-size: 0.74rem; color: var(--text-3); margin-top: 2px;
+}
+/* Stars inline inside stat */
+.sp-star-filled { color: var(--amber); font-size: 0.75rem; }
+.sp-star-empty  { color: var(--border-strong); font-size: 0.75rem; }
+
+/* ── Body layout ─────────────────────────────────────────────────────── */
+.sp-body { padding: 48px 0 80px; }
+.sp-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 44px; align-items: start;
+}
+
+/* ── Section header ──────────────────────────────────────────────────── */
+.sp-section-head {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 20px;
+  padding-bottom: 14px; border-bottom: 1px solid var(--border-subtle);
+}
+.sp-section-head i { color: var(--amber); font-size: 0.86rem; }
+.sp-section-count {
+  margin-left: auto; font-family: 'Outfit', sans-serif;
+  font-size: 0.76rem; font-weight: 600; color: var(--amber);
+  background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2);
+  border-radius: var(--r-pill); padding: 2px 9px;
+}
+
+/* ── Product grid ────────────────────────────────────────────────────── */
+.sp-product-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 36px;
+}
+.sp-product-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); overflow: hidden; transition: var(--t);
+  text-decoration: none; display: flex; flex-direction: column;
+  position: relative;
+}
+.sp-product-card:hover {
+  border-color: var(--border-strong); transform: translateY(-3px);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+}
+.sp-product-img {
+  width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block;
+  background: var(--surface-1); transition: transform 0.5s var(--ease);
+}
+.sp-product-card:hover .sp-product-img { transform: scale(1.04); }
+.sp-product-img-placeholder {
+  width: 100%; aspect-ratio: 4/3;
+  background: var(--surface-1);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--border-strong); font-size: 2rem;
+}
+.sp-product-body { padding: 14px 16px 16px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.sp-product-title {
+  font-weight: 600; font-size: 0.9rem; color: var(--text-1);
+  line-height: 1.3; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.sp-product-price {
+  font-family: 'Fraunces', serif; font-size: 1.1rem; font-weight: 800;
+  color: var(--amber); margin-top: auto;
+}
+.sp-product-meta {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+}
+.sp-product-tag {
+  font-size: 0.7rem; font-weight: 600; padding: 2px 8px;
+  border-radius: var(--r-pill); background: var(--surface-1);
+  color: var(--text-2); border: 1px solid var(--border-subtle);
+}
+.sp-product-tag.new     { background: rgba(16,185,129,0.08); color: #6EE7B7;  border-color: rgba(16,185,129,0.18); }
+.sp-product-tag.used    { background: rgba(245,158,11,0.08); color: var(--amber-light); border-color: rgba(245,158,11,0.18); }
+.sp-product-tag.parts   { background: rgba(249,115,22,0.08); color: #FDA975;  border-color: rgba(249,115,22,0.18); }
+
+/* ── Reviews ─────────────────────────────────────────────────────────── */
+.sp-review-list { display: flex; flex-direction: column; gap: 14px; margin-bottom: 36px; }
+.sp-review-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 18px 20px;
+  transition: var(--t);
+}
+.sp-review-card:hover { border-color: var(--border-strong); }
+.sp-review-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; margin-bottom: 10px;
+}
+.sp-review-reviewer {
+  font-weight: 600; font-size: 0.88rem; color: var(--text-1);
+  display: flex; align-items: center; gap: 7px;
+}
+.sp-review-reviewer-avatar {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 800; color: #0C0A08;
+}
+.sp-review-stars { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.sp-review-date { font-size: 0.75rem; color: var(--text-3); margin-top: 2px; }
+.sp-review-product {
+  font-size: 0.76rem; color: var(--amber); font-weight: 600; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 5px;
+}
+.sp-review-product i { font-size: 0.68rem; opacity: 0.7; }
+.sp-review-comment { font-size: 0.85rem; color: var(--text-2); line-height: 1.65; }
+
+/* Star display */
+.sp-star-lg { font-size: 0.85rem; }
+.sp-star-lg.filled { color: var(--amber); }
+.sp-star-lg.empty  { color: var(--border-strong); }
+
+/* ── Empty states ─────────────────────────────────────────────────────── */
+.sp-empty {
+  text-align: center; padding: 44px 20px;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--r-xl); background: var(--surface-1);
+}
+.sp-empty i { font-size: 2rem; color: var(--text-3); margin-bottom: 14px; display: block; }
+.sp-empty p { color: var(--text-3); font-size: 0.88rem; margin-bottom: 0; }
+
+/* ── Sidebar cards ───────────────────────────────────────────────────── */
+.sp-sidebar { display: flex; flex-direction: column; gap: 18px; }
+.sp-info-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 20px; position: relative; overflow: hidden;
+}
+.sp-info-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(245,158,11,0.04), transparent 70%);
+  pointer-events: none;
+}
+.sp-info-card-title {
+  font-family: 'Fraunces', serif; font-size: 0.92rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.sp-info-card-title i { color: var(--amber); font-size: 0.8rem; }
+
+/* About bio */
+.sp-bio {
+  font-size: 0.86rem; color: var(--text-2); line-height: 1.7;
+}
+
+/* Detail rows */
+.sp-detail-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.84rem;
+}
+.sp-detail-row:last-child { border-bottom: none; padding-bottom: 0; }
+.sp-detail-icon {
+  width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+  background: rgba(245,158,11,0.08);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; color: var(--amber);
+  margin-top: 1px;
+}
+.sp-detail-label { font-size: 0.72rem; color: var(--text-3); font-weight: 600; margin-bottom: 1px; }
+.sp-detail-value { color: var(--text-1); font-weight: 500; }
+
+/* Rate display */
+.sp-rate-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sp-rate-item {
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); padding: 12px 14px; text-align: center;
+}
+.sp-rate-amount {
+  font-family: 'Fraunces', serif; font-weight: 800; font-size: 1.1rem;
+  color: var(--amber); display: block; margin-bottom: 2px;
+}
+.sp-rate-label { font-size: 0.7rem; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+
+/* Rating summary card */
+.sp-rating-summary {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px; background: rgba(245,158,11,0.05);
+  border-radius: var(--r-lg); border: 1px solid rgba(245,158,11,0.15);
+  margin-bottom: 14px;
+}
+.sp-rating-big {
+  font-family: 'Fraunces', serif; font-size: 2.4rem; font-weight: 900;
+  color: var(--amber); line-height: 1; flex-shrink: 0;
+}
+.sp-rating-breakdown { flex: 1; min-width: 0; }
+.sp-rating-stars-row { display: flex; align-items: center; gap: 3px; margin-bottom: 3px; }
+.sp-rating-count { font-size: 0.77rem; color: var(--text-3); }
+
+/* ── Messages toast ──────────────────────────────────────────────────── */
+.sp-messages {
+  position: fixed; top: calc(var(--nav-h) + 16px); right: 20px;
+  z-index: 3000; display: flex; flex-direction: column; gap: 10px;
+  max-width: 360px; pointer-events: none;
+}
+.sp-msg {
+  padding: 13px 18px; border-radius: var(--r-lg);
+  font-size: 0.87rem; font-weight: 600;
+  display: flex; align-items: center; gap: 10px;
+  box-shadow: var(--shadow-md); pointer-events: all; cursor: pointer;
+  animation: spMsgSlide 0.35s var(--ease) both;
+}
+@keyframes spMsgSlide { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+.sp-msg-success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; }
+.sp-msg-error   { background: rgba(239,68,68,0.15);  border: 1px solid rgba(239,68,68,0.3);  color: #fca5a5; }
+.sp-msg-warning { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.25); color: var(--amber-light); }
+.sp-msg-info    { background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.25); color: var(--sky); }
+
+/* ── Responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .sp-layout { grid-template-columns: 1fr; }
+  .sp-sidebar { order: -1; }
+  .sp-stats-inner { grid-template-columns: repeat(2, 1fr); }
+  .sp-stat { border-bottom: 1px solid var(--border-subtle); }
+  .sp-stat:nth-child(2) { border-right: none; }
+  .sp-stat:nth-child(3) { border-bottom: none; }
+  .sp-stat:last-child   { border-right: none; border-bottom: none; }
+  .sp-product-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+  .sp-hero { padding: 36px 0 0; }
+  .sp-identity { flex-direction: column; gap: 20px; }
+  .sp-hero-actions { width: 100%; }
+  .sp-btn-primary, .sp-btn-ghost { flex: 1; justify-content: center; }
+  .sp-product-grid { grid-template-columns: repeat(2, 1fr); }
+  .sp-rate-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 540px) {
+  .sp-avatar { width: 68px; height: 68px; font-size: 1.6rem; }
+  .sp-name { font-size: 1.4rem; }
+  .sp-stats-inner { grid-template-columns: repeat(2, 1fr); }
+  .sp-product-grid { grid-template-columns: repeat(2, 1fr); }
+  .sp-messages { right: 10px; left: 10px; max-width: none; }
+}
+@media (max-width: 380px) {
+  .sp-avatar-row { flex-direction: column; align-items: flex-start; }
+  .sp-product-grid { grid-template-columns: 1fr; }
+  .sp-rate-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Scroll-triggered fade-up ─────────────────────────────────────────── */
+.fade-up {
+  animation: fadeUp 0.55s var(--ease) both;
+  animation-play-state: paused;
+}
+@keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+{# ── Floating messages ── #}
+{% if messages %}
+<div class="sp-messages">
+  {% for message in messages %}
+  <div class="sp-msg sp-msg-{{ message.tags }}" onclick="this.remove()">
+    {% if 'success' in message.tags %}<i class="fas fa-circle-check"></i>
+    {% elif 'error' in message.tags %}<i class="fas fa-circle-exclamation"></i>
+    {% elif 'warning' in message.tags %}<i class="fas fa-triangle-exclamation"></i>
+    {% else %}<i class="fas fa-circle-info"></i>{% endif %}
+    {{ message }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="sp-page">
+
+  <section class="sp-hero">
+    <div class="container">
+
+      <div class="sp-identity fade-up">
+
+        {# ── Avatar + identity ── #}
+        <div class="sp-avatar-row">
+          <div class="sp-avatar">
+            {{ seller.user.username|slice:":1"|upper }}
+          </div>
+          <div>
+            <div class="sp-name">
+              {{ seller.user.get_full_name|default:seller.user.username }}
+            </div>
+            <div class="sp-trade">
+              <i class="fas fa-tools"></i>
+              {{ seller.trade_category.name|default:"Independent Seller" }}
+            </div>
+            <div class="sp-badges">
+
+              {% if seller.user.verification_profile %}
+                {% include "verification/includes/_verification_badge.html" with vp=seller.user.verification_profile %}
+              {% endif %}
+
+              {% if seller.is_verified %}
+              <span class="sp-badge sp-badge-verified">
+                <i class="fas fa-shield-check"></i> Verified Worker
+              </span>
+              {% endif %}
+
+              {% if seller.availability == 'available' %}
+                <span class="sp-badge sp-badge-avail-available">
+                  <span class="avail-dot"></span> Available Now
+                </span>
+              {% elif seller.availability == 'soon' %}
+                <span class="sp-badge sp-badge-avail-soon">
+                  <span class="avail-dot"></span> Available Soon
+                </span>
+              {% elif seller.availability == 'busy' %}
+                <span class="sp-badge sp-badge-avail-busy">
+                  <span class="avail-dot"></span> Currently Busy
+                </span>
+              {% else %}
+                <span class="sp-badge sp-badge-avail-unavailable">
+                  <span class="avail-dot"></span> Unavailable
+                </span>
+              {% endif %}
+
+              {% if seller.years_experience %}
+              <span class="sp-badge sp-badge-exp">
+                <i class="fas fa-clock"></i>
+                {{ seller.years_experience }} yr{{ seller.years_experience|pluralize }} exp.
+              </span>
+              {% endif %}
+
+              {% if seller.state %}
+              <span class="sp-badge sp-badge-location">
+                <i class="fas fa-map-marker-alt"></i>
+                {{ seller.state }}{% if seller.lga %}, {{ seller.lga }}{% endif %}
+              </span>
+              {% endif %}
+
+            </div>
+          </div>
+        </div>
+
+        {# ── CTA buttons ── #}
+        <div class="sp-hero-actions fade-up d1">
+          {% if request.user.is_authenticated %}
+          <a href="{% url 'marketplace:worker_profile_public' pk=seller.pk %}"
+             class="sp-btn-ghost">
+            <i class="fas fa-id-card"></i> Jobs Profile
+          </a>
+          {% endif %}
+          <a href="{% url 'mktplace:product_list' %}?seller={{ seller.pk }}"
+             class="sp-btn-primary">
+            <i class="fas fa-tag"></i> View All Listings
+          </a>
+        </div>
+
+      </div>{# /sp-identity #}
+
+    </div>{# /container #}
+
+    {# ── Stats band ── #}
+    <div class="sp-stats-band">
+      <div class="container">
+        <div class="sp-stats-inner">
+
+          <div class="sp-stat">
+            <div class="sp-stat-number">{{ listings|length }}</div>
+            <div class="sp-stat-label">Active Listings</div>
+            <div class="sp-stat-sub">Tools &amp; equipment</div>
+          </div>
+
+          <div class="sp-stat">
+            <div class="sp-stat-number">
+              {% if avg_rating %}{{ avg_rating }}{% else %}—{% endif %}
+            </div>
+            <div class="sp-stat-label">Avg. Rating</div>
+            <div class="sp-stat-sub">
+              {% if avg_rating %}
+                {% for i in "12345" %}
+                  {% if forloop.counter <= avg_rating|floatformat:"0"|add:"0" %}
+                    <i class="fas fa-star sp-star-filled"></i>
+                  {% else %}
+                    <i class="far fa-star sp-star-empty"></i>
+                  {% endif %}
+                {% endfor %}
+              {% else %}
+                No reviews yet
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="sp-stat">
+            <div class="sp-stat-number">{{ reviews|length }}</div>
+            <div class="sp-stat-label">Reviews</div>
+            <div class="sp-stat-sub">From verified buyers</div>
+          </div>
+
+          <div class="sp-stat">
+            {% if seller.years_experience %}
+            <div class="sp-stat-number">{{ seller.years_experience }}</div>
+            <div class="sp-stat-label">Years Experience</div>
+            <div class="sp-stat-sub">
+              {{ seller.get_experience_level_display|default:"" }}
+            </div>
+            {% else %}
+            <div class="sp-stat-number">—</div>
+            <div class="sp-stat-label">Experience</div>
+            <div class="sp-stat-sub">Not specified</div>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  
+  <div class="sp-body">
+    <div class="container">
+      <div class="sp-layout">
+
+    
+        <div>
+
+          {# ── Active Listings ── #}
+          <div class="fade-up" style="margin-bottom:44px;">
+            <div class="sp-section-head">
+              <i class="fas fa-tag"></i>
+              Active Listings
+              {% if listings %}
+              <span class="sp-section-count">{{ listings|length }}</span>
+              {% endif %}
+            </div>
+
+            {% if listings %}
+            <div class="sp-product-grid">
+              {% for product in listings %}
+              <a href="{% url 'mktplace:product_detail' pk=product.pk %}"
+                 class="sp-product-card fade-up">
+
+                {# Product image #}
+                {% with product.images.first as img %}
+                {% if img %}
+                  <img src="{{ img.image.url }}" alt="{{ product.title }}"
+                       class="sp-product-img" loading="lazy">
+                {% else %}
+                  <div class="sp-product-img-placeholder">
+                    <i class="fas fa-tools"></i>
+                  </div>
+                {% endif %}
+                {% endwith %}
+
+                <div class="sp-product-body">
+                  <div class="sp-product-title">{{ product.title }}</div>
+
+                  <div class="sp-product-meta">
+                    {% if product.condition == 'new' %}
+                      <span class="sp-product-tag new">Brand New</span>
+                    {% elif product.condition == 'used_good' %}
+                      <span class="sp-product-tag used">Used — Good</span>
+                    {% elif product.condition == 'used_fair' %}
+                      <span class="sp-product-tag used">Used — Fair</span>
+                    {% elif product.condition == 'for_parts' %}
+                      <span class="sp-product-tag parts">For Parts</span>
+                    {% endif %}
+
+                    {% if product.state %}
+                    <span class="sp-product-tag">
+                      <i class="fas fa-map-marker-alt" style="font-size:0.65rem;"></i>
+                      {{ product.state }}
+                    </span>
+                    {% endif %}
+
+                    {% if product.offers_allowed %}
+                    <span class="sp-product-tag" style="color:var(--sky);border-color:rgba(56,189,248,0.2);background:rgba(56,189,248,0.06);">
+                      Offers OK
+                    </span>
+                    {% endif %}
+                  </div>
+
+                  <div class="sp-product-price">₦{{ product.price|floatformat:0 }}</div>
+                </div>
+              </a>
+              {% endfor %}
+            </div>
+
+            {% else %}
+            <div class="sp-empty fade-up">
+              <i class="fas fa-box-open"></i>
+              <p>This seller has no active listings at the moment.</p>
+            </div>
+            {% endif %}
+          </div>
+
+          {# ── Reviews ── #}
+          <div class="fade-up">
+            <div class="sp-section-head">
+              <i class="fas fa-star"></i>
+              Buyer Reviews
+              {% if reviews %}
+              <span class="sp-section-count">{{ reviews|length }}</span>
+              {% endif %}
+            </div>
+
+            {% if reviews %}
+
+            {# Rating summary #}
+            {% if avg_rating %}
+            <div class="sp-rating-summary fade-up">
+              <div class="sp-rating-big">{{ avg_rating }}</div>
+              <div class="sp-rating-breakdown">
+                <div class="sp-rating-stars-row">
+                  {% for i in "12345" %}
+                    {% if forloop.counter <= avg_rating|floatformat:"0"|add:"0" %}
+                      <i class="fas fa-star sp-star-lg filled"></i>
+                    {% else %}
+                      <i class="far fa-star sp-star-lg empty"></i>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+                <div class="sp-rating-count">
+                  Based on {{ reviews|length }} review{{ reviews|length|pluralize }}
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            <div class="sp-review-list">
+              {% for review in reviews %}
+              <div class="sp-review-card fade-up">
+                <div class="sp-review-header">
+                  <div class="sp-review-reviewer">
+                    <div class="sp-review-reviewer-avatar">
+                      {{ review.reviewer.username|slice:":1"|upper }}
+                    </div>
+                    <div>
+                      {{ review.reviewer.get_full_name|default:review.reviewer.username }}
+                      <div class="sp-review-date">{{ review.created_at|timesince }} ago</div>
+                    </div>
+                  </div>
+                  <div class="sp-review-stars">
+                    {% for i in "12345" %}
+                      {% if forloop.counter <= review.rating %}
+                        <i class="fas fa-star sp-star-lg filled"></i>
+                      {% else %}
+                        <i class="far fa-star sp-star-lg empty"></i>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                </div>
+
+                {% if review.product %}
+                <div class="sp-review-product">
+                  <i class="fas fa-tag"></i>
+                  {{ review.product.title|truncatechars:48 }}
+                </div>
+                {% endif %}
+
+                {% if review.comment %}
+                <div class="sp-review-comment">"{{ review.comment }}"</div>
+                {% else %}
+                <div class="sp-review-comment" style="color:var(--text-3);font-style:italic;">
+                  No written comment.
+                </div>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+
+            {% else %}
+            <div class="sp-empty fade-up">
+              <i class="fas fa-comment-slash"></i>
+              <p>No reviews yet — be the first to buy from this seller.</p>
+            </div>
+            {% endif %}
+          </div>
+
+        </div>{# /main column #}
+
+        
+        <div class="sp-sidebar">
+
+          {# ── About ── #}
+          <div class="sp-info-card fade-up">
+            <div class="sp-info-card-title">
+              <i class="fas fa-user"></i> About
+            </div>
+            {% if seller.bio %}
+              <p class="sp-bio">{{ seller.bio }}</p>
+            {% else %}
+              <p class="sp-bio" style="color:var(--text-3);font-style:italic;">
+                This seller hasn't added a bio yet.
+              </p>
+            {% endif %}
+          </div>
+
+          {# ── Details ── #}
+          <div class="sp-info-card fade-up">
+            <div class="sp-info-card-title">
+              <i class="fas fa-info-circle"></i> Details
+            </div>
+
+            {% if seller.trade_category %}
+            <div class="sp-detail-row">
+              <div class="sp-detail-icon"><i class="fas fa-tools"></i></div>
+              <div>
+                <div class="sp-detail-label">Trade</div>
+                <div class="sp-detail-value">{{ seller.trade_category.name }}</div>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if seller.state %}
+            <div class="sp-detail-row">
+              <div class="sp-detail-icon"><i class="fas fa-map-marker-alt"></i></div>
+              <div>
+                <div class="sp-detail-label">Location</div>
+                <div class="sp-detail-value">
+                  {{ seller.state }}{% if seller.lga %}, {{ seller.lga }}{% endif %}
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if seller.experience_level %}
+            <div class="sp-detail-row">
+              <div class="sp-detail-icon"><i class="fas fa-layer-group"></i></div>
+              <div>
+                <div class="sp-detail-label">Experience Level</div>
+                <div class="sp-detail-value">{{ seller.get_experience_level_display }}</div>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if seller.years_experience %}
+            <div class="sp-detail-row">
+              <div class="sp-detail-icon"><i class="fas fa-clock"></i></div>
+              <div>
+                <div class="sp-detail-label">Years in Trade</div>
+                <div class="sp-detail-value">{{ seller.years_experience }} year{{ seller.years_experience|pluralize }}</div>
+              </div>
+            </div>
+            {% endif %}
+
+            <div class="sp-detail-row">
+              <div class="sp-detail-icon"><i class="fas fa-circle"></i></div>
+              <div>
+                <div class="sp-detail-label">Availability</div>
+                <div class="sp-detail-value">
+                  {% if seller.availability == 'available' %}
+                    <span style="color:var(--emerald);">Available Now</span>
+                  {% elif seller.availability == 'soon' %}
+                    <span style="color:var(--amber);">Available Soon</span>
+                  {% elif seller.availability == 'busy' %}
+                    <span style="color:#FDA975;">Currently Busy</span>
+                  {% else %}
+                    <span style="color:var(--text-3);">Not Available</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            {% if seller.is_willing_to_relocate %}
+            <div class="sp-detail-row">
+              <div class="sp-detail-icon"><i class="fas fa-truck"></i></div>
+              <div>
+                <div class="sp-detail-label">Mobility</div>
+                <div class="sp-detail-value" style="color:var(--emerald);">
+                  Willing to relocate
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+          </div>
+
+          {# ── Rates ── #}
+          {% if seller.hourly_rate or seller.daily_rate %}
+          <div class="sp-info-card fade-up">
+            <div class="sp-info-card-title">
+              <i class="fas fa-naira-sign"></i> Service Rates
+            </div>
+            <div class="sp-rate-grid">
+              {% if seller.hourly_rate %}
+              <div class="sp-rate-item">
+                <span class="sp-rate-amount">₦{{ seller.hourly_rate|floatformat:0 }}</span>
+                <div class="sp-rate-label">Per Hour</div>
+              </div>
+              {% endif %}
+              {% if seller.daily_rate %}
+              <div class="sp-rate-item">
+                <span class="sp-rate-amount">₦{{ seller.daily_rate|floatformat:0 }}</span>
+                <div class="sp-rate-label">Per Day</div>
+              </div>
+              {% endif %}
+            </div>
+            <p style="font-size:0.75rem;color:var(--text-3);margin-top:10px;margin-bottom:0;">
+              <i class="fas fa-info-circle" style="margin-right:4px;"></i>
+              These are the seller's trade service rates, separate from product prices.
+            </p>
+          </div>
+          {% endif %}
+
+          {# ── Quick actions ── #}
+          <div class="sp-info-card fade-up">
+            <div class="sp-info-card-title">
+              <i class="fas fa-bolt"></i> Quick Actions
+            </div>
+
+            <a href="{% url 'mktplace:product_list' %}" class="ed-quick-link" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r-md);text-decoration:none;color:var(--text-2);font-size:0.84rem;font-weight:500;transition:var(--t);margin-bottom:3px;">
+              <i class="fas fa-store" style="width:16px;text-align:center;color:var(--text-3);font-size:0.76rem;"></i>
+              Browse Marketplace
+            </a>
+            <a href="{% url 'marketplace:worker_profile_public' pk=seller.pk %}" class="ed-quick-link" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r-md);text-decoration:none;color:var(--text-2);font-size:0.84rem;font-weight:500;transition:var(--t);margin-bottom:3px;">
+              <i class="fas fa-id-badge" style="width:16px;text-align:center;color:var(--text-3);font-size:0.76rem;"></i>
+              View Jobs Profile
+            </a>
+            {% if request.user.is_authenticated %}
+            <a href="{% url 'marketplace:notifications' %}" class="ed-quick-link" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r-md);text-decoration:none;color:var(--text-2);font-size:0.84rem;font-weight:500;transition:var(--t);margin-bottom:3px;">
+              <i class="fas fa-bell" style="width:16px;text-align:center;color:var(--text-3);font-size:0.76rem;"></i>
+              Notifications
+              {% if unread_count > 0 %}
+              <span style="margin-left:auto;font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:var(--r-pill);background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);color:var(--amber);">
+                {{ unread_count }}
+              </span>
+              {% endif %}
+            </a>
+            {% endif %}
+          </div>
+
+          {# ── Trust note ── #}
+          <div class="sp-info-card fade-up" style="border-color:rgba(56,189,248,0.18);background:rgba(56,189,248,0.03);">
+            <div style="display:flex;align-items:flex-start;gap:12px;">
+              <div style="width:34px;height:34px;border-radius:10px;flex-shrink:0;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.2);display:flex;align-items:center;justify-content:center;font-size:0.78rem;color:var(--sky);">
+                <i class="fas fa-shield-check"></i>
+              </div>
+              <div style="font-size:0.8rem;color:var(--text-2);line-height:1.65;">
+                All payments on TradeLink go through
+                <strong style="color:var(--text-1);">Paystack escrow</strong> —
+                your money is only released to the seller after you confirm receipt.
+                <a href="#" style="color:var(--sky);text-decoration:none;font-weight:600;">
+                  Learn more
+                </a>
+              </div>
+            </div>
+          </div>
+
+        </div>{# /sidebar #}
+
+      </div>{# /sp-layout #}
+    </div>{# /container #}
+  </div>{# /sp-body #}
+
+</div>{# /sp-page #}
+
+<script>
+/* ── Scroll-triggered fade-up ── */
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.style.animationPlayState = 'running';
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.08 });
+
+document.querySelectorAll('.fade-up').forEach((el, i) => {
+  el.style.animationPlayState = 'paused';
+  el.style.animationDelay = el.style.animationDelay || (i * 0.06) + 's';
+  observer.observe(el);
+});
+
+/* ── Auto-dismiss toast messages after 5 s ── */
+document.querySelectorAll('.sp-msg').forEach(msg => {
+  setTimeout(() => {
+    msg.style.transition = 'opacity 0.4s';
+    msg.style.opacity    = '0';
+    setTimeout(() => msg.remove(), 400);
+  }, 5000);
+});
+</script>
+{% endblock %}

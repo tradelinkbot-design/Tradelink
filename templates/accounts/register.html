@@ -1,0 +1,1439 @@
+{% extends "base.html" %}
+{% load socialaccount %}
+{% block title %}Create Account — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+/* =====================================================
+   REGISTER PAGE — TradeLink NG
+   3-Step Wizard: Account Type → Details → Security
+   Maps to: User model (email, username, phone_number,
+            first_name, last_name, password)
+===================================================== */
+
+body { display: flex; flex-direction: column; }
+
+/* ===== OUTER WRAP ===== */
+.reg-wrap {
+  flex: 1;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding-top: var(--nav-h);
+  position: relative; z-index: 1;
+}
+
+/* ===== LEFT — FORM PANEL ===== */
+.reg-form-panel {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 52px clamp(16px, 6vw, 80px);
+  background: var(--bg-base);
+  position: relative; overflow: hidden;
+}
+.reg-form-panel::before {
+  content: '';
+  position: absolute; bottom: -80px; left: -80px;
+  width: 320px; height: 320px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,158,11,0.05), transparent 70%);
+  pointer-events: none;
+}
+
+.reg-form-inner {
+  width: 100%; max-width: 440px;
+  animation: slideUp 0.55s cubic-bezier(0.4,0,0.2,1) both;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Back to home */
+.reg-back {
+  display: inline-flex; align-items: center; gap: 7px;
+  color: var(--text-3); font-size: 0.83rem; font-weight: 600;
+  text-decoration: none; margin-bottom: 36px;
+  transition: var(--t); letter-spacing: 0.2px;
+}
+.reg-back:hover { color: var(--amber); }
+.reg-back i { font-size: 0.75rem; }
+
+/* ===== STEP INDICATOR ===== */
+.step-indicator {
+  display: flex; align-items: center; gap: 0;
+  margin-bottom: 40px;
+}
+.step-pip {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  flex: 1; cursor: default;
+}
+.step-pip-circle {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 2px solid var(--border-subtle);
+  background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.78rem; font-weight: 800; color: var(--text-3);
+  transition: var(--t); position: relative; z-index: 1;
+  font-family: 'Fraunces', serif;
+}
+.step-pip.done  .step-pip-circle { background: var(--emerald); border-color: var(--emerald); color: #fff; }
+.step-pip.active .step-pip-circle {
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  border-color: var(--amber); color: #0C0A08;
+  box-shadow: 0 0 0 4px rgba(245,158,11,0.18);
+}
+.step-pip-label {
+  font-size: 0.72rem; font-weight: 600; color: var(--text-3);
+  text-align: center; white-space: nowrap; transition: var(--t);
+}
+.step-pip.active .step-pip-label { color: var(--amber); }
+.step-pip.done  .step-pip-label  { color: var(--emerald); }
+
+.step-connector {
+  flex: 1; height: 2px; margin-bottom: 20px;
+  background: var(--border-subtle);
+  transition: background 0.4s var(--ease);
+  max-width: 60px;
+}
+.step-connector.filled { background: linear-gradient(90deg, var(--amber), var(--orange)); }
+
+/* ===== STEP HEADING ===== */
+.step-heading {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(1.5rem, 5vw, 1.9rem); font-weight: 800;
+  letter-spacing: -1px; margin-bottom: 6px; line-height: 1.15;
+}
+.step-sub {
+  color: var(--text-2); font-size: 0.91rem;
+  margin-bottom: 32px; line-height: 1.65;
+}
+
+/* ===== ACCOUNT TYPE STEP ===== */
+.account-type-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 14px; margin-bottom: 32px;
+}
+.type-card {
+  position: relative; padding: 24px 20px;
+  background: var(--bg-card);
+  border: 2px solid var(--border-subtle);
+  border-radius: var(--r-xl); cursor: pointer;
+  transition: var(--t); text-align: center;
+  user-select: none;
+}
+.type-card input[type="radio"] { display: none; }
+.type-card:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-1);
+}
+.type-card.selected {
+  border-color: var(--amber);
+  background: rgba(245,158,11,0.06);
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+}
+.type-card.selected .type-check { opacity: 1; transform: scale(1); }
+.type-icon {
+  width: 56px; height: 56px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem; margin: 0 auto 14px;
+  transition: var(--t);
+}
+.type-card.selected .type-icon {
+  background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(249,115,22,0.15)) !important;
+  border-color: rgba(245,158,11,0.3) !important;
+}
+.type-title {
+  font-family: 'Fraunces', serif; font-weight: 800;
+  font-size: 1rem; margin-bottom: 5px;
+}
+.type-desc { font-size: 0.78rem; color: var(--text-3); line-height: 1.5; }
+.type-check {
+  position: absolute; top: 12px; right: 12px;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--amber); color: #0C0A08;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.68rem; font-weight: 900;
+  opacity: 0; transform: scale(0.6); transition: var(--t);
+}
+
+/* ===== FORM FIELDS ===== */
+.form-stack { display: flex; flex-direction: column; gap: 16px; }
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 7px; }
+.form-label {
+  font-size: 0.83rem; font-weight: 600; color: var(--text-2);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.form-label .required-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--amber); display: inline-block; margin-left: 5px;
+  vertical-align: middle;
+}
+.form-label .optional-tag {
+  font-size: 0.72rem; font-weight: 400; color: var(--text-3);
+}
+.input-wrap { position: relative; }
+.input-icon {
+  position: absolute; left: 14px; top: 50%;
+  transform: translateY(-50%); color: var(--text-3); font-size: 0.88rem;
+  pointer-events: none; transition: var(--t);
+}
+.form-control {
+  width: 100%; padding: 13px 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); color: var(--text-1);
+  font-family: 'Outfit', sans-serif; font-size: 0.93rem;
+  transition: var(--t); outline: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+}
+.form-control.has-icon { padding-left: 42px; }
+.form-control.has-icon-r { padding-right: 44px; }
+.form-control::placeholder { color: var(--text-3); }
+.form-control:focus {
+  border-color: var(--amber);
+  background: rgba(245,158,11,0.04);
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+}
+.form-control:focus + .input-icon,
+.input-wrap:focus-within .input-icon { color: var(--amber-dark); }
+.form-control.is-error  { border-color: rgba(239,68,68,0.55) !important; }
+.form-control.is-error:focus { box-shadow: 0 0 0 3px rgba(239,68,68,0.12) !important; border-color: #EF4444 !important; }
+.form-control.is-valid  { border-color: rgba(16,185,129,0.45); }
+
+.field-msg {
+  font-size: 0.78rem; margin-top: 4px;
+  display: flex; align-items: center; gap: 5px;
+  min-height: 18px;
+}
+.field-msg.error { color: #FCA5A5; }
+.field-msg.hint  { color: var(--text-3); }
+.field-msg.ok    { color: #6EE7B7; }
+
+/* Phone field flag prefix */
+.phone-wrap {
+  display: grid; grid-template-columns: auto 1fr; gap: 0;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); overflow: hidden;
+  transition: var(--t);
+}
+.phone-wrap:focus-within {
+  border-color: var(--amber);
+  background: rgba(245,158,11,0.04);
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+}
+.phone-prefix {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 14px; border-right: 1px solid var(--border-subtle);
+  font-size: 0.9rem; color: var(--text-2); white-space: nowrap;
+  background: rgba(255,255,255,0.02);
+}
+.phone-prefix .flag { font-size: 1.1rem; }
+.phone-input {
+  border: none; background: transparent; outline: none;
+  padding: 13px 14px; color: var(--text-1);
+  font-family: 'Outfit', sans-serif; font-size: 0.93rem; width: 100%;
+  min-width: 0;
+}
+.phone-input::placeholder { color: var(--text-3); }
+
+/* Password toggle */
+.pw-toggle {
+  position: absolute; right: 14px; top: 50%;
+  transform: translateY(-50%); background: none; border: none;
+  color: var(--text-3); cursor: pointer; font-size: 0.9rem;
+  transition: var(--t); padding: 4px;
+}
+.pw-toggle:hover { color: var(--amber); }
+
+/* Password strength */
+.pw-strength { margin-top: 8px; }
+.pw-strength-bar {
+  height: 4px; border-radius: 4px;
+  background: var(--border-subtle);
+  overflow: hidden; margin-bottom: 5px;
+}
+.pw-strength-fill {
+  height: 100%; border-radius: 4px;
+  transition: width 0.4s var(--ease), background 0.4s var(--ease);
+  width: 0%;
+}
+.pw-strength-label { font-size: 0.75rem; color: var(--text-3); }
+
+/* Terms checkbox */
+.terms-label {
+  display: flex; align-items: flex-start; gap: 10px;
+  cursor: pointer; user-select: none;
+  font-size: 0.85rem; color: var(--text-2); line-height: 1.55;
+  margin-top: 4px;
+}
+.terms-label input { display: none; }
+.checkbox-box {
+  width: 18px; height: 18px; min-width: 18px; border-radius: 5px;
+  border: 1.5px solid var(--border-subtle); background: transparent;
+  transition: var(--t); margin-top: 2px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.68rem; color: transparent;
+}
+.terms-label input:checked ~ .checkbox-box {
+  background: var(--amber); border-color: var(--amber); color: #0C0A08;
+}
+.terms-label a { color: var(--amber); text-decoration: none; transition: var(--t); }
+.terms-label a:hover { text-decoration: underline; }
+
+/* ===== NAV BUTTONS ===== */
+.step-nav {
+  display: flex; gap: 12px; align-items: center;
+  margin-top: 28px;
+}
+.btn-back-step {
+  display: flex; align-items: center; gap: 7px;
+  padding: 13px 20px; border-radius: var(--r-lg);
+  background: transparent; border: 1px solid var(--border-subtle);
+  color: var(--text-2); font-family: 'Outfit', sans-serif;
+  font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: var(--t);
+  white-space: nowrap;
+}
+.btn-back-step:hover { background: var(--surface-1); color: var(--text-1); border-color: var(--border-strong); }
+.btn-next-step {
+  flex: 1; padding: 14px;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  border: none; border-radius: var(--r-lg);
+  color: #0C0A08; font-family: 'Outfit', sans-serif;
+  font-size: 0.97rem; font-weight: 800; letter-spacing: 0.2px;
+  cursor: pointer; transition: var(--t);
+  box-shadow: 0 4px 20px rgba(245,158,11,0.28);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-next-step:hover:not(:disabled) {
+  box-shadow: var(--shadow-amber); transform: translateY(-1px); filter: brightness(1.06);
+}
+.btn-next-step:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+/* Sign-in link */
+.already-have {
+  text-align: center; margin-top: 22px;
+  font-size: 0.86rem; color: var(--text-3);
+}
+.already-have a {
+  color: var(--amber); text-decoration: none; font-weight: 600; transition: var(--t);
+}
+.already-have a:hover { color: var(--amber-light); }
+
+/* Social register (step 1 top) */
+.social-row-reg {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 10px;
+  margin-bottom: 24px;
+}
+.social-reg-btn {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 11px 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-subtle); border-radius: var(--r-lg);
+  color: var(--text-2); font-family: 'Outfit', sans-serif;
+  font-size: 0.84rem; font-weight: 600; cursor: pointer; transition: var(--t);
+  white-space: nowrap;
+}
+.social-reg-btn:hover { background: var(--surface-1); border-color: var(--border-strong); color: var(--text-1); }
+.or-div {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
+}
+.or-div::before,.or-div::after { content:''; flex:1; height:1px; background: var(--border-subtle); }
+.or-div span { font-size: 0.76rem; color: var(--text-3); white-space:nowrap; }
+
+/* ===== RIGHT — VISUAL PANEL ===== */
+.reg-visual-panel {
+  background: var(--bg-raised);
+  border-left: 1px solid var(--border-subtle);
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 60px clamp(28px,5vw,72px);
+  transition: var(--t);
+}
+.reg-visual-panel::before {
+  content: '';
+  position: absolute; top: -80px; right: -80px;
+  width: 480px; height: 480px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,158,11,0.07), transparent 65%);
+  pointer-events: none;
+}
+.reg-visual-panel::after {
+  content: '';
+  position: absolute; bottom: -60px; left: -60px;
+  width: 340px; height: 340px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(249,115,22,0.05), transparent 65%);
+  pointer-events: none;
+}
+
+.visual-body { position: relative; z-index: 1; max-width: 380px; width: 100%; }
+
+/* Benefits list (visible on step 1) */
+.benefits-header {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(1.5rem, 3vw, 2.1rem); font-weight: 800;
+  line-height: 1.2; letter-spacing: -0.5px; margin-bottom: 10px;
+}
+.benefits-header em { font-style: italic; color: var(--amber); }
+.benefits-sub {
+  color: var(--text-2); font-size: 0.9rem; line-height: 1.7; margin-bottom: 32px;
+}
+.benefits-list { display: flex; flex-direction: column; gap: 14px; margin-bottom: 36px; }
+.benefit-item {
+  display: flex; align-items: flex-start; gap: 14px; padding: 16px;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); transition: var(--t);
+}
+.benefit-item:hover { border-color: var(--border-strong); }
+.benefit-ico {
+  width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 1rem;
+  background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(249,115,22,0.1));
+  border: 1px solid rgba(245,158,11,0.2); color: var(--amber);
+}
+.benefit-text h4 {
+  font-family: 'Fraunces', serif; font-weight: 700; font-size: 0.93rem; margin-bottom: 3px;
+}
+.benefit-text p { font-size: 0.8rem; color: var(--text-2); line-height: 1.55; }
+
+/* Avatar trust row */
+.avatar-trust {
+  display: flex; align-items: center; gap: 16px; padding: 16px 20px;
+  background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--r-lg);
+}
+.avatars { display: flex; }
+.avatars span {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid var(--bg-raised);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Fraunces', serif; font-weight: 800; font-size: 0.7rem; color: #0C0A08;
+  margin-left: -8px;
+}
+.avatars span:first-child { margin-left: 0; }
+.avatar-trust-text { font-size: 0.83rem; color: var(--text-2); line-height: 1.5; }
+.avatar-trust-text strong { color: var(--text-1); font-weight: 700; }
+
+/* Step-specific visuals */
+.visual-step { display: none; }
+.visual-step.active { display: block; }
+
+/* Progress ring (step 2 & 3) */
+.progress-ring-wrap {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 24px; margin-bottom: 36px;
+}
+.progress-ring-svg { transform: rotate(-90deg); }
+.progress-ring-circle {
+  fill: none; stroke: var(--border-subtle); stroke-width: 6;
+}
+.progress-ring-progress {
+  fill: none;
+  stroke: url(#amberGrad);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 283;
+  stroke-dashoffset: 283;
+  transition: stroke-dashoffset 0.6s var(--ease);
+}
+.ring-label {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  font-family: 'Fraunces', serif; font-weight: 900;
+  font-size: 1.4rem; color: var(--amber);
+  pointer-events: none;
+}
+.ring-outer { position: relative; width: 100px; height: 100px; }
+
+.visual-checklist { display: flex; flex-direction: column; gap: 12px; }
+.check-row {
+  display: flex; align-items: center; gap: 12px; padding: 13px 16px;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); transition: var(--t);
+}
+.check-row.done { border-color: rgba(16,185,129,0.25); background: rgba(16,185,129,0.04); }
+.check-row-ico {
+  width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
+  background: var(--surface-1); color: var(--text-3); transition: var(--t);
+}
+.check-row.done .check-row-ico {
+  background: rgba(16,185,129,0.15); color: var(--emerald);
+}
+.check-row-text { font-size: 0.86rem; color: var(--text-2); transition: var(--t); }
+.check-row.done .check-row-text { color: var(--text-1); }
+.check-tick {
+  margin-left: auto; font-size: 0.78rem; color: transparent; transition: var(--t);
+}
+.check-row.done .check-tick { color: var(--emerald); }
+
+/* Security badges */
+.security-badges {
+  display: flex; flex-direction: column; gap: 14px; margin-bottom: 28px;
+}
+.sec-badge {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px; background: var(--bg-card);
+  border: 1px solid var(--border-subtle); border-radius: var(--r-lg);
+}
+.sec-badge-ico {
+  width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 1rem;
+}
+.sec-badge h5 { font-weight: 700; font-size: 0.88rem; margin-bottom: 2px; }
+.sec-badge p  { font-size: 0.77rem; color: var(--text-3); line-height: 1.4; }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 960px) {
+  .reg-wrap { grid-template-columns: 1fr; }
+  .reg-visual-panel { display: none; }
+  .reg-form-panel { padding: 44px clamp(16px, 5vw, 48px); min-height: 100vh; justify-content: flex-start; padding-top: 36px; }
+  .reg-form-inner { max-width: 100%; }
+}
+@media (max-width: 600px) {
+  .account-type-grid { grid-template-columns: 1fr; gap: 12px; }
+  .form-row-2  { grid-template-columns: 1fr; gap: 12px; }
+  .social-row-reg { grid-template-columns: 1fr; gap: 8px; }
+  .step-nav { flex-direction: column-reverse; gap: 10px; }
+  .btn-back-step { width: 100%; justify-content: center; }
+  .btn-next-step { width: 100%; }
+  .step-pip-label { font-size: 0.65rem; }
+  .step-pip-circle { width: 30px; height: 30px; }
+  .step-connector { max-width: 36px; }
+  .reg-form-panel { padding: 28px 16px; }
+  .type-icon { width: 44px; height: 44px; font-size: 1.1rem; }
+  .type-title { font-size: 0.92rem; }
+  .type-desc { font-size: 0.75rem; }
+  .phone-prefix { padding: 0 10px; font-size: 0.85rem; }
+  .phone-input { padding: 13px 10px; font-size: 0.88rem; }
+  .terms-label { font-size: 0.8rem; }
+}
+@media (max-width: 380px) {
+  .step-pip-label { display: none; }
+  .social-reg-btn { font-size: 0.78rem; padding: 10px 8px; }
+}
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="reg-wrap">
+
+  <!-- ══════════════════════════════════════
+       LEFT — FORM PANEL
+  ══════════════════════════════════════ -->
+  <div class="reg-form-panel">
+    <div class="reg-form-inner">
+
+      <a href="/" class="reg-back"><i class="fas fa-arrow-left"></i> Back to home</a>
+
+      <!-- Step indicator -->
+      <div class="step-indicator" id="stepIndicator">
+        <div class="step-pip active" id="pip-1">
+          <div class="step-pip-circle" id="pip-circle-1">1</div>
+          <div class="step-pip-label">Account Type</div>
+        </div>
+        <div class="step-connector" id="conn-1"></div>
+        <div class="step-pip" id="pip-2">
+          <div class="step-pip-circle" id="pip-circle-2">2</div>
+          <div class="step-pip-label">Your Details</div>
+        </div>
+        <div class="step-connector" id="conn-2"></div>
+        <div class="step-pip" id="pip-3">
+          <div class="step-pip-circle" id="pip-circle-3">3</div>
+          <div class="step-pip-label">Security</div>
+        </div>
+      </div>
+
+      <!-- ── DJANGO FORM ── -->
+      <form id="registerForm" method="POST" action="{% url 'register' %}" novalidate>
+        {% csrf_token %}
+
+        <!-- Hidden fields that get populated by JS -->
+        <input type="hidden" name="account_type" id="hAccountType" value="worker">
+
+        <!-- ══════ STEP 1 — Account Type ══════ -->
+        <div class="step-body" id="step-1">
+          <h2 class="step-heading">Join TradeLink NG</h2>
+          <p class="step-sub">Create a free account in under 2 minutes. Are you looking for work, or looking to hire?</p>
+
+          <!-- Social sign-up shortcuts -->
+          <div class="social-row-reg">
+            <a href="{% provider_login_url 'google' process='login' %}" class="social-reg-btn">
+              <i class="fab fa-google" style="color:#4285F4;"></i> Google
+            </a>
+            <a href="{% provider_login_url 'facebook' process='login' %}" class="social-reg-btn">
+              <i class="fab fa-facebook-f" style="color:#1877F2;"></i> Facebook
+            </a>
+            <a href="{% provider_login_url 'linkedin_oauth2' process='login' %}" class="social-reg-btn">
+              <i class="fab fa-linkedin" style="color:#0A66C2;"></i> LinkedIn
+            </a>
+          </div>
+          <div class="or-div"><span>or register with email</span></div>
+
+          <!-- Account type cards -->
+          <div class="account-type-grid">
+            <label class="type-card selected" id="card-worker">
+              <input type="radio" name="_account_type" value="worker" checked>
+              <div class="type-check"><i class="fas fa-check"></i></div>
+              <div class="type-icon" style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.2); color:var(--amber);">
+                <i class="fas fa-hard-hat"></i>
+              </div>
+              <div class="type-title">I'm a Tradesperson</div>
+              <div class="type-desc">Looking for jobs, contracts, or freelance work in the skilled trades.</div>
+            </label>
+            <label class="type-card" id="card-employer">
+              <input type="radio" name="_account_type" value="employer">
+              <div class="type-check"><i class="fas fa-check"></i></div>
+              <div class="type-icon" style="background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.2); color:var(--sky);">
+                <i class="fas fa-building"></i>
+              </div>
+              <div class="type-title">I'm an Employer</div>
+              <div class="type-desc">Looking to hire skilled tradespeople for jobs, projects, or contracts.</div>
+            </label>
+          </div>
+
+          <div class="step-nav">
+            <button type="button" class="btn-next-step" onclick="goToStep(2)">
+              Continue <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- ══════ STEP 2 — Personal Details ══════ -->
+        <div class="step-body" id="step-2" style="display:none;">
+          <h2 class="step-heading">Your Details</h2>
+          <p class="step-sub">Fill in your personal information. All fields marked with <span style="color:var(--amber)">●</span> are required.</p>
+
+          <div class="form-stack">
+
+            <!-- First name + Last name -->
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label" for="first_name">
+                  First Name
+                  <span class="optional-tag">Optional</span>
+                </label>
+                <div class="input-wrap">
+                  <i class="fas fa-user input-icon"></i>
+                  <input
+                    type="text"
+                    id="first_name"
+                    name="first_name"
+                    class="form-control has-icon"
+                    placeholder="Emeka"
+                    autocomplete="given-name"
+                    value="{{ form.first_name.value|default:'' }}"
+                  >
+                </div>
+                {% if form.first_name.errors %}
+                  <span class="field-msg error"><i class="fas fa-circle-exclamation"></i> {{ form.first_name.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="last_name">
+                  Last Name
+                  <span class="optional-tag">Optional</span>
+                </label>
+                <div class="input-wrap">
+                  <i class="fas fa-user input-icon"></i>
+                  <input
+                    type="text"
+                    id="last_name"
+                    name="last_name"
+                    class="form-control has-icon"
+                    placeholder="Okafor"
+                    autocomplete="family-name"
+                    value="{{ form.last_name.value|default:'' }}"
+                  >
+                </div>
+                {% if form.last_name.errors %}
+                  <span class="field-msg error"><i class="fas fa-circle-exclamation"></i> {{ form.last_name.errors.0 }}</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Username -->
+            <div class="form-group">
+              <label class="form-label" for="username">
+                Username <span class="required-dot"></span>
+              </label>
+              <div class="input-wrap">
+                <i class="fas fa-at input-icon"></i>
+                <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  class="form-control has-icon {% if form.username.errors %}is-error{% endif %}"
+                  placeholder="emeka_builds"
+                  autocomplete="username"
+                  maxlength="256"
+                  required
+                  value="{{ form.username.value|default:'' }}"
+                >
+                <i class="fas fa-circle-check" id="usernameCheckIcon"
+                   style="position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--emerald);display:none;font-size:0.9rem;pointer-events:none;"></i>
+              </div>
+              {% if form.username.errors %}
+                <span class="field-msg error"><i class="fas fa-circle-exclamation"></i> {{ form.username.errors.0 }}</span>
+              {% else %}
+                <span class="field-msg hint" id="usernameHint">Letters, numbers, and underscores only. Will be public on your profile.</span>
+              {% endif %}
+            </div>
+
+            <!-- Email -->
+            <div class="form-group">
+              <label class="form-label" for="email">
+                Email Address <span class="required-dot"></span>
+              </label>
+              <div class="input-wrap">
+                <i class="fas fa-envelope input-icon"></i>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  class="form-control has-icon {% if form.email.errors %}is-error{% endif %}"
+                  placeholder="emeka@email.com"
+                  autocomplete="email"
+                  required
+                  value="{{ form.email.value|default:'' }}"
+                >
+              </div>
+              {% if form.email.errors %}
+                <span class="field-msg error"><i class="fas fa-circle-exclamation"></i> {{ form.email.errors.0 }}</span>
+              {% endif %}
+            </div>
+
+            <!-- Phone Number -->
+            <div class="form-group">
+              <label class="form-label" for="phone_number">
+                Phone Number <span class="required-dot"></span>
+              </label>
+              <div class="phone-wrap {% if form.phone_number.errors %}is-error{% endif %}" id="phoneWrap">
+                <div class="phone-prefix">
+                  <span class="flag">🇳🇬</span>
+                  <span>+234</span>
+                </div>
+                <input
+                  type="tel"
+                  id="phone_number"
+                  name="phone_number"
+                  class="phone-input"
+                  placeholder="080 1234 5678"
+                  autocomplete="tel"
+                  required
+                  value="{{ form.phone_number.value|default:'' }}"
+                >
+              </div>
+              {% if form.phone_number.errors %}
+                <span class="field-msg error"><i class="fas fa-circle-exclamation"></i> {{ form.phone_number.errors.0 }}</span>
+              {% else %}
+                <span class="field-msg hint">Enter your Nigerian mobile number. Used for employer contact.</span>
+              {% endif %}
+            </div>
+
+          </div><!-- /form-stack -->
+
+          <div class="step-nav">
+            <button type="button" class="btn-back-step" onclick="goToStep(1)">
+              <i class="fas fa-arrow-left"></i> Back
+            </button>
+            <button type="button" class="btn-next-step" id="step2Next" onclick="validateStep2()">
+              Continue <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- ══════ STEP 3 — Security ══════ -->
+        <div class="step-body" id="step-3" style="display:none;">
+          <h2 class="step-heading">Secure Your Account</h2>
+          <p class="step-sub">Choose a strong password to protect your TradeLink NG profile.</p>
+
+          <div class="form-stack">
+
+            <!-- Password -->
+            <div class="form-group">
+              <label class="form-label" for="password">
+                Password <span class="required-dot"></span>
+              </label>
+              <div class="input-wrap">
+                <i class="fas fa-lock input-icon"></i>
+                <input
+                  type="password"
+                  id="password"
+                  name="password1"
+                  class="form-control has-icon has-icon-r {% if form.password1.errors %}is-error{% endif %}"
+                  placeholder="Create a strong password"
+                  autocomplete="new-password"
+                  required
+                  oninput="updateStrength(this.value)"
+                >
+                <button type="button" class="pw-toggle" onclick="togglePw('password')" aria-label="Toggle password">
+                  <i class="far fa-eye" id="pwIcon1"></i>
+                </button>
+              </div>
+              {% if form.password1.errors %}
+                <span class="field-msg error"><i class="fas fa-circle-exclamation"></i> {{ form.password1.errors.0 }}</span>
+              {% endif %}
+
+              <!-- Strength bar -->
+              <div class="pw-strength" id="pwStrengthWrap" style="display:none;">
+                <div class="pw-strength-bar">
+                  <div class="pw-strength-fill" id="pwStrengthFill"></div>
+                </div>
+                <span class="pw-strength-label" id="pwStrengthLabel">Weak</span>
+              </div>
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="form-group">
+              <label class="form-label" for="password2">
+                Confirm Password <span class="required-dot"></span>
+              </label>
+              <div class="input-wrap">
+                <i class="fas fa-lock input-icon"></i>
+                <input
+                  type="password"
+                  id="password2"
+                  name="password2"
+                  class="form-control has-icon has-icon-r {% if form.password2.errors %}is-error{% endif %}"
+                  placeholder="Repeat your password"
+                  autocomplete="new-password"
+                  required
+                  oninput="checkMatch()"
+                >
+                <button type="button" class="pw-toggle" onclick="togglePw('password2')" aria-label="Toggle password">
+                  <i class="far fa-eye" id="pwIcon2"></i>
+                </button>
+              </div>
+              <span class="field-msg" id="matchMsg">
+                {% if form.password2.errors %}
+                  <span class="error"><i class="fas fa-circle-exclamation"></i> {{ form.password2.errors.0 }}</span>
+                {% endif %}
+              </span>
+            </div>
+
+            <!-- Terms -->
+            <div class="form-group" style="margin-top:4px;">
+              <label class="terms-label" id="termsLabel">
+                <input type="checkbox" id="terms" name="terms" required>
+                <div class="checkbox-box"><i class="fas fa-check"></i></div>
+                <span>
+                  I agree to TradeLink NG's
+                  <a href="/terms/" target="_blank">Terms of Service</a>
+                  and <a href="/privacy/" target="_blank">Privacy Policy</a>.
+                  I understand my data will be used to match me with relevant jobs.
+                </span>
+              </label>
+              <span class="field-msg error" id="termsError" style="display:none;">
+                <i class="fas fa-circle-exclamation"></i> You must agree to the terms to continue.
+              </span>
+            </div>
+
+            <!-- Non-field errors from Django -->
+            {% if form.non_field_errors %}
+              <div class="field-msg error non-field-errors" style="background:rgba(239,68,68,0.06);padding:12px 14px;border-radius:var(--r-md);border:1px solid rgba(239,68,68,0.15);">
+                <i class="fas fa-triangle-exclamation"></i>
+                {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+              </div>
+            {% endif %}
+
+          </div><!-- /form-stack -->
+
+          <div class="step-nav">
+            <button type="button" class="btn-back-step" onclick="goToStep(2)">
+              <i class="fas fa-arrow-left"></i> Back
+            </button>
+            <button type="submit" class="btn-next-step" id="submitBtn">
+              <i class="fas fa-user-plus"></i> Create Account
+            </button>
+          </div>
+        </div>
+
+      </form><!-- /registerForm -->
+
+      <p class="already-have">
+        Already have an account? <a href="{% url 'signin' %}">Sign in</a>
+      </p>
+
+    </div><!-- /reg-form-inner -->
+  </div><!-- /reg-form-panel -->
+
+
+  <!-- ══════════════════════════════════════
+       RIGHT — VISUAL PANEL
+  ══════════════════════════════════════ -->
+  <div class="reg-visual-panel">
+    <div class="visual-body">
+
+      <!-- STEP 1 Visual: Why join? -->
+      <div class="visual-step active" id="visual-1">
+        <p style="display:inline-flex;align-items:center;gap:7px;font-size:0.73rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:20px;">
+          <span style="display:block;width:16px;height:2px;background:var(--amber);border-radius:2px;"></span>
+          Why TradeLink NG?
+        </p>
+
+        <h2 class="benefits-header">
+          Nigeria's trades workers<br><em>deserve better.</em>
+        </h2>
+        <p class="benefits-sub">
+          We built TradeLink NG for the electricians, carpenters, hair stylists, and solar installers who power Nigeria — but have been ignored by every other job platform.
+        </p>
+
+        <div class="benefits-list">
+          <div class="benefit-item">
+            <div class="benefit-ico"><i class="fas fa-brain"></i></div>
+            <div class="benefit-text">
+              <h4>AI-Powered Job Matching</h4>
+              <p>Our CLIP-based AI understands your actual skills and matches you to relevant jobs instantly.</p>
+            </div>
+          </div>
+          <div class="benefit-item">
+            <div class="benefit-ico"><i class="fas fa-shield-halved"></i></div>
+            <div class="benefit-text">
+              <h4>Verified Employers Only</h4>
+              <p>Every employer is vetted and verified. No scams, no ghost jobs, no wasted applications.</p>
+            </div>
+          </div>
+          <div class="benefit-item">
+            <div class="benefit-ico"><i class="fas fa-naira-sign"></i></div>
+            <div class="benefit-text">
+              <h4>Know Your Worth</h4>
+              <p>See real salary data for your trade and location. Negotiate confidently.</p>
+            </div>
+          </div>
+          <div class="benefit-item">
+            <div class="benefit-ico"><i class="fas fa-map-pin"></i></div>
+            <div class="benefit-text">
+              <h4>All 36 States Covered</h4>
+              <p>From Lagos to Maiduguri — find work close to home, or explore opportunities nationwide.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="avatar-trust">
+          <div class="avatars">
+            <span style="background:linear-gradient(135deg,#F59E0B,#D97706);">AO</span>
+            <span style="background:linear-gradient(135deg,#F97316,#EA580C);">BM</span>
+            <span style="background:linear-gradient(135deg,#10B981,#059669);">CK</span>
+            <span style="background:linear-gradient(135deg,#38BDF8,#0284C7);">TI</span>
+            <span style="background:linear-gradient(135deg,#A78BFA,#7C3AED);">NG</span>
+          </div>
+          <div class="avatar-trust-text">
+            Join <strong>48,000+</strong> skilled workers already on TradeLink NG. Free forever.
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2 Visual: Progress + checklist -->
+      <div class="visual-step" id="visual-2">
+        <p style="display:inline-flex;align-items:center;gap:7px;font-size:0.73rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:28px;">
+          <span style="display:block;width:16px;height:2px;background:var(--amber);border-radius:2px;"></span>
+          Profile Setup
+        </p>
+
+        <div class="progress-ring-wrap">
+          <div class="ring-outer">
+            <svg class="progress-ring-svg" width="100" height="100" viewBox="0 0 100 100">
+              <defs>
+                <linearGradient id="amberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%"   stop-color="#F59E0B"/>
+                  <stop offset="100%" stop-color="#F97316"/>
+                </linearGradient>
+              </defs>
+              <circle class="progress-ring-circle" cx="50" cy="50" r="45"/>
+              <circle class="progress-ring-progress" id="ringProgress" cx="50" cy="50" r="45"/>
+            </svg>
+            <div class="ring-label" id="ringLabel">33%</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-family:'Fraunces',serif;font-size:1.2rem;font-weight:800;margin-bottom:4px;">Almost there!</div>
+            <div style="font-size:0.83rem;color:var(--text-2);">Complete your profile to get matched with jobs.</div>
+          </div>
+        </div>
+
+        <div class="visual-checklist">
+          <div class="check-row done" id="check-type">
+            <div class="check-row-ico"><i class="fas fa-user-tag"></i></div>
+            <div class="check-row-text">Account type selected</div>
+            <i class="fas fa-circle-check check-tick"></i>
+          </div>
+          <div class="check-row" id="check-details" style="border-color:var(--amber);background:rgba(245,158,11,0.04);">
+            <div class="check-row-ico" style="background:rgba(245,158,11,0.12);color:var(--amber);"><i class="fas fa-id-card"></i></div>
+            <div class="check-row-text" style="color:var(--text-1);">Personal details &amp; contact</div>
+            <i class="fas fa-circle-notch fa-spin check-tick" style="color:var(--amber);"></i>
+          </div>
+          <div class="check-row" id="check-security">
+            <div class="check-row-ico"><i class="fas fa-lock"></i></div>
+            <div class="check-row-text">Password &amp; security</div>
+            <i class="fas fa-circle check-tick" style="color:var(--border-subtle);font-size:0.6rem;"></i>
+          </div>
+        </div>
+
+        <div style="margin-top:28px;padding:20px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--r-lg);">
+          <div style="font-size:0.8rem;color:var(--text-3);margin-bottom:8px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">
+            💡 Quick Tip
+          </div>
+          <div style="font-size:0.87rem;color:var(--text-2);line-height:1.65;">
+            Use your real name and a working phone number. Employers contact verified workers <strong style="color:var(--text-1);">3× more</strong> than unverified profiles.
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3 Visual: Security badges -->
+      <div class="visual-step" id="visual-3">
+        <p style="display:inline-flex;align-items:center;gap:7px;font-size:0.73rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:28px;">
+          <span style="display:block;width:16px;height:2px;background:var(--amber);border-radius:2px;"></span>
+          Your Data is Safe
+        </p>
+
+        <h2 style="font-family:'Fraunces',serif;font-size:1.8rem;font-weight:800;line-height:1.2;letter-spacing:-0.5px;margin-bottom:10px;">
+          We take your<br><span style="color:var(--amber);font-style:italic;">privacy seriously.</span>
+        </h2>
+        <p style="color:var(--text-2);font-size:0.88rem;line-height:1.7;margin-bottom:32px;">
+          Your personal data is encrypted, never sold, and only used to match you with genuine job opportunities.
+        </p>
+
+        <div class="security-badges">
+          <div class="sec-badge">
+            <div class="sec-badge-ico" style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.2);color:var(--emerald);">
+              <i class="fas fa-shield-check"></i>
+            </div>
+            <div>
+              <h5>256-bit SSL Encryption</h5>
+              <p>All data transmitted to TradeLink NG is fully encrypted end-to-end.</p>
+            </div>
+          </div>
+          <div class="sec-badge">
+            <div class="sec-badge-ico" style="background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.2);color:var(--sky);">
+              <i class="fas fa-user-shield"></i>
+            </div>
+            <div>
+              <h5>Data Never Sold</h5>
+              <p>We never sell your personal information to third parties. Full stop.</p>
+            </div>
+          </div>
+          <div class="sec-badge">
+            <div class="sec-badge-ico" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.2);color:var(--amber);">
+              <i class="fas fa-lock"></i>
+            </div>
+            <div>
+              <h5>Passwords Hashed with bcrypt</h5>
+              <p>Your password is never stored in plain text. Industry-standard hashing.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Final checklist summary -->
+        <div class="visual-checklist">
+          <div class="check-row done">
+            <div class="check-row-ico"><i class="fas fa-user-tag"></i></div>
+            <div class="check-row-text">Account type selected</div>
+            <i class="fas fa-circle-check check-tick"></i>
+          </div>
+          <div class="check-row done">
+            <div class="check-row-ico"><i class="fas fa-id-card"></i></div>
+            <div class="check-row-text">Personal details &amp; contact</div>
+            <i class="fas fa-circle-check check-tick"></i>
+          </div>
+          <div class="check-row" id="check-security-3" style="border-color:var(--amber);background:rgba(245,158,11,0.04);">
+            <div class="check-row-ico" style="background:rgba(245,158,11,0.12);color:var(--amber);"><i class="fas fa-lock"></i></div>
+            <div class="check-row-text" style="color:var(--text-1);">Password &amp; security</div>
+            <i class="fas fa-circle-notch fa-spin check-tick" style="color:var(--amber);"></i>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /visual-body -->
+  </div><!-- /reg-visual-panel -->
+
+</div><!-- /reg-wrap -->
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+/* =====================================================
+   STEP WIZARD — TradeLink NG Register
+===================================================== */
+
+  const totalSteps = 3;
+  const CIRC = 283;
+  let currentStep = 1;
+
+  function goToStep(n) {
+    document.getElementById('step-'   + currentStep).style.display = 'none';
+    document.getElementById('visual-' + currentStep).classList.remove('active');
+    currentStep = n;
+    document.getElementById('step-'   + n).style.display = 'block';
+    document.getElementById('visual-' + n).classList.add('active');
+    updateStepIndicator();
+    updateRing();
+    document.querySelector('.reg-form-panel').scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function updateStepIndicator() {
+    for (let i = 1; i <= totalSteps; i++) {
+      const pip    = document.getElementById('pip-' + i);
+      const circle = document.getElementById('pip-circle-' + i);
+      pip.classList.remove('active', 'done');
+      if (i < currentStep) {
+        pip.classList.add('done');
+        circle.innerHTML = '<i class="fas fa-check" style="font-size:0.72rem;"></i>';
+      } else if (i === currentStep) {
+        pip.classList.add('active');
+        circle.textContent = i;
+      } else {
+        circle.textContent = i;
+      }
+    }
+    for (let i = 1; i < totalSteps; i++) {
+      document.getElementById('conn-' + i).classList.toggle('filled', i < currentStep);
+    }
+  }
+
+  function updateRing() {
+    const ring  = document.getElementById('ringProgress');
+    const label = document.getElementById('ringLabel');
+    if (!ring) return;
+    const pct    = Math.round(((currentStep - 1) / totalSteps) * 100);
+    const offset = CIRC - (pct / 100) * CIRC;
+    ring.style.strokeDashoffset = offset;
+    if (label) label.textContent = pct + '%';
+  }
+
+  document.querySelectorAll('.type-card').forEach(card => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      card.querySelector('input[type="radio"]').checked = true;
+      document.getElementById('hAccountType').value = card.querySelector('input').value;
+    });
+  });
+
+  function togglePw(id) {
+    const input  = document.getElementById(id);
+    const iconId = id === 'password' ? 'pwIcon1' : 'pwIcon2';
+    const icon   = document.getElementById(iconId);
+    const hidden = input.type === 'password';
+    input.type   = hidden ? 'text' : 'password';
+    icon.className = hidden ? 'far fa-eye-slash' : 'far fa-eye';
+  }
+
+  document.getElementById('password').addEventListener('input', function () {
+    const val  = this.value;
+    const wrap = document.getElementById('pwStrengthWrap');
+    const fill = document.getElementById('pwStrengthFill');
+    const lbl  = document.getElementById('pwStrengthLabel');
+    if (!val) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    let score = 0;
+    if (val.length >= 8)            score++;
+    if (val.length >= 12)           score++;
+    if (/[A-Z]/.test(val))          score++;
+    if (/[0-9]/.test(val))          score++;
+    if (/[^A-Za-z0-9]/.test(val))   score++;
+    const levels = [
+      { pct:'20%', color:'#EF4444', label:'Too weak'    },
+      { pct:'40%', color:'#F97316', label:'Weak'        },
+      { pct:'60%', color:'#F59E0B', label:'Fair'        },
+      { pct:'80%', color:'#84CC16', label:'Strong'      },
+      { pct:'100%',color:'#10B981', label:'Very strong' },
+    ];
+    const lvl = levels[Math.min(score, 4)];
+    fill.style.width      = lvl.pct;
+    fill.style.background = lvl.color;
+    lbl.textContent       = lvl.label;
+    lbl.style.color       = lvl.color;
+    this.classList.remove('is-error');
+  });
+
+  document.getElementById('password2').addEventListener('input', function () {
+    const pw1 = document.getElementById('password').value;
+    const msg = document.getElementById('matchMsg');
+    const inp = this;
+    if (!inp.value) { msg.innerHTML = ''; inp.classList.remove('is-error', 'is-valid'); return; }
+    if (pw1 === inp.value) {
+      msg.innerHTML = '<span class="ok"><i class="fas fa-circle-check"></i> Passwords match</span>';
+      inp.classList.remove('is-error'); inp.classList.add('is-valid');
+    } else {
+      msg.innerHTML = '<span class="error"><i class="fas fa-circle-exclamation"></i> Passwords do not match</span>';
+      inp.classList.add('is-error');    inp.classList.remove('is-valid');
+    }
+  });
+
+  document.getElementById('username').addEventListener('input', function () {
+    const val   = this.value.trim();
+    const hint  = document.getElementById('usernameHint');
+    const icon  = document.getElementById('usernameCheckIcon');
+    const valid = /^[a-zA-Z0-9_]{3,}$/.test(val);
+    this.classList.toggle('is-error', val.length > 0 && !valid);
+    this.classList.toggle('is-valid', valid);
+    if (icon) icon.style.display = valid ? 'block' : 'none';
+    if (hint) {
+      if (val.length > 0 && !valid) {
+        hint.className = 'field-msg error';
+        hint.innerHTML = '<i class="fas fa-circle-exclamation"></i> Only letters, numbers, underscores. Min 3 characters.';
+      } else {
+        hint.className = 'field-msg hint';
+        hint.innerHTML = 'Letters, numbers, and underscores only. Will be public on your profile.';
+      }
+    }
+  });
+
+  document.getElementById('phone_number').addEventListener('input', function () {
+    let val = this.value.replace(/\D/g, '');
+    if (val.startsWith('0')) val = val.slice(1);
+    this.value = val.slice(0, 10);
+    const wrap = document.getElementById('phoneWrap');
+    wrap.style.borderColor = (this.value.length === 10)
+      ? 'rgba(16,185,129,0.45)'
+      : (this.value.length > 0 ? '' : '');
+  });
+
+  function validateStep2() {
+    let ok = true;
+    const username   = document.getElementById('username').value.trim();
+    const email      = document.getElementById('email').value.trim();
+    const phone      = document.getElementById('phone_number').value.replace(/\D/g, '').replace(/^0/, '');
+    const phoneWrap  = document.getElementById('phoneWrap');
+
+    if (!username || !/^[a-zA-Z0-9_]{3,}$/.test(username)) {
+      document.getElementById('username').classList.add('is-error'); ok = false;
+    }
+    if (!email || !/\S+@\S+\.\S+/.test(email)) {
+      document.getElementById('email').classList.add('is-error'); ok = false;
+    }
+    if (phone.length !== 10) {
+      phoneWrap.style.borderColor = 'rgba(239,68,68,0.55)';
+      phoneWrap.style.boxShadow   = '0 0 0 3px rgba(239,68,68,0.12)'; ok = false;
+    }
+    if (ok) goToStep(3);
+  }
+
+  document.getElementById('registerForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    /* ── client-side validation (unchanged) ── */
+    const pw1      = document.getElementById('password').value;
+    const pw2      = document.getElementById('password2').value;
+    const terms    = document.getElementById('terms').checked;
+    const termsErr = document.getElementById('termsError');
+    let ok = true;
+
+    if (pw1.length < 8) {
+      document.getElementById('password').classList.add('is-error');
+      ok = false;
+    }
+    if (pw1 !== pw2) {
+      document.getElementById('password2').classList.add('is-error');
+      ok = false;
+    }
+    if (!terms) {
+      termsErr.style.display = 'flex';
+      ok = false;
+    } else {
+      termsErr.style.display = 'none';
+    }
+    if (!ok) return;
+
+    /* ── format phone before sending ── */
+    const phoneInput = document.getElementById('phone_number');
+    const digits     = phoneInput.value.replace(/\D/g, '').replace(/^0/, '');
+    const originalPhone = phoneInput.value;
+    if (digits.length === 10) phoneInput.value = '+234' + digits;
+
+    /* ── loading state ── */
+    const btn = document.getElementById('submitBtn');
+    btn.disabled  = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating your account…';
+
+    const form = document.getElementById('registerForm');
+    const data = new FormData(form);
+
+    function getCSRF() {
+      const el = form.querySelector('[name=csrfmiddlewaretoken]');
+      return el ? el.value : '';
+    }
+
+    /* ── helpers to inject server errors ── */
+    function clearAjaxErrors() {
+      form.querySelectorAll('[data-ajax-err]').forEach(el => el.remove());
+      form.querySelectorAll('.is-error[data-ajax-marked]').forEach(el => {
+        el.classList.remove('is-error');
+        el.removeAttribute('data-ajax-marked');
+      });
+    }
+
+    function injectFieldError(fieldId, message) {
+      const input = document.getElementById(fieldId);
+      if (!input) return;
+      input.classList.add('is-error');
+      input.setAttribute('data-ajax-marked', '1');
+      // find or create the field-msg span after the field group
+      const group = input.closest('.form-group') || input.parentElement;
+      const existing = group.querySelector('[data-ajax-err]');
+      if (existing) { existing.textContent = message; return; }
+      const span = document.createElement('span');
+      span.className = 'field-msg error';
+      span.setAttribute('data-ajax-err', '1');
+      span.innerHTML = '<i class="fas fa-circle-exclamation"></i> ' + message;
+      group.appendChild(span);
+    }
+
+    function injectNonFieldError(message) {
+      let el = document.querySelector('.non-field-errors[data-ajax-err]');
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'field-msg error non-field-errors';
+        el.setAttribute('data-ajax-err', '1');
+        el.style.cssText = 'background:rgba(239,68,68,0.06);padding:12px 14px;border-radius:var(--r-md);border:1px solid rgba(239,68,68,0.15);';
+        const stack = document.querySelector('#step-3 .form-stack');
+        if (stack) stack.prepend(el);
+      }
+      el.innerHTML = '<i class="fas fa-triangle-exclamation"></i> ' + message;
+    }
+
+    /* ── parse server-rendered HTML for errors ── */
+    function parseServerErrors(html) {
+      const doc    = new DOMParser().parseFromString(html, 'text/html');
+      const result = { nonField: null, fields: {} };
+
+      // Non-field errors
+      const nfList = doc.querySelector('.non-field-errors .field-msg, .non-field-errors');
+      if (nfList) result.nonField = nfList.textContent.replace(/[\u26A0\uFE0F]/g, '').trim();
+
+      // Field errors — look for is-error inputs and sibling field-msg.error
+      const fieldMap = {
+        first_name:    'first_name',
+        last_name:     'last_name',
+        username:      'username',
+        email:         'email',
+        phone_number:  'phone_number',
+        password1:     'password',
+        password2:     'password2',
+      };
+      Object.entries(fieldMap).forEach(([name, id]) => {
+        const input = doc.querySelector('[name="' + name + '"]');
+        if (!input) return;
+        const group = input.closest('.form-group') || input.parentElement;
+        if (!group) return;
+        const errEl = group.querySelector('.field-msg.error, .errorlist li');
+        if (errEl) result.fields[id] = errEl.textContent.replace(/[⚠️]/g, '').trim();
+      });
+
+      return result;
+    }
+
+    try {
+      const response = await fetch(form.action, {
+        method: 'POST',
+        body: data,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': getCSRF(),
+        },
+        redirect: 'manual',
+        credentials: 'same-origin',
+      });
+
+      /* ── success: Django redirects ── */
+      if (response.type === 'opaqueredirect' || response.status === 302 || response.redirected) {
+        const dest = response.url || response.headers.get('Location') || '/';
+        window.location.href = dest;
+        return;
+      }
+
+      /* ── failure: form re-rendered with errors ── */
+      if (response.status === 200) {
+        const html = await response.text();
+
+        // Check for embedded redirect
+        const redirectMatch = html.match(/window\.location(?:\.href)?\s*=\s*['"]([^'"]+)['"]/);
+        if (redirectMatch) { window.location.href = redirectMatch[1]; return; }
+
+        clearAjaxErrors();
+        const { nonField, fields } = parseServerErrors(html);
+
+        // Step 2 fields
+        const step2Fields = ['first_name', 'last_name', 'username', 'email', 'phone_number'];
+        const step3Fields = ['password', 'password2'];
+
+        let hasStep2 = false, hasStep3 = false;
+
+        Object.entries(fields).forEach(([id, msg]) => {
+          injectFieldError(id, msg);
+          if (step2Fields.includes(id)) hasStep2 = true;
+          if (step3Fields.includes(id)) hasStep3 = true;
+        });
+
+        if (nonField) {
+          injectNonFieldError(nonField);
+          hasStep3 = true;
+        }
+
+        // Restore phone display value
+        phoneInput.value = originalPhone;
+
+        // Jump to the earliest step with errors
+        if (hasStep2)       goToStep(2);
+        else if (hasStep3)  goToStep(3);
+
+        btn.disabled  = false;
+        btn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
+        return;
+      }
+
+      // Unexpected status
+      injectNonFieldError('Something went wrong. Please try again.');
+      btn.disabled  = false;
+      btn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
+
+    } catch (err) {
+      console.error('Register fetch error:', err);
+      phoneInput.value = originalPhone;
+      injectNonFieldError('Network error — please check your connection and try again.');
+      btn.disabled  = false;
+      btn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
+    }
+  });
+
+  (function () {
+    const phoneInput = document.getElementById('phone_number');
+    if (!phoneInput || !phoneInput.value) return;
+    let val = phoneInput.value.replace(/\D/g, '');
+    if (val.startsWith('234')) val = val.slice(3);
+    if (val.startsWith('0'))   val = val.slice(1);
+    phoneInput.value = val.slice(0, 10);
+  }());
+
+  (function autoJumpOnError() {
+    const step2Fields = ['first_name', 'last_name', 'username', 'email', 'phone_number'];
+    const step3Fields = ['password', 'password2'];
+
+    const hasStep2Err = step2Fields.some(id => {
+      const el = document.getElementById(id);
+      return el && el.classList.contains('is-error');
+    });
+    const phoneWrap   = document.getElementById('phoneWrap');
+    const phoneHasErr = phoneWrap && phoneWrap.classList.contains('is-error');
+
+    const hasStep3Err = step3Fields.some(id => {
+      const el = document.getElementById(id);
+      return el && el.classList.contains('is-error');
+    });
+    const hasNonFieldErr = !!document.querySelector('.non-field-errors');
+
+    if (hasStep3Err || hasNonFieldErr)       goToStep(3);
+    else if (hasStep2Err || phoneHasErr)     goToStep(2);
+  }());
+
+  updateStepIndicator();
+  updateRing();
+</script>
+{% endblock %}

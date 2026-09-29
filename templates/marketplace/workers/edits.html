@@ -1,0 +1,1030 @@
+{% extends "base.html" %}
+{% block title %}Edit Worker Profile — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+/* =====================================================
+   WORKER PROFILE EDIT — TradeLink NG
+   Context: form (WorkerProfileForm), profile (WorkerProfile),
+            unread_count
+===================================================== */
+
+/* ── PAGE SHELL ── */
+.we-page { padding-top: var(--nav-h); min-height: 100vh; }
+
+/* ── PAGE HEADER BAND ── */
+.we-header {
+  background: linear-gradient(
+    180deg,
+    rgba(245,158,11,0.05) 0%,
+    rgba(249,115,22,0.02) 60%,
+    transparent 100%
+  );
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 40px 0 36px;
+  position: relative; overflow: hidden;
+}
+.we-header::before {
+  content: '';
+  position: absolute; top: -120px; right: -80px;
+  width: 440px; height: 440px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,158,11,0.07), transparent 65%);
+  pointer-events: none;
+}
+.we-header-inner {
+  max-width: 1100px; margin: 0 auto;
+  padding: 0 clamp(20px,5vw,64px);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 20px; flex-wrap: wrap;
+}
+.we-header-left { display: flex; align-items: center; gap: 18px; }
+
+.we-avatar {
+  width: 62px; height: 62px; border-radius: 18px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Fraunces', serif; font-size: 1.6rem; font-weight: 900;
+  color: #0C0A08;
+  box-shadow: 0 6px 24px rgba(245,158,11,0.3);
+}
+
+.we-header-title {
+  font-family: 'Fraunces', serif; font-size: 1.55rem;
+  font-weight: 900; letter-spacing: -0.5px; color: var(--text-1);
+  margin-bottom: 3px;
+}
+.we-header-sub { font-size: 0.85rem; color: var(--text-2); }
+.we-header-sub a {
+  color: var(--amber); text-decoration: none; transition: var(--t);
+}
+.we-header-sub a:hover { color: var(--amber-light); text-decoration: underline; }
+
+/* ── COMPLETION METER ── */
+.we-completion {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 14px 20px;
+  flex-shrink: 0;
+}
+.we-completion-label { font-size: 0.78rem; color: var(--text-3); font-weight: 600; }
+.we-completion-pct {
+  font-family: 'Fraunces', serif; font-size: 1.3rem; font-weight: 900;
+  color: var(--amber); line-height: 1;
+}
+.we-completion-bar-wrap {
+  width: 110px; height: 6px; background: var(--surface-1);
+  border-radius: var(--r-pill); overflow: hidden;
+}
+.we-completion-bar {
+  height: 100%; border-radius: var(--r-pill);
+  background: linear-gradient(90deg, var(--amber), var(--orange));
+  transition: width 0.8s var(--ease);
+}
+
+/* ── BODY LAYOUT ── */
+.we-body {
+  max-width: 1100px; margin: 0 auto;
+  padding: 44px clamp(20px,5vw,64px) 80px;
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 40px; align-items: start;
+}
+
+/* ── MESSAGES ── */
+.we-messages { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 10px; }
+.we-msg {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 18px; border-radius: var(--r-lg); font-size: 0.88rem;
+}
+.we-msg-success {
+  background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2);
+  color: #6ee7b7;
+}
+.we-msg-error {
+  background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+  color: #fca5a5;
+}
+.we-msg i { font-size: 0.85rem; margin-top: 2px; flex-shrink: 0; }
+
+/* ── SECTION CARD ── */
+.we-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); overflow: hidden; margin-bottom: 24px;
+}
+.we-card:last-child { margin-bottom: 0; }
+.we-card-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+}
+.we-card-header::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--amber), var(--orange));
+}
+.we-card-title {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 800;
+  color: var(--text-1);
+}
+.we-card-icon {
+  width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; color: var(--amber);
+}
+.we-card-body { padding: 24px; }
+
+/* ── FORM FIELDS ── */
+.we-field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.we-field-grid .we-field-full { grid-column: 1 / -1; }
+
+.we-field { display: flex; flex-direction: column; gap: 7px; }
+.we-label {
+  font-size: 0.82rem; font-weight: 600; color: var(--text-2);
+  display: flex; align-items: center; gap: 6px;
+}
+.we-label-required { color: var(--amber); font-size: 0.75rem; }
+.we-help { font-size: 0.77rem; color: var(--text-3); margin-top: -2px; }
+
+.we-input,
+.we-select,
+.we-textarea {
+  width: 100%;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); color: var(--text-1);
+  font-family: 'Outfit', sans-serif; font-size: 0.92rem;
+  transition: var(--t); outline: none;
+}
+.we-input    { padding: 11px 14px; }
+.we-select   {
+  padding: 11px 14px; cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(250,245,235,0.3)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center;
+}
+.we-textarea { padding: 11px 14px; resize: vertical; min-height: 120px; }
+.we-input:focus,
+.we-select:focus,
+.we-textarea:focus {
+  border-color: var(--amber);
+  background: rgba(245,158,11,0.04);
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+}
+.we-input::placeholder,
+.we-textarea::placeholder { color: var(--text-3); }
+.we-select option { background: var(--bg-card); color: var(--text-1); }
+
+/* ── Style Django-rendered <select> widgets (trade_category, experience_level, state)
+   Django renders these without our .we-select class, so we target them by id pattern ── */
+select#id_trade_category,
+select#id_experience_level,
+select#id_state {
+  width: 100%;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); color: var(--text-1);
+  font-family: 'Outfit', sans-serif; font-size: 0.92rem;
+  padding: 11px 14px; cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(250,245,235,0.3)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center;
+  outline: none; transition: var(--t);
+}
+select#id_trade_category:focus,
+select#id_experience_level:focus,
+select#id_state:focus {
+  border-color: var(--amber);
+  background-color: rgba(245,158,11,0.04);
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+}
+select#id_trade_category option,
+select#id_experience_level option,
+select#id_state option { background: var(--bg-card); color: var(--text-1); }
+
+.we-field.has-error select#id_trade_category,
+.we-field.has-error select#id_experience_level,
+.we-field.has-error select#id_state {
+  border-color: rgba(239,68,68,0.5);
+  background-color: rgba(239,68,68,0.04);
+}
+
+/* Field error state */
+.we-field.has-error .we-input,
+.we-field.has-error .we-select,
+.we-field.has-error .we-textarea {
+  border-color: rgba(239,68,68,0.5);
+  background: rgba(239,68,68,0.04);
+}
+.we-field-error {
+  font-size: 0.77rem; color: #fca5a5;
+  display: flex; align-items: center; gap: 5px; margin-top: 2px;
+}
+.we-field-error i { font-size: 0.7rem; }
+
+/* Checkbox row */
+.we-checkbox-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); cursor: pointer; transition: var(--t);
+}
+.we-checkbox-row:hover { border-color: var(--border-strong); background: var(--surface-1); }
+.we-checkbox-row input[type="checkbox"] {
+  width: 18px; height: 18px; accent-color: var(--amber); cursor: pointer; flex-shrink: 0;
+}
+.we-checkbox-label {
+  font-size: 0.9rem; color: var(--text-2); font-weight: 500; cursor: pointer;
+}
+
+/* Pay rate row */
+.we-pay-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.we-input-prefix { position: relative; }
+.we-input-prefix .we-prefix-sym {
+  position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+  font-size: 0.82rem; color: var(--text-3); pointer-events: none;
+}
+.we-input-prefix .we-input { padding-left: 32px; }
+
+/* ── PORTFOLIO SECTION ── */
+.we-portfolio-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px;
+  margin-bottom: 18px;
+}
+.we-portfolio-item {
+  position: relative; border-radius: var(--r-lg); overflow: hidden;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  aspect-ratio: 4 / 3;
+}
+.we-portfolio-img {
+  width: 100%; height: 100%; object-fit: cover; display: block; transition: var(--t);
+}
+.we-portfolio-item:hover .we-portfolio-img { transform: scale(1.04); }
+.we-portfolio-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(12,10,8,0.85), transparent 55%);
+  display: flex; flex-direction: column; justify-content: flex-end; padding: 10px 11px;
+  opacity: 0; transition: var(--t);
+}
+.we-portfolio-item:hover .we-portfolio-overlay { opacity: 1; }
+.we-portfolio-caption { font-size: 0.75rem; color: var(--text-1); margin-bottom: 8px; line-height: 1.3; }
+.we-portfolio-del {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(239,68,68,0.85); color: #fff;
+  border: none; border-radius: var(--r-sm); padding: 5px 10px;
+  font-size: 0.73rem; font-weight: 600; cursor: pointer;
+  font-family: 'Outfit', sans-serif; transition: var(--t); width: fit-content;
+}
+.we-portfolio-del:hover { background: rgb(239,68,68); }
+.we-portfolio-empty {
+  grid-column: 1 / -1; text-align: center;
+  padding: 32px 20px; color: var(--text-3); font-size: 0.88rem;
+}
+.we-portfolio-empty i {
+  font-size: 2rem; color: var(--border-strong);
+  display: block; margin-bottom: 10px;
+}
+.we-portfolio-add-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 22px;
+  background: var(--surface-1); border: 1px dashed var(--border-strong);
+  border-radius: var(--r-lg); color: var(--amber);
+  font-size: 0.88rem; font-weight: 600;
+  text-decoration: none; transition: var(--t); cursor: pointer;
+}
+.we-portfolio-add-btn:hover { background: var(--surface-2); border-color: var(--amber); }
+
+/* Availability status indicator */
+.we-availability-row { display: flex; flex-direction: column; gap: 8px; }
+.we-avail-option {
+  display: flex; align-items: center; gap: 11px;
+  padding: 11px 14px;
+  background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); cursor: pointer; transition: var(--t);
+}
+.we-avail-option:hover { border-color: var(--border-strong); background: var(--surface-1); }
+.we-avail-option input[type="radio"] {
+  accent-color: var(--amber); width: 16px; height: 16px; flex-shrink: 0;
+}
+.we-avail-dot {
+  width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+}
+.we-avail-dot.green  { background: var(--emerald); box-shadow: 0 0 0 3px rgba(16,185,129,0.15); }
+.we-avail-dot.yellow { background: var(--amber);   box-shadow: 0 0 0 3px rgba(245,158,11,0.15); }
+.we-avail-dot.orange { background: var(--orange);  box-shadow: 0 0 0 3px rgba(249,115,22,0.15); }
+.we-avail-dot.red    { background: #ef4444;        box-shadow: 0 0 0 3px rgba(239,68,68,0.15); }
+.we-avail-text { font-size: 0.87rem; color: var(--text-2); font-weight: 500; }
+
+/* ── SUBMIT BAR ──
+   NOTE: NO fade-up class here — sticky elements + fade-up animation causes
+   the bar to stay at opacity:0 / translateY(28px), making the button
+   invisible and unclickable. Always keep this fully visible.
+── */
+.we-submit-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+  padding: 20px 24px;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl);
+  position: sticky; bottom: 20px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+  backdrop-filter: blur(12px);
+  z-index: 10;
+  /* Always fully visible — never animated */
+  opacity: 1 !important;
+  transform: none !important;
+}
+.we-submit-hint { font-size: 0.8rem; color: var(--text-3); }
+.we-submit-hint i { color: var(--amber); margin-right: 5px; }
+.we-submit-actions { display: flex; gap: 12px; align-items: center; }
+.we-btn-cancel {
+  padding: 11px 22px;
+  background: transparent; border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md); color: var(--text-2);
+  font-family: 'Outfit', sans-serif; font-size: 0.9rem; font-weight: 600;
+  cursor: pointer; text-decoration: none; transition: var(--t);
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.we-btn-cancel:hover { background: var(--surface-1); color: var(--text-1); border-color: var(--border-strong); }
+.we-btn-save {
+  padding: 11px 28px;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  border: none; border-radius: var(--r-md);
+  color: #0C0A08; font-family: 'Outfit', sans-serif;
+  font-size: 0.92rem; font-weight: 700;
+  cursor: pointer; transition: var(--t);
+  display: inline-flex; align-items: center; gap: 8px;
+  box-shadow: 0 4px 20px rgba(245,158,11,0.3);
+}
+.we-btn-save:hover { filter: brightness(1.06); transform: translateY(-1px); box-shadow: 0 8px 28px rgba(245,158,11,0.4); }
+.we-btn-save:active { transform: translateY(0); }
+
+/* ── RIGHT SIDEBAR ── */
+.we-sidebar { display: flex; flex-direction: column; gap: 18px; }
+
+.we-tip-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 20px; overflow: hidden; position: relative;
+}
+.we-tip-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(245,158,11,0.04), transparent 70%);
+  pointer-events: none;
+}
+.we-tip-title {
+  font-family: 'Fraunces', serif; font-size: 0.92rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.we-tip-title i { color: var(--amber); font-size: 0.82rem; }
+.we-tip-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.we-tip-item {
+  display: flex; align-items: flex-start; gap: 9px;
+  font-size: 0.82rem; color: var(--text-2); line-height: 1.55;
+}
+.we-tip-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--amber); flex-shrink: 0; margin-top: 7px;
+}
+
+/* Quick links */
+.we-quick-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 20px;
+}
+.we-quick-title {
+  font-family: 'Fraunces', serif; font-size: 0.92rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.we-quick-title i { color: var(--amber); font-size: 0.82rem; }
+.we-quick-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--r-md);
+  text-decoration: none; color: var(--text-2);
+  font-size: 0.86rem; font-weight: 500;
+  transition: var(--t); margin-bottom: 4px;
+}
+.we-quick-link:last-child { margin-bottom: 0; }
+.we-quick-link:hover { background: var(--surface-1); color: var(--text-1); }
+.we-quick-link i { width: 16px; text-align: center; color: var(--text-3); font-size: 0.78rem; }
+.we-quick-link:hover i { color: var(--amber); }
+.we-quick-link .we-quick-badge {
+  margin-left: auto; font-size: 0.7rem; font-weight: 600;
+  padding: 2px 8px; border-radius: var(--r-pill);
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  color: var(--text-3);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .we-body { grid-template-columns: 1fr; }
+  .we-sidebar { order: -1; }
+  .we-field-grid { grid-template-columns: 1fr; }
+  .we-pay-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .we-header-inner { flex-direction: column; align-items: flex-start; }
+  .we-completion { width: 100%; }
+  .we-submit-bar { position: static; flex-direction: column; align-items: stretch; }
+  .we-submit-actions { flex-direction: column; }
+  .we-btn-cancel, .we-btn-save { justify-content: center; }
+  .we-portfolio-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="we-page">
+
+  {# ── PAGE HEADER ── #}
+  <div class="we-header">
+    <div class="we-header-inner">
+      <div class="we-header-left">
+        <div class="we-avatar">
+          {{ request.user.username|slice:":1"|upper }}
+        </div>
+        <div>
+          <div class="we-header-title">
+            {% if profile.pk %}Edit Your Profile{% else %}Set Up Your Worker Profile{% endif %}
+          </div>
+          <div class="we-header-sub">
+            <a href="{% url 'marketplace:worker_dashboard' %}">
+              <i class="fas fa-chevron-left" style="font-size:0.7rem;"></i> Dashboard
+            </a>
+            &nbsp;·&nbsp;
+            {% if profile.pk %}
+              <a href="{% url 'marketplace:worker_profile_public' pk=profile.pk %}">
+                View public profile <i class="fas fa-arrow-up-right-from-square" style="font-size:0.7rem;"></i>
+              </a>
+            {% else %}
+              Complete your profile to start getting matched to jobs
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {# Profile completion meter #}
+      <div class="we-completion">
+        <div>
+          <div class="we-completion-label">Profile Strength</div>
+          <div class="we-completion-pct">{{ profile.profile_completion }}%</div>
+        </div>
+        <div>
+          <div class="we-completion-bar-wrap">
+            <div class="we-completion-bar" style="width:{{ profile.profile_completion }}%;"></div>
+          </div>
+          <div style="font-size:0.7rem;color:var(--text-3);margin-top:4px;">
+            {% if profile.profile_completion < 40 %}Just getting started
+            {% elif profile.profile_completion < 70 %}Looking good
+            {% elif profile.profile_completion < 90 %}Almost there
+            {% else %}Complete!{% endif %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  {# ── BODY ── #}
+  <div class="we-body">
+
+    {# ── DJANGO MESSAGES ── #}
+    {% if messages %}
+    <div class="we-messages">
+      {% for msg in messages %}
+      <div class="we-msg {% if msg.tags == 'success' %}we-msg-success{% else %}we-msg-error{% endif %}">
+        <i class="fas {% if msg.tags == 'success' %}fa-circle-check{% else %}fa-circle-exclamation{% endif %}"></i>
+        {{ msg }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    
+    <div>
+      <form
+        method="POST"
+        action="{% url 'marketplace:worker_profile_edit' %}"
+        enctype="multipart/form-data"
+        id="profileForm"
+        novalidate
+      >
+        {% csrf_token %}
+
+        {# ─── 1. Trade & Experience ─── #}
+        <div class="we-card fade-up">
+          <div class="we-card-header">
+            <div class="we-card-icon"><i class="fas fa-helmet-safety"></i></div>
+            <div class="we-card-title">Trade &amp; Experience</div>
+          </div>
+          <div class="we-card-body">
+            <div class="we-field-grid">
+
+              {# Trade Category — rendered by Django so selected state is always correct #}
+              <div class="we-field {% if form.trade_category.errors %}has-error{% endif %}">
+                <label class="we-label" for="{{ form.trade_category.id_for_label }}">
+                  Trade Category <span class="we-label-required">✱</span>
+                </label>
+                {{ form.trade_category }}
+                {% if form.trade_category.errors %}
+                  <span class="we-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.trade_category.errors.0 }}
+                  </span>
+                {% else %}
+                  <span class="we-help">Choose the trade that best describes your work.</span>
+                {% endif %}
+              </div>
+
+              {# Experience Level #}
+              <div class="we-field {% if form.experience_level.errors %}has-error{% endif %}">
+                <label class="we-label" for="{{ form.experience_level.id_for_label }}">
+                  Experience Level
+                </label>
+                {{ form.experience_level }}
+                {% if form.experience_level.errors %}
+                  <span class="we-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.experience_level.errors.0 }}
+                  </span>
+                {% endif %}
+              </div>
+
+              {# Years of Experience #}
+              <div class="we-field {% if form.years_experience.errors %}has-error{% endif %}">
+                <label class="we-label" for="{{ form.years_experience.id_for_label }}">
+                  Years of Experience
+                </label>
+                <input
+                  type="number" min="0" max="60"
+                  name="{{ form.years_experience.html_name }}"
+                  id="{{ form.years_experience.id_for_label }}"
+                  value="{{ form.years_experience.value|default:'' }}"
+                  class="we-input"
+                  placeholder="e.g. 5"
+                >
+                {% if form.years_experience.errors %}
+                  <span class="we-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.years_experience.errors.0 }}
+                  </span>
+                {% endif %}
+              </div>
+
+            </div>{# /field-grid #}
+          </div>
+        </div>
+
+        {# ─── 2. Bio ─── #}
+        <div class="we-card fade-up d1">
+          <div class="we-card-header">
+            <div class="we-card-icon"><i class="fas fa-align-left"></i></div>
+            <div class="we-card-title">Professional Bio</div>
+          </div>
+          <div class="we-card-body">
+            <div class="we-field {% if form.bio.errors %}has-error{% endif %}">
+              <label class="we-label" for="{{ form.bio.id_for_label }}">
+                About You <span class="we-label-required">✱</span>
+              </label>
+              {# Single id attribute — duplicate removed #}
+              <textarea
+                name="{{ form.bio.html_name }}"
+                id="{{ form.bio.id_for_label }}"
+                rows="6"
+                class="we-textarea"
+                placeholder="Describe your skills, experience, and the kind of work you do…"
+                maxlength="2000"
+              >{{ form.bio.value|default:'' }}</textarea>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                {% if form.bio.errors %}
+                  <span class="we-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.bio.errors.0 }}
+                  </span>
+                {% else %}
+                  <span class="we-help">
+                    This is the main text our AI uses to match you to jobs — be specific and detailed.
+                  </span>
+                {% endif %}
+                <span id="bioCount" style="font-size:0.74rem;color:var(--text-3);flex-shrink:0;margin-left:12px;">
+                  0 / 2000
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# ─── 3. Location ─── #}
+        <div class="we-card fade-up d2">
+          <div class="we-card-header">
+            <div class="we-card-icon"><i class="fas fa-location-dot"></i></div>
+            <div class="we-card-title">Location</div>
+          </div>
+          <div class="we-card-body">
+            <div class="we-field-grid">
+
+              {# State #}
+              <div class="we-field {% if form.state.errors %}has-error{% endif %}">
+                <label class="we-label" for="{{ form.state.id_for_label }}">State</label>
+                {{ form.state }}
+                {% if form.state.errors %}
+                  <span class="we-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.state.errors.0 }}
+                  </span>
+                {% endif %}
+              </div>
+
+              {# LGA #}
+              <div class="we-field {% if form.lga.errors %}has-error{% endif %}">
+                <label class="we-label" for="{{ form.lga.id_for_label }}">
+                  Local Government Area (LGA)
+                </label>
+                <input
+                  type="text"
+                  name="{{ form.lga.html_name }}"
+                  id="{{ form.lga.id_for_label }}"
+                  value="{{ form.lga.value|default:'' }}"
+                  class="we-input"
+                  placeholder="e.g. Ikeja"
+                >
+                {% if form.lga.errors %}
+                  <span class="we-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.lga.errors.0 }}
+                  </span>
+                {% endif %}
+              </div>
+
+              {# Willing to Relocate #}
+              <div class="we-field-full">
+                <label class="we-checkbox-row">
+                  <input
+                    type="checkbox"
+                    name="{{ form.is_willing_to_relocate.html_name }}"
+                    id="{{ form.is_willing_to_relocate.id_for_label }}"
+                    {% if form.is_willing_to_relocate.value %}checked{% endif %}
+                  >
+                  <span class="we-checkbox-label">
+                    <i class="fas fa-plane" style="color:var(--amber);margin-right:5px;"></i>
+                    I am willing to relocate for the right opportunity
+                  </span>
+                </label>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {# ─── 4. Rates ─── #}
+        <div class="we-card fade-up d3">
+          <div class="we-card-header">
+            <div class="we-card-icon"><i class="fas fa-naira-sign"></i></div>
+            <div class="we-card-title">Rates (NGN)</div>
+          </div>
+          <div class="we-card-body">
+            <div class="we-pay-row">
+
+              <div class="we-field {% if form.hourly_rate.errors %}has-error{% endif %}">
+                <label class="we-label" for="{{ form.hourly_rate.id_for_label }}">Hourly Rate</label>
+                <div class="we-input-prefix">
+                  <span class="we-prefix-sym">₦</span>
+                  <input
+                    type="number" min="0" step="50"
+                    name="{{ form.hourly_rate.html_name }}"
+                    id="{{ form.hourly_rate.id_for_label }}"
+                    value="{{ form.hourly_rate.value|default:'' }}"
+                    class="we-input"
+                    placeholder="0.00"
+                  >
+                </div>
+                {% if form.hourly_rate.errors %}
+                  <span class="we-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.hourly_rate.errors.0 }}
+                  </span>
+                {% else %}
+                  <span class="we-help">Leave blank if you prefer to negotiate per job.</span>
+                {% endif %}
+              </div>
+
+              <div class="we-field {% if form.daily_rate.errors %}has-error{% endif %}">
+                <label class="we-label" for="{{ form.daily_rate.id_for_label }}">Daily Rate</label>
+                <div class="we-input-prefix">
+                  <span class="we-prefix-sym">₦</span>
+                  <input
+                    type="number" min="0" step="100"
+                    name="{{ form.daily_rate.html_name }}"
+                    id="{{ form.daily_rate.id_for_label }}"
+                    value="{{ form.daily_rate.value|default:'' }}"
+                    class="we-input"
+                    placeholder="0.00"
+                  >
+                </div>
+                {% if form.daily_rate.errors %}
+                  <span class="we-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.daily_rate.errors.0 }}
+                  </span>
+                {% endif %}
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {# ─── 5. Portfolio ─── #}
+        <div class="we-card fade-up d4">
+          <div class="we-card-header">
+            <div class="we-card-icon"><i class="fas fa-images"></i></div>
+            <div class="we-card-title">Portfolio</div>
+            {% if profile.portfolio.all %}
+            <span style="margin-left:auto;font-size:0.78rem;font-weight:600;
+                         color:var(--amber);background:rgba(245,158,11,0.1);
+                         border:1px solid rgba(245,158,11,0.2);
+                         border-radius:var(--r-pill);padding:2px 10px;">
+              {{ profile.portfolio.count }} item{{ profile.portfolio.count|pluralize }}
+            </span>
+            {% endif %}
+          </div>
+          <div class="we-card-body">
+            <p style="font-size:0.83rem;color:var(--text-3);margin-bottom:16px;">
+              <i class="fas fa-brain" style="color:var(--amber);margin-right:5px;"></i>
+              Our AI analyses your portfolio images to match you to visually similar jobs.
+              Add real photos of your work for the best results.
+            </p>
+
+            <div class="we-portfolio-grid">
+              {% for item in profile.portfolio.all %}
+              <div class="we-portfolio-item">
+                <img src="{{ item.image.url }}" alt="{{ item.caption }}" class="we-portfolio-img">
+                <div class="we-portfolio-overlay">
+                  {% if item.caption %}
+                  <div class="we-portfolio-caption">{{ item.caption|truncatechars:50 }}</div>
+                  {% endif %}
+                  <button
+                    type="button"
+                    class="we-portfolio-del"
+                    data-delete-url="{% url 'marketplace:portfolio_delete' pk=item.pk %}"
+                    onclick="deletePortfolioItem(this)">
+                    <i class="fas fa-trash-can"></i> Remove
+                  </button>
+                </div>
+              </div>
+              {% empty %}
+              <div class="we-portfolio-empty">
+                <i class="fas fa-camera"></i>
+                No portfolio items yet. Add photos of your best work to stand out.
+              </div>
+              {% endfor %}
+            </div>
+
+            <a href="{% url 'marketplace:portfolio_add' %}" class="we-portfolio-add-btn">
+              <i class="fas fa-plus"></i> Add Portfolio Item
+            </a>
+          </div>
+        </div>
+
+        
+        <div class="we-card fade-up d5">
+          <div class="we-card-header">
+            <div class="we-card-icon"><i class="fas fa-circle-dot"></i></div>
+            <div class="we-card-title">Availability</div>
+          </div>
+          <div class="we-card-body" style="padding-top:16px;">
+            <p style="font-size:0.8rem;color:var(--text-3);margin-bottom:14px;">
+              This status appears on your public profile and affects how employers find you.
+            </p>
+            <div class="we-availability-row">
+              {% for val, label in form.availability.field.choices %}
+              <label class="we-avail-option">
+                <input
+                  type="radio"
+                  name="{{ form.availability.html_name }}"
+                  value="{{ val }}"
+                  {% if form.availability.value == val %}checked{% endif %}
+                >
+                <span class="we-avail-dot
+                  {% if val == 'available' %}green
+                  {% elif val == 'soon' %}yellow
+                  {% elif val == 'busy' %}orange
+                  {% else %}red{% endif %}">
+                </span>
+                <span class="we-avail-text">{{ label }}</span>
+              </label>
+              {% endfor %}
+            </div>
+            {% if form.availability.errors %}
+              <span class="we-field-error" style="margin-top:8px;">
+                <i class="fas fa-circle-exclamation"></i> {{ form.availability.errors.0 }}
+              </span>
+            {% endif %}
+          </div>
+        </div>
+
+        
+        <div class="we-submit-bar">
+          <div class="we-submit-hint">
+            <i class="fas fa-bolt"></i>
+            Saving will trigger AI re-matching in the background.
+          </div>
+          <div class="we-submit-actions">
+            <a href="{% url 'marketplace:worker_dashboard' %}" class="we-btn-cancel">
+              <i class="fas fa-xmark"></i> Cancel
+            </a>
+            <button type="submit" class="we-btn-save">
+              <i class="fas fa-floppy-disk"></i> Save Profile
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>{# /left column #}
+
+    {# ── RIGHT SIDEBAR — display only, zero form fields ── #}
+    <div class="we-sidebar">
+
+      {# ─── Tips ─── #}
+      <div class="we-tip-card fade-up d1">
+        <div class="we-tip-title">
+          <i class="fas fa-lightbulb"></i> Profile Tips
+        </div>
+        <ul class="we-tip-list">
+          <li class="we-tip-item">
+            <span class="we-tip-dot"></span>
+            Write a detailed bio — our AI reads it to match you to jobs.
+          </li>
+          <li class="we-tip-item">
+            <span class="we-tip-dot"></span>
+            Upload at least 3 portfolio photos. Visual matching boosts your score.
+          </li>
+          <li class="we-tip-item">
+            <span class="we-tip-dot"></span>
+            Set your state and LGA — local jobs pay better and require less travel.
+          </li>
+          <li class="we-tip-item">
+            <span class="we-tip-dot"></span>
+            Keep your availability status up to date so employers know when to contact you.
+          </li>
+          <li class="we-tip-item">
+            <span class="we-tip-dot"></span>
+            Add your honest day rate — transparent pricing builds employer trust.
+          </li>
+        </ul>
+      </div>
+
+      {# ─── Quick Links ─── #}
+      <div class="we-quick-card fade-up d2">
+        <div class="we-quick-title">
+          <i class="fas fa-link"></i> Quick Links
+        </div>
+        <a href="{% url 'marketplace:worker_dashboard' %}" class="we-quick-link">
+          <i class="fas fa-gauge-high"></i> Dashboard
+        </a>
+        <a href="{% url 'marketplace:worker_applications' %}" class="we-quick-link">
+          <i class="fas fa-file-lines"></i> My Applications
+          {% if profile.applications.count %}
+          <span class="we-quick-badge">{{ profile.applications.count }}</span>
+          {% endif %}
+        </a>
+        <a href="{% url 'marketplace:worker_matches' %}" class="we-quick-link">
+          <i class="fas fa-bolt"></i> AI Job Matches
+        </a>
+        <a href="{% url 'marketplace:portfolio_add' %}" class="we-quick-link">
+          <i class="fas fa-images"></i> Add Portfolio Item
+        </a>
+        <a href="{% url 'marketplace:job_list' %}" class="we-quick-link">
+          <i class="fas fa-briefcase"></i> Browse All Jobs
+        </a>
+        {% if profile.pk %}
+        <a href="{% url 'marketplace:worker_profile_public' pk=profile.pk %}" class="we-quick-link">
+          <i class="fas fa-eye"></i> View Public Profile
+        </a>
+        {% endif %}
+      </div>
+
+      {# ─── AI Embedding status ─── #}
+      <div class="we-tip-card fade-up d3" style="border-color:rgba(56,189,248,0.15);">
+        <div class="we-tip-title">
+          <i class="fas fa-brain" style="color:var(--sky);"></i>
+          <span style="color:var(--sky);">AI Matching Status</span>
+        </div>
+        {% if profile.text_embedding %}
+          <div style="display:flex;align-items:center;gap:8px;font-size:0.83rem;color:var(--emerald);margin-bottom:8px;">
+            <i class="fas fa-circle-check"></i> Profile is indexed for AI matching
+          </div>
+          {% if profile.text_embedding_updated %}
+          <div style="font-size:0.76rem;color:var(--text-3);">
+            Last updated {{ profile.text_embedding_updated|timesince }} ago.
+          </div>
+          {% endif %}
+        {% else %}
+          <div style="display:flex;align-items:center;gap:8px;font-size:0.83rem;color:var(--amber);margin-bottom:8px;">
+            <i class="fas fa-clock"></i> Indexing pending…
+          </div>
+          <div style="font-size:0.76rem;color:var(--text-3);">
+            Save your profile to trigger AI indexing. This usually takes under a minute.
+          </div>
+        {% endif %}
+      </div>
+
+    </div>{# /sidebar #}
+
+  </div>{# /we-body #}
+</div>{# /we-page #}
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+/* ── Bio character counter ── */
+const bioEl    = document.querySelector('textarea[name="bio"]');
+const bioCount = document.getElementById('bioCount');
+if (bioEl && bioCount) {
+  const update = () => bioCount.textContent = bioEl.value.length + ' / 2000';
+  bioEl.addEventListener('input', update);
+  update();
+}
+
+/* ── Completion bar entrance animation ── */
+document.addEventListener('DOMContentLoaded', () => {
+  const bar = document.querySelector('.we-completion-bar');
+  if (bar) {
+    const target = bar.style.width;
+    bar.style.width = '0';
+    setTimeout(() => { bar.style.width = target; }, 200);
+  }
+});
+
+/* ── Scroll-triggered fade-up for cards only ──
+   NOTE: The submit bar intentionally does NOT have the fade-up class.
+   Applying fade-up to position:sticky elements causes opacity:0 +
+   translateY(28px) via animation-fill-mode:both when paused, making
+   the element invisible and shifting its click area — which was the
+   root cause of no POST requests reaching the server.
+── */
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.style.animationPlayState = 'running';
+      obs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.06 });
+
+document.querySelectorAll('.fade-up').forEach((el, i) => {
+  el.style.animationPlayState = 'paused';
+  el.style.animationDelay = el.style.animationDelay || (i * 0.07) + 's';
+  obs.observe(el);
+});
+
+/* ── Auto-dismiss messages ── */
+document.querySelectorAll('.we-msg').forEach(el => {
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.4s';
+    el.style.opacity    = '0';
+    setTimeout(() => el.remove(), 420);
+  }, 5000);
+});
+
+/* ── Portfolio item delete (AJAX) ── */
+function deletePortfolioItem(btn) {
+  if (!confirm('Remove this portfolio item?')) return;
+
+  const url  = btn.dataset.deleteUrl;
+  const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  const card = btn.closest('.we-portfolio-item');
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+  fetch(url, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrf },
+    credentials: 'same-origin',
+  })
+  .then(response => {
+    if (response.ok || response.redirected) {
+      card.style.transition = 'opacity 0.3s, transform 0.3s';
+      card.style.opacity    = '0';
+      card.style.transform  = 'scale(0.9)';
+      setTimeout(() => {
+        card.remove();
+        const grid = document.querySelector('.we-portfolio-grid');
+        if (grid && grid.querySelectorAll('.we-portfolio-item').length === 0) {
+          grid.innerHTML = `
+            <div class="we-portfolio-empty" style="grid-column:1/-1;">
+              <i class="fas fa-camera"></i>
+              No portfolio items yet. Add photos of your best work to stand out.
+            </div>`;
+        }
+      }, 320);
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-trash-can"></i> Remove';
+      alert('Could not remove item. Please try again.');
+    }
+  })
+  .catch(() => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-trash-can"></i> Remove';
+    alert('Network error. Please try again.');
+  });
+}
+</script>
+{% endblock %}

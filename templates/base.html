@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}TradeLink NG — Nigeria's Skilled Trades Platform{% endblock %}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;0,9..144,800;0,9..144,900;1,9..144,700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+  {% block extra_head %}{% endblock %}
+
+  <style>
+    /* =====================================================
+       TRADELINK NG — BASE STYLESHEET
+    ===================================================== */
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    /* FIX: must set overflow-x on html, not just body.
+       body overflow-x alone doesn't prevent the root scroll container
+       from exposing a horizontal scrollbar on iOS/Android. */
+    html {
+      scroll-behavior: smooth;
+      overflow-x: hidden;
+    }
+
+    :root {
+      --bg-base:        #0C0A08;
+      --bg-raised:      #131008;
+      --bg-card:        #181410;
+      --amber:          #F59E0B;
+      --amber-light:    #FCD34D;
+      --amber-dark:     #D97706;
+      --orange:         #F97316;
+      --emerald:        #10B981;
+      --sky:            #38BDF8;
+      --surface-1:      rgba(245,158,11,0.06);
+      --surface-2:      rgba(245,158,11,0.10);
+      --border-subtle:  rgba(245,158,11,0.12);
+      --border-strong:  rgba(245,158,11,0.28);
+      --text-1:         #FAF5EB;
+      --text-2:         rgba(250,245,235,0.6);
+      --text-3:         rgba(250,245,235,0.32);
+      --nav-h:          72px;
+      --r-xl:           24px;
+      --r-lg:           16px;
+      --r-md:           10px;
+      --r-sm:           6px;
+      --r-pill:         100px;
+      --shadow-sm:      0 2px 8px rgba(0,0,0,0.4);
+      --shadow-md:      0 8px 32px rgba(0,0,0,0.5);
+      --shadow-lg:      0 24px 64px rgba(0,0,0,0.6);
+      --shadow-amber:   0 8px 32px rgba(245,158,11,0.22);
+      --ease:           cubic-bezier(0.4,0,0.2,1);
+      --t:              all 0.28s cubic-bezier(0.4,0,0.2,1);
+
+      /* Verification badge colours */
+      --ver-blue:  #3B82F6;
+      --ver-gold:  #F59E0B;
+      --ver-green: #10B981;
+      --ver-grey:  #6B7280;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--text-1);
+      background: var(--bg-base);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 10% 0%, rgba(245,158,11,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 90% 100%, rgba(249,115,22,0.06) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 40% at 50% 50%, rgba(16,185,129,0.03) 0%, transparent 60%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ========== NAVBAR ========== */
+    .navbar {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: var(--nav-h); z-index: 1000;
+      display: flex; align-items: center;
+      justify-content: space-between;
+      /* FIX: tighter min padding so logo + hamburger fit on 360px phones */
+      padding: 0 clamp(16px,5vw,64px);
+      background: rgba(12,10,8,0.75);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      border-bottom: 1px solid var(--border-subtle);
+      transition: var(--t);
+    }
+    .navbar.scrolled {
+      background: rgba(12,10,8,0.96);
+      border-bottom-color: var(--border-strong);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    }
+
+    .nav-logo {
+      font-family: 'Fraunces', serif; font-weight: 800; font-size: 1.45rem;
+      letter-spacing: -0.5px; color: var(--text-1);
+      text-decoration: none; display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0; /* FIX: stop logo from shrinking when space is tight */
+    }
+    .logo-mark {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: linear-gradient(135deg, var(--amber), var(--orange));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem; color: #0C0A08; font-weight: 900;
+      box-shadow: 0 4px 16px rgba(245,158,11,0.35); flex-shrink: 0;
+    }
+    .logo-ng {
+      background: linear-gradient(to right,
+        #008751 0%, #008751 33%,
+        #FFFFFF 33%, #FFFFFF 67%,
+        #008751 67%, #008751 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+
+    .nav-links {
+      display: flex; align-items: center; gap: 2px; list-style: none;
+    }
+    .nav-links > li > a {
+      font-size: 0.875rem; font-weight: 500; color: var(--text-2);
+      text-decoration: none; padding: 8px 13px;
+      border-radius: var(--r-md); transition: var(--t); display: flex; align-items: center; gap: 5px;
+    }
+    .nav-links > li > a:hover { color: var(--text-1); background: var(--surface-1); }
+    .nav-links > li > a.active { color: var(--amber); background: var(--surface-1); }
+
+    /* ── NAV DROPDOWN SYSTEM ── */
+    .nav-dropdown { position: relative; display: inline-flex; align-items: center; }
+    .nav-dropdown-trigger {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 0.875rem; font-weight: 500; color: var(--text-2);
+      text-decoration: none; padding: 8px 13px;
+      border-radius: var(--r-md); transition: var(--t); cursor: pointer; white-space: nowrap;
+    }
+    .nav-dropdown-trigger .nd-arrow {
+      font-size: 0.6rem; transition: transform 0.22s ease; color: var(--text-3); margin-left: 1px;
+    }
+    .nav-dropdown:hover .nav-dropdown-trigger { color: var(--text-1); background: var(--surface-1); }
+    .nav-dropdown:hover .nd-arrow { transform: rotate(180deg); color: var(--amber); }
+
+    /* Base dropdown panel */
+    .nd-panel {
+      position: absolute; top: calc(100% + 10px); left: 0;
+      background: rgba(15, 11, 8, 0.97);
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--r-xl); padding: 10px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(245,158,11,0.06);
+      opacity: 0; visibility: hidden;
+      transform: translateY(12px) scale(0.98);
+      transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 1050; pointer-events: none;
+      min-width: 220px;
+    }
+    .nav-dropdown:hover .nd-panel {
+      opacity: 1; visibility: visible; transform: translateY(0) scale(1); pointer-events: auto;
+    }
+
+    /* Standard dropdown items */
+    .nd-item {
+      display: flex; align-items: center; gap: 11px;
+      padding: 10px 13px; border-radius: var(--r-lg);
+      color: var(--text-2); text-decoration: none;
+      font-size: 0.855rem; font-weight: 500;
+      transition: var(--t); position: relative;
+    }
+    .nd-item:hover { color: var(--text-1); background: var(--surface-1); transform: translateX(3px); }
+    .nd-item.active { color: var(--amber); background: var(--surface-1); }
+    .nd-item-icon {
+      width: 30px; height: 30px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; flex-shrink: 0;
+      background: var(--surface-1); border: 1px solid var(--border-subtle);
+      transition: var(--t); color: var(--amber);
+    }
+    .nd-item:hover .nd-item-icon { background: var(--surface-2); border-color: var(--border-strong); }
+    .nd-item-text strong { display: block; font-size: 0.855rem; font-weight: 600; color: inherit; line-height: 1.2; margin-bottom: 1px; }
+    .nd-item-text span { font-size: 0.76rem; color: var(--text-3); font-weight: 400; line-height: 1.2; }
+    .nd-sep { height: 1px; background: var(--border-subtle); margin: 6px 0; }
+    .nd-label {
+      font-size: 0.65rem; font-weight: 700; letter-spacing: 1.8px;
+      text-transform: uppercase; color: var(--text-3); padding: 6px 13px 2px;
+    }
+
+    /* Wide 2-col panels */
+    .nd-panel-wide {
+      min-width: 420px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 12px;
+    }
+    .nd-col-label {
+      grid-column: span 2; font-size: 0.65rem; font-weight: 700;
+      letter-spacing: 1.8px; text-transform: uppercase; color: var(--text-3); padding: 2px 6px 6px;
+    }
+
+    /* CTA strip at bottom of dropdown */
+    .nd-cta {
+      margin: 6px 0 0;
+      padding: 10px 13px;
+      background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(249,115,22,0.06));
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--r-lg);
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      text-decoration: none; transition: var(--t);
+    }
+    .nd-cta:hover { border-color: var(--border-strong); background: rgba(245,158,11,0.12); }
+    .nd-cta-text { font-size: 0.82rem; font-weight: 600; color: var(--text-1); }
+    .nd-cta-text span { display: block; font-size: 0.72rem; color: var(--text-3); font-weight: 400; }
+    .nd-cta-arrow { color: var(--amber); font-size: 0.75rem; }
+
+    .nav-actions { display: flex; align-items: center; gap: 8px; }
+
+    /* ── NAV USER GREETING ── */
+    .nav-username {
+      font-size: 0.9rem; font-weight: 500; color: var(--text-2);
+      /* FIX: prevent an overly long username blowing out the navbar */
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: 140px;
+    }
+
+    /* ── SIGNOUT FORM ── */
+    .signout-form { margin: 0; padding: 0; }
+    .signout-form .btn { cursor: pointer; font-family: 'Outfit', sans-serif; }
+
+    .nav-hamburger {
+      display: none; flex-direction: column; gap: 5px;
+      cursor: pointer; padding: 8px; border: none;
+      background: none; color: var(--text-1);
+      flex-shrink: 0;
+    }
+    .nav-hamburger span {
+      display: block; width: 22px; height: 2px;
+      background: var(--text-1); border-radius: 2px; transition: var(--t);
+    }
+
+    /* ── MOBILE DASHBOARD BUTTON ON NAVBAR ── */
+    .mobile-dash-btn {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: var(--r-pill);
+      background: linear-gradient(135deg, var(--amber), var(--orange));
+      color: #0C0A08;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 2px 10px rgba(245,158,11,0.25);
+      transition: var(--t);
+      white-space: nowrap;
+    }
+    .mobile-dash-btn:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+    .mobile-dash-btn i {
+      font-size: 0.8rem;
+    }
+
+    .mobile-menu {
+      position: fixed; top: var(--nav-h); left: 0; right: 0;
+      background: rgba(12,10,8,0.98); backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 16px clamp(14px,4vw,32px) 24px;
+      display: none; flex-direction: column; gap: 4px; z-index: 999;
+      width: 100%; max-width: 100vw; overflow-x: hidden;
+      max-height: calc(100vh - var(--nav-h));
+      overflow-y: auto;
+    }
+    .mobile-menu.open { display: flex; }
+
+    /* Mobile user card */
+    .mobile-user-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: var(--r-lg);
+      background: var(--surface-1);
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 10px;
+    }
+    .m-user-avatar {
+      font-size: 1.8rem;
+      color: var(--amber);
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .m-user-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .m-user-info strong {
+      font-size: 0.92rem;
+      color: var(--text-1);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .m-user-info span {
+      font-size: 0.74rem;
+      color: var(--text-3);
+    }
+
+    /* Mobile regular nav link */
+    .m-nav-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--text-2);
+      text-decoration: none;
+      padding: 11px 14px;
+      border-radius: var(--r-md);
+      transition: var(--t);
+    }
+    .m-nav-link i {
+      font-size: 0.9rem;
+      color: var(--amber);
+      width: 20px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .m-nav-link:hover, .m-nav-link.active {
+      color: var(--text-1);
+      background: var(--surface-1);
+    }
+
+    /* Mobile Accordion Dropdowns */
+    .m-dropdown {
+      display: flex;
+      flex-direction: column;
+      border-radius: var(--r-md);
+      overflow: hidden;
+      transition: var(--t);
+      margin-bottom: 2px;
+    }
+    .m-dropdown-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 14px;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text-2);
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: var(--r-md);
+      transition: var(--t);
+      text-align: left;
+    }
+    .m-dropdown-btn span {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .m-dropdown-btn span i {
+      font-size: 0.9rem;
+      color: var(--amber);
+      width: 20px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .m-dropdown-btn .m-arrow {
+      font-size: 0.7rem;
+      color: var(--text-3);
+      transition: transform 0.25s ease;
+    }
+    .m-dropdown-btn:hover,
+    .m-dropdown.open .m-dropdown-btn {
+      color: var(--text-1);
+      background: var(--surface-1);
+    }
+    .m-dropdown.open .m-dropdown-btn .m-arrow {
+      transform: rotate(180deg);
+      color: var(--amber);
+    }
+    .m-dropdown-content {
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      padding: 4px 8px 8px 36px;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 0 0 var(--r-md) var(--r-md);
+    }
+    .m-dropdown.open .m-dropdown-content {
+      display: flex;
+    }
+    .m-dropdown-content a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: var(--text-2);
+      text-decoration: none;
+      border-radius: var(--r-sm);
+      transition: var(--t);
+    }
+    .m-dropdown-content a i {
+      font-size: 0.82rem;
+      color: var(--amber-light);
+      width: 16px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .m-dropdown-content a:hover {
+      color: var(--text-1);
+      background: var(--surface-1);
+    }
+
+    .mobile-menu .m-actions {
+      display: flex; gap: 10px; margin-top: 12px; padding-top: 16px;
+      border-top: 1px solid var(--border-subtle);
+      flex-wrap: wrap; /* FIX: wrap so buttons don't overflow on 360px */
+    }
+    .mobile-menu .m-actions .btn { flex: 1; justify-content: center; min-width: 110px; }
+    .mobile-menu .m-actions .signout-form { flex: 1; }
+    .mobile-menu .m-actions .signout-form .btn { width: 100%; }
+
+    /* ========== BUTTONS ========== */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px; padding: 10px 22px; border-radius: var(--r-md);
+      font-family: 'Outfit', sans-serif; font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; text-decoration: none; transition: var(--t);
+      border: none; outline: none; white-space: nowrap;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--amber), var(--orange));
+      color: #0C0A08; font-weight: 700;
+      box-shadow: 0 4px 20px rgba(245,158,11,0.3);
+    }
+    .btn-primary:hover { box-shadow: var(--shadow-amber); transform: translateY(-1px); filter: brightness(1.05); }
+    .btn-ghost {
+      background: transparent; color: var(--text-2);
+      border: 1px solid var(--border-subtle);
+    }
+    .btn-ghost:hover { background: var(--surface-1); color: var(--text-1); border-color: var(--border-strong); }
+    .btn-outline {
+      background: transparent; color: var(--amber);
+      border: 1px solid var(--border-strong);
+    }
+    .btn-outline:hover { background: var(--surface-1); border-color: var(--amber); }
+    .btn-lg { padding: 14px 32px; font-size: 1rem; border-radius: var(--r-lg); }
+    .btn-sm { padding: 7px 16px; font-size: 0.82rem; }
+
+    /* ========== CARD ========== */
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border-subtle);
+      border-radius: var(--r-xl); transition: var(--t);
+      position: relative; overflow: hidden;
+    }
+    .card::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, var(--surface-1) 0%, transparent 60%);
+      opacity: 0; transition: var(--t); pointer-events: none;
+    }
+    .card:hover {
+      border-color: var(--border-strong); transform: translateY(-3px);
+      box-shadow: 0 20px 48px rgba(0,0,0,0.4), 0 0 0 1px rgba(245,158,11,0.06);
+    }
+    .card:hover::before { opacity: 1; }
+
+    /* ========== FORMS ========== */
+    .form-group { display: flex; flex-direction: column; gap: 8px; }
+    .form-label { font-size: 0.85rem; font-weight: 600; color: var(--text-2); }
+    .input-wrap { position: relative; }
+    .input-icon {
+      position: absolute; left: 14px; top: 50%;
+      transform: translateY(-50%); color: var(--text-3); font-size: 0.9rem; pointer-events: none;
+    }
+    .form-control {
+      width: 100%; padding: 13px 16px;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle);
+      border-radius: var(--r-lg); color: var(--text-1);
+      font-family: 'Outfit', sans-serif; font-size: 0.95rem;
+      transition: var(--t); outline: none;
+    }
+    .form-control.has-icon { padding-left: 42px; }
+    .form-control::placeholder { color: var(--text-3); }
+    .form-control:focus {
+      border-color: var(--amber); background: rgba(245,158,11,0.04);
+      box-shadow: 0 0 0 3px rgba(245,158,11,0.12);
+    }
+
+    /* ========== BADGES ========== */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 12px; border-radius: var(--r-pill);
+      font-size: 0.76rem; font-weight: 600; letter-spacing: 0.2px;
+    }
+    .badge-amber  { background: rgba(245,158,11,0.12); color: #FCD34D; border: 1px solid rgba(245,158,11,0.2); }
+    .badge-orange { background: rgba(249,115,22,0.12); color: #FDA975; border: 1px solid rgba(249,115,22,0.2); }
+    .badge-green  { background: rgba(16,185,129,0.12); color: #6EE7B7; border: 1px solid rgba(16,185,129,0.2); }
+    .badge-sky    { background: rgba(56,189,248,0.12); color: #7DD3FC; border: 1px solid rgba(56,189,248,0.2); }
+
+    /* ========== UTILS ========== */
+    .z1 { position: relative; z-index: 1; }
+    /* FIX: tighter min padding so content doesn't bleed on 360px */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 clamp(16px,4vw,48px); }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 2.5px;
+      text-transform: uppercase; color: var(--amber); margin-bottom: 14px;
+    }
+    .eyebrow::before {
+      content: ''; display: block; width: 18px; height: 2px;
+      background: var(--amber); border-radius: 2px;
+    }
+    /* FIX: floor lowered from 2rem → 1.6rem so headings don't overflow at 320px */
+    .section-title {
+      font-family: 'Fraunces', serif;
+      font-size: clamp(1.6rem, 4.5vw, 3.2rem);
+      font-weight: 800; line-height: 1.15; letter-spacing: -1px; margin-bottom: 16px;
+    }
+    .section-sub { color: var(--text-2); font-size: 1.05rem; max-width: 520px; line-height: 1.75; }
+    .amber-text {
+      background: linear-gradient(120deg, var(--amber) 0%, var(--orange) 80%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    /* ========== FOOTER ========== */
+    .site-footer {
+      position: relative; z-index: 1;
+      background: var(--bg-raised); border-top: 1px solid var(--border-subtle);
+      /* FIX: tighter horizontal padding on small screens */
+      padding: 72px clamp(16px,5vw,64px) 36px;
+    }
+    .footer-inner {
+      max-width: 1200px; margin: 0 auto;
+      display: grid; grid-template-columns: 2.2fr 1fr 1fr 1fr; gap: 52px;
+    }
+    .footer-desc {
+      color: var(--text-2); font-size: 0.9rem; line-height: 1.75;
+      max-width: 270px; margin-top: 16px;
+    }
+    .footer-col-title {
+      font-family: 'Fraunces', serif; font-size: 0.76rem; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--text-3); margin-bottom: 18px;
+    }
+    .footer-links { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .footer-links a {
+      color: var(--text-2); text-decoration: none; font-size: 0.9rem;
+      transition: var(--t); display: flex; align-items: center; gap: 8px;
+    }
+    .footer-links a:hover { color: var(--amber); }
+    .footer-links a::before {
+      content: ''; width: 4px; height: 4px; border-radius: 50%;
+      background: var(--border-strong); transition: var(--t); flex-shrink: 0;
+    }
+    .footer-links a:hover::before { background: var(--amber); }
+    .footer-bottom {
+      max-width: 1200px; margin: 48px auto 0; padding-top: 24px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 16px; font-size: 0.83rem; color: var(--text-3);
+    }
+    .footer-bottom a { color: var(--text-3); text-decoration: none; transition: var(--t); }
+    .footer-bottom a:hover { color: var(--text-2); }
+    .social-row { display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
+    .social-ico {
+      width: 38px; height: 38px; border-radius: var(--r-md);
+      background: var(--surface-1); border: 1px solid var(--border-subtle);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-2); text-decoration: none; font-size: 0.88rem; transition: var(--t);
+    }
+    .social-ico:hover { background: var(--surface-2); color: var(--amber); border-color: var(--border-strong); }
+
+    /* ========== VERIFICATION BADGES & PROMPT ========== */
+    .ver-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: var(--r-pill);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .ver-badge i {
+      font-size: 0.8rem;
+    }
+    .ver-badge--blue {
+      background: rgba(59, 130, 246, 0.1);
+      color: var(--ver-blue);
+      border-color: rgba(59, 130, 246, 0.2);
+    }
+    .ver-badge--gold {
+      background: rgba(245, 158, 11, 0.1);
+      color: var(--ver-gold);
+      border-color: rgba(245, 158, 11, 0.2);
+    }
+    .ver-badge--green {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--ver-green);
+      border-color: rgba(16, 185, 129, 0.2);
+    }
+    .ver-badge--grey {
+      background: rgba(107, 114, 128, 0.1);
+      color: var(--ver-grey);
+      border-color: rgba(107, 114, 128, 0.2);
+    }
+
+    /* Verification Prompt Banner */
+    .ver-prompt {
+      position: fixed;
+      bottom: 24px;
+      left: 0;
+      right: 0;
+      width: calc(100% - 32px);
+      max-width: 760px;
+      margin-left: auto;
+      margin-right: auto;
+      z-index: 1100;
+      border-radius: var(--r-lg);
+      padding: 16px 20px;
+      border: 1px solid var(--border-strong);
+      box-shadow: var(--shadow-lg);
+      animation: fadeUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .ver-prompt--warn {
+      background: rgba(19, 16, 8, 0.95);
+      border-color: rgba(245, 158, 11, 0.38);
+    }
+    .ver-prompt--info {
+      background: rgba(8, 12, 19, 0.95);
+      border-color: rgba(59, 130, 246, 0.38);
+    }
+    .ver-prompt__inner {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .ver-prompt__icon {
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+    .ver-prompt--warn .ver-prompt__icon { color: var(--ver-gold); }
+    .ver-prompt--info .ver-prompt__icon { color: var(--ver-blue); }
+    .ver-prompt__text {
+      color: var(--text-1);
+      font-size: 0.9rem;
+      line-height: 1.45;
+      flex-grow: 1;
+      min-width: 0;          /* allows flex child to shrink below content size */
+      overflow-wrap: break-word;
+    }
+    .ver-prompt__text strong {
+      color: #fff;
+    }
+    .ver-prompt__cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, var(--amber), var(--orange));
+      color: #0C0A08;
+      text-decoration: none;
+      padding: 8px 18px;
+      border-radius: var(--r-pill);
+      font-size: 0.82rem;
+      font-weight: 700;
+      transition: var(--t);
+      flex-shrink: 0;
+      white-space: nowrap;
+      border: none;
+      cursor: pointer;
+    }
+    .ver-prompt__cta:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+    .ver-prompt__cta--subtle {
+      background: rgba(59, 130, 246, 0.12);
+      color: var(--ver-blue);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+    }
+    .ver-prompt__cta--subtle:hover {
+      background: rgba(59, 130, 246, 0.2);
+      color: #fff;
+      border-color: var(--ver-blue);
+    }
+    .ver-prompt__close {
+      background: none;
+      border: none;
+      color: var(--text-3);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 4px;
+      transition: var(--t);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ver-prompt__close:hover {
+      color: var(--text-1);
+    }
+
+    @media (max-width: 640px) {
+      .ver-prompt {
+        bottom: 16px;
+        padding: 14px 16px;
+      }
+      .ver-prompt__inner {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+      }
+      .ver-prompt__close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+      }
+      .ver-prompt__cta {
+        align-self: flex-start;
+      }
+    }
+
+    /* ========== ANIMATIONS ========== */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-10px); }
+    }
+    @keyframes pulseDot {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.5); }
+      50%       { box-shadow: 0 0 0 8px rgba(245,158,11,0); }
+    }
+    .fade-up { animation: fadeUp 0.65s cubic-bezier(0.4,0,0.2,1) both; }
+    .fade-in { animation: fadeIn 0.5s cubic-bezier(0.4,0,0.2,1) both; }
+    .d1{animation-delay:.1s} .d2{animation-delay:.2s} .d3{animation-delay:.3s}
+    .d4{animation-delay:.4s} .d5{animation-delay:.5s} .d6{animation-delay:.6s}
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 1024px) {
+      /* FIX: 2-col footer starts earlier */
+      .footer-inner { grid-template-columns: 1fr 1fr; gap: 36px; }
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      /* Hide desktop-only action items on mobile */
+      .nav-actions .btn-ghost,
+      .nav-actions .btn-primary,
+      .nav-actions .nav-username,
+      .nav-actions .signout-form { display: none; }
+      /* Show mobile dashboard button */
+      .mobile-dash-btn { display: inline-flex; }
+      .nav-hamburger { display: flex; }
+    }
+    @media (max-width: 560px) {
+      .footer-bottom { flex-direction: column; text-align: center; }
+    }
+    /* FIX: collapse footer to 1-col on very small phones */
+    @media (max-width: 420px) {
+      .footer-inner { grid-template-columns: 1fr; gap: 24px; }
+      .site-footer  { padding-top: 48px; padding-bottom: 28px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar" id="navbar">
+    <a href="{% url 'home' %}" class="nav-logo">
+      <div class="logo-mark">T</div>
+      TradeLink<span class="logo-ng">NG</span>
+    </a>
+
+        <ul class="nav-links">
+      <li><a href="{% url 'home' %}" class="{% block nav_home %}{% endblock %}">Home</a></li>
+
+      <!-- ABOUT dropdown -->
+      <li class="nav-dropdown">
+        <a href="{% url 'about' %}" class="nav-dropdown-trigger {% block nav_about %}{% endblock %}">
+          About <i class="fas fa-chevron-down nd-arrow"></i>
+        </a>
+        <div class="nd-panel">
+          <a href="{% url 'about' %}" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-info-circle"></i></div>
+            <div class="nd-item-text"><strong>About TradeLink</strong><span>Our mission &amp; story</span></div>
+          </a>
+          <a href="{% url 'about' %}#how-it-works" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-route"></i></div>
+            <div class="nd-item-text"><strong>How It Works</strong><span>Post jobs, hire, get paid</span></div>
+          </a>
+          <a href="{% url 'about' %}#verification" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-shield-alt"></i></div>
+            <div class="nd-item-text"><strong>Trust &amp; Verification</strong><span>Blue, Gold &amp; Green badges</span></div>
+          </a>
+          <a href="{% url 'about' %}#values" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-gem"></i></div>
+            <div class="nd-item-text"><strong>Core Values</strong><span>What drives us</span></div>
+          </a>
+          <div class="nd-sep"></div>
+          <a href="{% url 'contacts:contact_us' %}" class="nd-cta">
+            <div class="nd-cta-text">Need Help? <span>Talk to our support team</span></div>
+            <i class="fas fa-arrow-right nd-cta-arrow"></i>
+          </a>
+        </div>
+      </li>
+
+      <!-- FIND WORK dropdown -->
+      <li class="nav-dropdown">
+        <a href="{% url 'marketplace:job_list' %}" class="nav-dropdown-trigger {% block nav_jobs %}{% endblock %}">
+          Find Work <i class="fas fa-chevron-down nd-arrow"></i>
+        </a>
+        <div class="nd-panel">
+          <div class="nd-label">For Technicians</div>
+          <a href="{% url 'marketplace:job_list' %}" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-briefcase"></i></div>
+            <div class="nd-item-text"><strong>Browse Jobs</strong><span>Active projects across Nigeria</span></div>
+          </a>
+          <a href="{% url 'marketplace:trade_list' %}" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-hard-hat"></i></div>
+            <div class="nd-item-text"><strong>Explore Trades</strong><span>All skill categories</span></div>
+          </a>
+          <a href="{% url 'hiring:worker_profile_enhanced' %}" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-id-card"></i></div>
+            <div class="nd-item-text"><strong>My Pro Profile</strong><span>Showcase skills &amp; badges</span></div>
+          </a>
+          <a href="{% url 'hiring:worker_inbox' %}" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-inbox"></i></div>
+            <div class="nd-item-text"><strong>Hiring Inbox</strong><span>Employer messages &amp; offers</span></div>
+          </a>
+          <div class="nd-sep"></div>
+          <a href="{% url 'marketplace:job_create' %}" class="nd-cta">
+            <div class="nd-cta-text">Hiring Instead? <span>Post a job in 60 seconds</span></div>
+            <i class="fas fa-arrow-right nd-cta-arrow"></i>
+          </a>
+        </div>
+      </li>
+
+      <!-- EMPLOYERS dropdown -->
+      <li class="nav-dropdown">
+        <a href="{% url 'hiring:talent_search' %}" class="nav-dropdown-trigger {% block nav_employers %}{% endblock %}">
+          Employers <i class="fas fa-chevron-down nd-arrow"></i>
+        </a>
+        <div class="nd-panel">
+          <div class="nd-label">For Employers &amp; Businesses</div>
+          <a href="{% url 'marketplace:job_create' %}" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-plus-circle"></i></div>
+            <div class="nd-item-text"><strong>Post a Job</strong><span>Reach verified artisans fast</span></div>
+          </a>
+          <a href="{% url 'hiring:talent_search' %}" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-search"></i></div>
+            <div class="nd-item-text"><strong>Search Talent</strong><span>Browse skilled tradespeople</span></div>
+          </a>
+          <a href="{% url 'hiring:pipeline' %}" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-filter"></i></div>
+            <div class="nd-item-text"><strong>Hiring Pipeline</strong><span>Manage your candidates</span></div>
+          </a>
+          <a href="{% url 'hiring:saved_workers' %}" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-bookmark"></i></div>
+            <div class="nd-item-text"><strong>Saved Artisans</strong><span>Your shortlisted workers</span></div>
+          </a>
+          <a href="{% url 'marketplace:dashboard' %}" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-tachometer-alt"></i></div>
+            <div class="nd-item-text"><strong>Dashboard</strong><span>Manage jobs &amp; milestones</span></div>
+          </a>
+          <div class="nd-sep"></div>
+          <a href="{% url 'about' %}#verification" class="nd-cta">
+            <div class="nd-cta-text">Why TradeLink? <span>Verified artisans, escrow-safe payments</span></div>
+            <i class="fas fa-arrow-right nd-cta-arrow"></i>
+          </a>
+        </div>
+      </li>
+
+      <!-- MARKETPLACE dropdown -->
+      <li class="nav-dropdown">
+        <a href="{% url 'mktplace:product_list' %}" class="nav-dropdown-trigger {% block nav_blog %}{% endblock %}">
+          Marketplace <i class="fas fa-chevron-down nd-arrow"></i>
+        </a>
+        <div class="nd-panel">
+          <div class="nd-label">Trade Tools &amp; Equipment</div>
+          <a href="{% url 'mktplace:product_list' %}" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-store"></i></div>
+            <div class="nd-item-text"><strong>Browse Products</strong><span>Tools, safety gear &amp; more</span></div>
+          </a>
+          <a href="{% url 'mktplace:category_list' %}" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-th-large"></i></div>
+            <div class="nd-item-text"><strong>All Categories</strong><span>Shop by equipment type</span></div>
+          </a>
+          <a href="{% url 'mktplace:product_create' %}" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-tag"></i></div>
+            <div class="nd-item-text"><strong>Sell Equipment</strong><span>List your tools for sale</span></div>
+          </a>
+          <a href="{% url 'mktplace:seller_dashboard' %}" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-chart-bar"></i></div>
+            <div class="nd-item-text"><strong>Seller Dashboard</strong><span>Manage your listings</span></div>
+          </a>
+          <a href="{% url 'mktplace:order_list' %}" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-shopping-bag"></i></div>
+            <div class="nd-item-text"><strong>My Orders</strong><span>Track purchases &amp; sales</span></div>
+          </a>
+        </div>
+      </li>
+
+      <li><a href="{% url 'contacts:contact_us' %}" class="{% block nav_contacts %}{% endblock %}">Contact</a></li>
+    </ul>
+
+    <div class="nav-actions">
+      {% if user.is_authenticated %}
+        <!-- Direct Mobile Dashboard button on navbar -->
+        
+        <a href="{% url 'chats:conversation_list' %}" class="btn btn-ghost" title="Messages">
+          <i class="fas fa-comment-dots"></i> Messages
+        </a>
+        <a href="{% url 'edit_profile' %}" class="btn btn-ghost" title="Profile">
+          <i class="fas fa-user-circle"></i> Profile
+        </a>
+        <a href="{% url 'marketplace:dashboard' %}" class="nav-username" style="text-decoration:none;">Hi, {{ user.username }}</a>
+        <form method="post" action="{% url 'signout' %}" class="signout-form">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-ghost">
+            <i class="fas fa-sign-out-alt"></i> Sign Out
+          </button>
+        </form>
+      {% else %}
+        <!-- Direct Mobile Sign-In button on navbar -->
+        
+        <a href="{% url 'register' %}" class="btn btn-primary">Get Started</a>
+      {% endif %}
+    </div>
+
+    <button class="nav-hamburger" id="hamburger" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- MOBILE MENU WITH ACCORDION DROPDOWNS -->
+  <div class="mobile-menu" id="mobileMenu">
+    {% if user.is_authenticated %}
+      <div class="mobile-user-card">
+        <div class="m-user-avatar">
+          <i class="fas fa-user-circle"></i>
+        </div>
+        <div class="m-user-info">
+          <strong>Hi, {{ user.username }}</strong>
+          <span>Account Dashboard</span>
+        </div>
+        <a href="{% url 'marketplace:dashboard' %}" class="btn btn-primary btn-sm">
+          <i class="fas fa-th-large"></i> Dashboard
+        </a>
+      </div>
+    {% endif %}
+
+    <a href="{% url 'home' %}" class="m-nav-link"><i class="fas fa-home"></i> Home</a>
+
+    <!-- Mobile Dropdown: About -->
+    <div class="m-dropdown">
+      <button type="button" class="m-dropdown-btn">
+        <span><i class="fas fa-info-circle"></i> About</span>
+        <i class="fas fa-chevron-down m-arrow"></i>
+      </button>
+      <div class="m-dropdown-content">
+        <a href="{% url 'about' %}"><i class="fas fa-building"></i> About TradeLink</a>
+        <a href="{% url 'about' %}#how-it-works"><i class="fas fa-route"></i> How It Works</a>
+        <a href="{% url 'about' %}#verification"><i class="fas fa-shield-alt"></i> Trust &amp; Verification</a>
+        <a href="{% url 'about' %}#values"><i class="fas fa-gem"></i> Core Values</a>
+      </div>
+    </div>
+
+    <!-- Mobile Dropdown: Find Work -->
+    <div class="m-dropdown">
+      <button type="button" class="m-dropdown-btn">
+        <span><i class="fas fa-briefcase"></i> Find Work</span>
+        <i class="fas fa-chevron-down m-arrow"></i>
+      </button>
+      <div class="m-dropdown-content">
+        <a href="{% url 'marketplace:job_list' %}"><i class="fas fa-search"></i> Browse Jobs</a>
+        <a href="{% url 'marketplace:trade_list' %}"><i class="fas fa-hard-hat"></i> Explore Trades</a>
+        <a href="{% url 'hiring:worker_profile_enhanced' %}"><i class="fas fa-id-card"></i> My Pro Profile</a>
+        <a href="{% url 'hiring:worker_inbox' %}"><i class="fas fa-inbox"></i> Hiring Inbox</a>
+        <a href="{% url 'marketplace:job_create' %}"><i class="fas fa-plus-circle"></i> Post a Job</a>
+      </div>
+    </div>
+
+    <!-- Mobile Dropdown: Employers -->
+    <div class="m-dropdown">
+      <button type="button" class="m-dropdown-btn">
+        <span><i class="fas fa-user-tie"></i> Employers</span>
+        <i class="fas fa-chevron-down m-arrow"></i>
+      </button>
+      <div class="m-dropdown-content">
+        <a href="{% url 'marketplace:job_create' %}"><i class="fas fa-plus-circle"></i> Post a Job</a>
+        <a href="{% url 'hiring:talent_search' %}"><i class="fas fa-search"></i> Search Talent</a>
+        <a href="{% url 'hiring:pipeline' %}"><i class="fas fa-filter"></i> Hiring Pipeline</a>
+        <a href="{% url 'hiring:saved_workers' %}"><i class="fas fa-bookmark"></i> Saved Artisans</a>
+        <a href="{% url 'marketplace:dashboard' %}"><i class="fas fa-tachometer-alt"></i> Employer Dashboard</a>
+      </div>
+    </div>
+
+    <!-- Mobile Dropdown: Marketplace -->
+    <div class="m-dropdown">
+      <button type="button" class="m-dropdown-btn">
+        <span><i class="fas fa-store"></i> Marketplace</span>
+        <i class="fas fa-chevron-down m-arrow"></i>
+      </button>
+      <div class="m-dropdown-content">
+        <a href="{% url 'mktplace:product_list' %}"><i class="fas fa-boxes"></i> Browse Equipment</a>
+        <a href="{% url 'mktplace:category_list' %}"><i class="fas fa-th-large"></i> All Categories</a>
+        <a href="{% url 'mktplace:product_create' %}"><i class="fas fa-tag"></i> Sell Equipment</a>
+        <a href="{% url 'mktplace:seller_dashboard' %}"><i class="fas fa-chart-bar"></i> Seller Dashboard</a>
+        <a href="{% url 'mktplace:order_list' %}"><i class="fas fa-shopping-bag"></i> My Orders</a>
+      </div>
+    </div>
+
+    <a href="{% url 'verify:dashboard' %}" class="m-nav-link"><i class="fas fa-shield-alt"></i> Verification</a>
+    <a href="{% url 'contacts:contact_us' %}" class="m-nav-link"><i class="fas fa-headset"></i> Contact &amp; Support</a>
+
+    <div class="m-actions">
+      {% if user.is_authenticated %}
+        <a href="{% url 'marketplace:dashboard' %}" class="btn btn-primary" style="flex:100%;margin-bottom:4px;">
+          <i class="fas fa-tachometer-alt"></i> Go to Dashboard
+        </a>
+        <a href="{% url 'chats:conversation_list' %}" class="btn btn-ghost">
+          <i class="fas fa-comment-dots"></i> Messages
+        </a>
+        <a href="{% url 'edit_profile' %}" class="btn btn-ghost">
+          <i class="fas fa-user-circle"></i> Profile
+        </a>
+        <form method="post" action="{% url 'signout' %}" class="signout-form">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-ghost">
+            <i class="fas fa-sign-out-alt"></i> Sign Out
+          </button>
+        </form>
+      {% else %}
+        <a href="{% url 'signin' %}"   class="btn btn-ghost">Sign In</a>
+        <a href="{% url 'register' %}" class="btn btn-primary">Get Started</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% block content %}{% endblock %}
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <a href="{% url 'home' %}" class="nav-logo" style="text-decoration:none;">
+          <div class="logo-mark">T</div>
+          TradeLink<span class="logo-ng">NG</span>
+        </a>
+        <p class="footer-desc">
+          Connecting Nigeria's skilled tradespeople with the clients and businesses who need them.
+          From Lagos to Kano — your skills deserve to be found.
+        </p>
+        <div class="social-row">
+          <a href="#" class="social-ico" aria-label="Twitter/X"><i class="fab fa-x-twitter"></i></a>
+          <a href="#" class="social-ico" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+          <a href="#" class="social-ico" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+          <a href="#" class="social-ico" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+        </div>
+      </div>
+      <div>
+        <p class="footer-col-title">For Workers</p>
+        <ul class="footer-links">
+          <li><a href="{% url 'marketplace:job_list' %}">Browse Jobs</a></li>
+          <li><a href="{% url 'marketplace:worker_profile_edit' %}">Build Profile</a></li>
+          <li><a href="#">Rate Guide</a></li>
+          <li><a href="#">Skills Hub</a></li>
+          <li><a href="#">Success Stories</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="footer-col-title">For Employers</p>
+        <ul class="footer-links">
+          <li><a href="{% url 'marketplace:job_create' %}">Post a Job</a></li>
+          <li><a href="{% url 'marketplace:trade_list' %}">Find Talent</a></li>
+          <li><a href="#">Pricing</a></li>
+          <li><a href="#">Verification</a></li>
+          <li><a href="#">Business Account</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="footer-col-title">Company</p>
+        <ul class="footer-links">
+          <li><a href="{% url 'about' %}">About Us</a></li>
+          <li><a href="{% url 'contacts:contact_us' %}">Help & Support</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Careers</a></li>
+          <li><a href="#">Privacy Policy</a></li>
+          <li><a href="#">Terms of Use</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2025 TradeLink NG Ltd. All rights reserved. Built in Nigeria 🇳🇬</span>
+      <span style="display:flex;gap:20px;">
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <a href="{% url 'contacts:contact_us' %}">Contact</a>
+      </span>
+    </div>
+  </footer>
+
+  <script>
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    }, { passive: true });
+
+    const hamburger = document.getElementById('hamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+    hamburger.addEventListener('click', () => {
+      const isOpen = mobileMenu.classList.toggle('open');
+      const [s1, s2, s3] = hamburger.querySelectorAll('span');
+      s1.style.transform = isOpen ? 'translateY(7px) rotate(45deg)'  : '';
+      s2.style.opacity   = isOpen ? '0' : '';
+      s3.style.transform = isOpen ? 'translateY(-7px) rotate(-45deg)' : '';
+    });
+    document.addEventListener('click', (e) => {
+      if (!navbar.contains(e.target) && !mobileMenu.contains(e.target)) {
+        mobileMenu.classList.remove('open');
+        hamburger.querySelectorAll('span').forEach(s => { s.style.transform = ''; s.style.opacity = ''; });
+      }
+    });
+
+    // Mobile Accordion Dropdown toggle
+    document.querySelectorAll('.m-dropdown-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const parent = btn.closest('.m-dropdown');
+        const isOpen = parent.classList.contains('open');
+        // Close other open accordions
+        document.querySelectorAll('.m-dropdown.open').forEach(d => {
+          if (d !== parent) d.classList.remove('open');
+        });
+        parent.classList.toggle('open', !isOpen);
+      });
+    });
+  </script>
+  {# ── Verification prompt banner ── #}
+  {% include "verification/includes/_verification_prompt.html" %}
+
+  {# ── Cookie consent banner ── #}
+  {% include "includes/_cookie_consent.html" %}
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

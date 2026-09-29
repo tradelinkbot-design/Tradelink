@@ -1,0 +1,1017 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}My Dashboard — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ─── PAGE SHELL ─────────────────────────────────────────────────────── */
+  .dash-page {
+    padding-top: calc(var(--nav-h) + 24px);
+    padding-bottom: 60px;
+    min-height: 100vh;
+    position: relative; z-index: 1;
+  }
+  .dash-grid {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+
+  /* ─── SIDEBAR ────────────────────────────────────────────────────────── */
+  .dash-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: sticky;
+    top: calc(var(--nav-h) + 24px);
+  }
+
+  /* Profile card */
+  .profile-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 28px 24px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .profile-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 72px;
+    background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(249,115,22,0.08));
+    pointer-events: none;
+  }
+  .avatar-wrap {
+    position: relative;
+    display: inline-flex;
+    margin-bottom: 14px;
+  }
+  .avatar {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif; font-size: 1.8rem; font-weight: 800;
+    color: #0C0A08;
+    border: 3px solid var(--bg-card);
+    box-shadow: 0 4px 20px rgba(245,158,11,0.3);
+    position: relative; z-index: 1;
+  }
+  .avatar img {
+    width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+  }
+  .avail-dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid var(--bg-card);
+    position: absolute; bottom: 2px; right: 2px; z-index: 2;
+  }
+  .avail-dot.available    { background: var(--emerald); animation: pulseDot 2s ease infinite; }
+  .avail-dot.soon         { background: var(--amber); }
+  .avail-dot.busy         { background: var(--orange); }
+  .avail-dot.unavailable  { background: var(--text-3); }
+
+  .profile-name {
+    font-family: 'Fraunces', serif; font-size: 1.15rem; font-weight: 700;
+    color: var(--text-1); margin-bottom: 4px;
+  }
+  .profile-trade {
+    font-size: 0.83rem; color: var(--text-2); margin-bottom: 14px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .profile-meta {
+    display: flex; justify-content: center; gap: 8px;
+    flex-wrap: wrap; margin-bottom: 18px;
+  }
+
+  /* Completion ring */
+  .completion-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 18px 0 4px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .ring-svg { width: 80px; height: 80px; }
+  .ring-track { fill: none; stroke: var(--border-subtle); stroke-width: 7; }
+  .ring-fill  {
+    fill: none; stroke-width: 7; stroke-linecap: round;
+    stroke: var(--amber);
+    transition: stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1);
+    transform-origin: center; transform: rotate(-90deg);
+    filter: drop-shadow(0 0 4px rgba(245,158,11,0.45));
+  }
+  .ring-label {
+    font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 800;
+    fill: var(--text-1);
+    dominant-baseline: central; text-anchor: middle;
+  }
+  .ring-sub { fill: var(--text-3); font-size: 0.45rem; font-family: 'Outfit',sans-serif; }
+  .completion-text {
+    font-size: 0.8rem; color: var(--text-2); text-align: center; max-width: 200px;
+    line-height: 1.5;
+  }
+  .completion-text strong { color: var(--amber); }
+  .btn-complete {
+    font-size: 0.8rem; margin-top: 4px;
+    padding: 7px 18px; border-radius: var(--r-md);
+    background: var(--surface-1); color: var(--amber);
+    border: 1px solid var(--border-strong);
+    text-decoration: none; font-weight: 600; transition: var(--t);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-complete:hover { background: var(--surface-2); }
+
+  /* Sidebar nav links */
+  .dash-nav {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    overflow: hidden;
+  }
+  .dash-nav-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 20px; color: var(--text-2); text-decoration: none;
+    font-size: 0.88rem; font-weight: 500; transition: var(--t);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .dash-nav-item:last-child { border-bottom: none; }
+  .dash-nav-item:hover { background: var(--surface-1); color: var(--text-1); }
+  .dash-nav-item.active { background: var(--surface-1); color: var(--amber); }
+  .dash-nav-item i { width: 18px; text-align: center; font-size: 0.9rem; flex-shrink: 0; }
+  .dash-nav-badge {
+    margin-left: auto; min-width: 20px; height: 20px;
+    background: var(--amber); color: #0C0A08; border-radius: var(--r-pill);
+    font-size: 0.7rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; padding: 0 6px;
+  }
+
+  /* Rates card */
+  .rates-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 18px 20px;
+  }
+  .rates-title {
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text-3); margin-bottom: 12px;
+  }
+  .rate-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.85rem; padding: 6px 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .rate-row:last-child { border-bottom: none; }
+  .rate-label { color: var(--text-2); }
+  .rate-value { color: var(--amber); font-weight: 600; font-family: 'Fraunces', serif; }
+
+  /* ─── MOBILE NAV TOGGLE ──────────────────────────────────────────────── */
+  .mobile-sidebar-toggle {
+    display: none;
+    width: 100%;
+    padding: 12px 18px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    color: var(--text-1);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.9rem; font-weight: 600;
+    cursor: pointer;
+    align-items: center; gap: 10px;
+    transition: var(--t);
+    margin-bottom: 4px;
+  }
+  .mobile-sidebar-toggle:hover { background: var(--surface-1); }
+  .mobile-sidebar-toggle .toggle-arrow {
+    margin-left: auto;
+    transition: transform 0.3s ease;
+  }
+  .mobile-sidebar-toggle.open .toggle-arrow { transform: rotate(180deg); }
+  .sidebar-collapsible { overflow: hidden; }
+
+  /* ─── MAIN CONTENT ───────────────────────────────────────────────────── */
+  .dash-main {
+    display: flex; flex-direction: column; gap: 24px;
+    min-width: 0;
+  }
+
+  /* Welcome banner */
+  .welcome-banner {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 24px 28px;
+    display: flex; justify-content: space-between; align-items: center; gap: 20px;
+    position: relative; overflow: hidden;
+  }
+  .welcome-banner::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(105deg, rgba(245,158,11,0.07) 0%, transparent 55%);
+    pointer-events: none;
+  }
+  .welcome-banner::after {
+    content: '';
+    position: absolute; right: -30px; bottom: -30px;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(249,115,22,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .welcome-title {
+    font-family: 'Fraunces', serif; font-size: 1.25rem; font-weight: 700;
+    color: var(--text-1); margin-bottom: 6px; position: relative; z-index: 1;
+  }
+  .welcome-sub {
+    font-size: 0.87rem; color: var(--text-2); max-width: 380px; line-height: 1.65;
+    position: relative; z-index: 1;
+  }
+  .welcome-actions {
+    display: flex; gap: 10px; flex-shrink: 0; position: relative; z-index: 1;
+    flex-wrap: wrap;
+  }
+
+  /* Stats strip */
+  .stats-strip {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  }
+  .stat-tile {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl); padding: 18px 20px;
+    display: flex; align-items: center; gap: 14px;
+    transition: var(--t); min-width: 0;
+  }
+  .stat-tile:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+  .stat-icon {
+    width: 44px; height: 44px; border-radius: var(--r-md); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+  }
+  .stat-icon.amber { background: rgba(245,158,11,0.12); color: var(--amber); }
+  .stat-icon.green { background: rgba(16,185,129,0.12); color: var(--emerald); }
+  .stat-icon.sky   { background: rgba(56,189,248,0.12); color: var(--sky); }
+  .stat-num {
+    font-family: 'Fraunces', serif; font-size: 1.55rem; font-weight: 800;
+    color: var(--text-1); line-height: 1;
+  }
+  .stat-label { font-size: 0.75rem; color: var(--text-2); margin-top: 3px; }
+
+  /* Section headers */
+  .section-hdr {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px; gap: 12px;
+  }
+  .section-hdr-title {
+    font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 700;
+    color: var(--text-1); display: flex; align-items: center; gap: 10px;
+  }
+  .section-hdr-title i {
+    width: 32px; height: 32px; border-radius: var(--r-sm);
+    background: rgba(245,158,11,0.10); color: var(--amber);
+    display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
+  }
+  .section-link {
+    font-size: 0.82rem; color: var(--text-2); text-decoration: none; font-weight: 500;
+    transition: var(--t); display: flex; align-items: center; gap: 5px;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .section-link:hover { color: var(--amber); }
+
+  /* ─── MATCH CARDS ────────────────────────────────────────────────────── */
+  .match-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;
+  }
+  .match-card {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl); padding: 18px;
+    display: flex; flex-direction: column; gap: 12px;
+    transition: var(--t); position: relative; overflow: hidden;
+    min-width: 0;
+  }
+  .match-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--surface-1) 0%, transparent 60%);
+    opacity: 0; transition: var(--t); pointer-events: none;
+  }
+  .match-card:hover {
+    border-color: var(--border-strong); transform: translateY(-2px);
+    box-shadow: 0 12px 36px rgba(0,0,0,0.35);
+  }
+  .match-card:hover::before { opacity: 1; }
+
+  .match-top {
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+  }
+  .match-score-ring {
+    width: 46px; height: 46px; flex-shrink: 0; position: relative;
+  }
+  .match-score-ring svg { width: 100%; height: 100%; }
+  .match-score-ring .ms-track { fill:none; stroke: var(--border-subtle); stroke-width:5; }
+  .match-score-ring .ms-fill  {
+    fill:none; stroke-width:5; stroke-linecap:round;
+    transform-origin:center; transform:rotate(-90deg);
+    transition: stroke-dashoffset 1s ease;
+  }
+  .match-score-ring .ms-label {
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.65rem; font-weight:700; color:var(--amber); line-height:1;
+  }
+
+  .match-title { font-size: 0.9rem; font-weight: 600; color: var(--text-1); line-height: 1.35; }
+  .match-employer { font-size: 0.76rem; color: var(--text-2); margin-top: 2px; }
+  .match-meta {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .match-tag {
+    font-size: 0.72rem; padding: 3px 9px; border-radius: var(--r-pill);
+    background: var(--surface-1); color: var(--text-2);
+    border: 1px solid var(--border-subtle);
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .match-pay {
+    font-size: 0.82rem; font-weight: 600; color: var(--emerald);
+    display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+  }
+  .match-actions { display: flex; gap: 8px; margin-top: auto; }
+  .match-actions .btn { flex: 1; justify-content: center; }
+
+  /* ─── APPLICATION TABLE ──────────────────────────────────────────────── */
+  .app-table-wrap {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl); overflow: hidden;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
+  .app-table { width: 100%; border-collapse: collapse; min-width: 480px; }
+  .app-table th {
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text-3);
+    padding: 14px 16px; text-align: left;
+    background: rgba(245,158,11,0.03);
+    border-bottom: 1px solid var(--border-subtle);
+    white-space: nowrap;
+  }
+  .app-table td {
+    padding: 13px 16px; font-size: 0.86rem; color: var(--text-2);
+    border-bottom: 1px solid var(--border-subtle); vertical-align: middle;
+  }
+  .app-table tr:last-child td { border-bottom: none; }
+  .app-table tr:hover td { background: var(--surface-1); }
+  .app-job-title { color: var(--text-1); font-weight: 500; }
+  .app-job-company { font-size: 0.76rem; color: var(--text-3); margin-top: 2px; }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: var(--r-pill);
+    font-size: 0.72rem; font-weight: 600; white-space: nowrap;
+  }
+  .status-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .status-pending     { background: rgba(245,158,11,0.10); color: #FCD34D; border: 1px solid rgba(245,158,11,0.2); }
+  .status-pending::before { background: #FCD34D; }
+  .status-shortlisted { background: rgba(56,189,248,0.10); color: #7DD3FC; border: 1px solid rgba(56,189,248,0.2); }
+  .status-shortlisted::before { background: #7DD3FC; }
+  .status-accepted    { background: rgba(16,185,129,0.10); color: #6EE7B7; border: 1px solid rgba(16,185,129,0.2); }
+  .status-accepted::before { background: #6EE7B7; }
+  .status-rejected    { background: rgba(239,68,68,0.10); color: #FCA5A5; border: 1px solid rgba(239,68,68,0.2); }
+  .status-rejected::before { background: #FCA5A5; }
+  .status-withdrawn   { background: rgba(255,255,255,0.05); color: var(--text-3); border: 1px solid var(--border-subtle); }
+  .status-withdrawn::before { background: var(--text-3); }
+
+  /* ─── SAVED JOBS GRID ────────────────────────────────────────────────── */
+  .saved-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;
+  }
+  .saved-card {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl); padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 10px;
+    transition: var(--t); text-decoration: none; min-width: 0;
+  }
+  .saved-card:hover {
+    border-color: var(--border-strong); transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.3);
+  }
+  .saved-title { font-size: 0.9rem; font-weight: 600; color: var(--text-1); line-height: 1.35; }
+  .saved-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .saved-co { font-size: 0.78rem; color: var(--text-2); }
+  .saved-date { font-size: 0.72rem; color: var(--text-3); margin-top: auto; }
+
+  /* ─── EMPTY STATES ───────────────────────────────────────────────────── */
+  .empty-state {
+    text-align: center; padding: 40px 20px;
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+  }
+  .empty-icon {
+    width: 56px; height: 56px; border-radius: var(--r-lg);
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; color: var(--text-3);
+  }
+  .empty-title { font-size: 0.92rem; font-weight: 600; color: var(--text-2); }
+  .empty-sub   { font-size: 0.82rem; color: var(--text-3); max-width: 260px; line-height: 1.6; }
+
+  /* ─── CLIP BADGE ─────────────────────────────────────────────────────── */
+  .clip-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px; border-radius: var(--r-pill);
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.3px;
+    background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(249,115,22,0.10));
+    color: var(--amber-light); border: 1px solid rgba(245,158,11,0.22);
+  }
+
+  /* ─── VERIFICATION BADGE ─────────────────────────────────────────────── */
+  .verified-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.72rem; font-weight: 600; color: var(--sky);
+    background: rgba(56,189,248,0.10); border: 1px solid rgba(56,189,248,0.2);
+    padding: 3px 9px; border-radius: var(--r-pill);
+  }
+
+  /* ─── RESPONSIVE ─────────────────────────────────────────────────────── */
+  @media (max-width: 1024px) {
+    .dash-grid { grid-template-columns: 1fr; gap: 20px; }
+    .dash-sidebar { position: static; flex-direction: column; }
+    .match-grid  { grid-template-columns: repeat(2, 1fr); }
+    .saved-grid  { grid-template-columns: repeat(2, 1fr); }
+    .stats-strip { grid-template-columns: repeat(3, 1fr); }
+    .mobile-sidebar-toggle { display: flex; }
+    .sidebar-collapsible { display: none; }
+    .sidebar-collapsible.open { display: flex; flex-direction: column; gap: 16px; }
+  }
+  @media (max-width: 640px) {
+    .dash-page { padding-top: calc(var(--nav-h) + 16px); padding-bottom: 40px; }
+    .stats-strip { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stats-strip .stat-tile:last-child { grid-column: span 2; }
+    .match-grid  { grid-template-columns: 1fr; }
+    .saved-grid  { grid-template-columns: 1fr; }
+    .welcome-banner { flex-direction: column; align-items: flex-start; gap: 16px; padding: 20px; }
+    .welcome-actions { width: 100%; }
+    .welcome-actions .btn { flex: 1; justify-content: center; }
+    .app-table th:nth-child(3),
+    .app-table td:nth-child(3) { display: none; }
+    .stat-num { font-size: 1.35rem; }
+    .dash-page { padding-left: 0; padding-right: 0; }
+  }
+  @media (max-width: 420px) {
+    .stats-strip { grid-template-columns: 1fr; }
+    .stats-strip .stat-tile:last-child { grid-column: span 1; }
+    .match-actions { flex-direction: column; }
+    .match-actions .btn { width: 100%; }
+    .welcome-title { font-size: 1.05rem; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="dash-page">
+  <div class="container">
+
+    {# ── Messages ─────────────────────────────────────────────────────────── #}
+    {% if messages %}
+      <div style="margin-bottom:20px; display:flex; flex-direction:column; gap:10px;">
+        {% for message in messages %}
+          <div class="card" style="padding:14px 20px; border-left: 3px solid
+            {% if message.tags == 'success' %}var(--emerald)
+            {% elif message.tags == 'error' %}#EF4444
+            {% else %}var(--amber){% endif %};
+            font-size:0.88rem; color:var(--text-1); border-radius:var(--r-md);
+            display:flex; align-items:center; gap:10px;">
+            <i class="fas
+              {% if message.tags == 'success' %}fa-circle-check" style="color:var(--emerald)
+              {% elif message.tags == 'error' %}fa-circle-exclamation" style="color:#EF4444
+              {% else %}fa-circle-info" style="color:var(--amber){% endif %}"></i>
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="dash-grid">
+
+      <aside class="dash-sidebar fade-up">
+
+        {# ─── Mobile toggle ────────────────────────────────────────────── #}
+        <button class="mobile-sidebar-toggle" id="sidebarToggle" aria-expanded="false">
+          <i class="fas fa-user-circle"></i>
+          {{ worker.user.get_full_name|default:worker.user.username }} — Profile &amp; Nav
+          <i class="fas fa-chevron-down toggle-arrow"></i>
+        </button>
+
+        <div class="sidebar-collapsible" id="sidebarContent">
+
+          {# ─── Profile Card ─────────────────────────────────────────────── #}
+          <div class="profile-card">
+            <div class="avatar-wrap">
+              <div class="avatar">
+                {% if worker.user.profile_picture %}
+                  <img src="{{ worker.user.profile_picture.url }}" alt="{{ worker.user.get_full_name }}">
+                {% else %}
+                  {{ worker.user.get_full_name|first|upper|default:worker.user.username|first|upper }}
+                {% endif %}
+              </div>
+              <span class="avail-dot {{ worker.availability }}"></span>
+            </div>
+
+            <div class="profile-name">
+              {{ worker.user.get_full_name|default:worker.user.username }}
+            </div>
+            <div class="profile-trade">
+              {% if worker.trade_category %}
+                <i class="fas fa-hard-hat" style="color:var(--amber); font-size:0.75rem;"></i>
+                {{ worker.trade_category.name }}
+              {% else %}
+                <span>No trade set</span>
+              {% endif %}
+            </div>
+
+            <div class="profile-meta">
+              {% if worker.is_verified %}
+                <span class="verified-badge"><i class="fas fa-shield-halved"></i> Verified</span>
+              {% endif %}
+              {% if worker.is_featured %}
+                <span class="badge badge-amber"><i class="fas fa-star"></i> Featured</span>
+              {% endif %}
+              <span class="badge
+                {% if worker.availability == 'available' %}badge-green
+                {% elif worker.availability == 'soon' %}badge-amber
+                {% elif worker.availability == 'busy' %}badge-orange
+                {% else %}badge-sky{% endif %}">
+                {{ worker.get_availability_display }}
+              </span>
+            </div>
+
+            {% if worker.state %}
+              <div style="font-size:0.8rem; color:var(--text-2); margin-bottom:14px; display:flex; align-items:center; justify-content:center; gap:6px;">
+                <i class="fas fa-location-dot" style="color:var(--text-3); font-size:0.75rem;"></i>
+                {{ worker.lga|default:'' }}{% if worker.lga and worker.state %}, {% endif %}{{ worker.get_state_display }}
+              </div>
+            {% endif %}
+
+            {# ─ Profile completion ring ─ #}
+            <div class="completion-wrap">
+              {% with pct=worker.profile_completion circ=188.5 %}
+              {% with offset=pct|floatformat:0 %}
+              <svg class="ring-svg" viewBox="0 0 72 72">
+                <circle class="ring-track" cx="36" cy="36" r="30"/>
+                <circle class="ring-fill"  cx="36" cy="36" r="30"
+                  stroke-dasharray="188.5"
+                  stroke-dashoffset="{{ 188.5|floatformat:1 }}"
+                  id="completionRing"
+                  data-pct="{{ pct }}"
+                  {% if pct >= 80 %}stroke="var(--emerald)"
+                  {% elif pct >= 50 %}stroke="var(--amber)"
+                  {% else %}stroke="var(--orange)"{% endif %}/>
+                <text class="ring-label" x="36" y="36">{{ pct }}%</text>
+                <text class="ring-sub"   x="36" y="46">complete</text>
+              </svg>
+              {% endwith %}
+              {% endwith %}
+              <div class="completion-text">
+                {% if worker.profile_completion < 50 %}
+                  Your profile is <strong>{{ worker.profile_completion }}%</strong> complete. Add your bio and skills to get more matches.
+                {% elif worker.profile_completion < 80 %}
+                  Good progress! Upload portfolio photos to boost your match score.
+                {% else %}
+                  <strong>Strong profile!</strong> You're showing up in employer searches.
+                {% endif %}
+              </div>
+              <a href="{% url 'marketplace:worker_profile_edit' %}" class="btn-complete">
+                <i class="fas fa-pen-to-square"></i> Edit Profile
+              </a>
+            </div>
+          </div>
+
+          {# ─── Dashboard nav ────────────────────────────────────────────── #}
+          <nav class="dash-nav">
+            <a href="{% url 'marketplace:worker_dashboard' %}" class="dash-nav-item active">
+              <i class="fas fa-gauge-high"></i> Dashboard
+            </a>
+            <a href="{% url 'marketplace:worker_matches' %}" class="dash-nav-item">
+              <i class="fas fa-wand-magic-sparkles"></i> AI Job Matches
+              {% if top_matches %}
+                <span class="dash-nav-badge">{{ top_matches|length }}</span>
+              {% endif %}
+            </a>
+            <a href="{% url 'marketplace:worker_applications' %}" class="dash-nav-item">
+              <i class="fas fa-file-lines"></i> My Applications
+              {% if recent_apps %}
+                <span class="dash-nav-badge">{{ recent_apps|length }}</span>
+              {% endif %}
+            </a>
+            <a href="{% url 'marketplace:job_list' %}" class="dash-nav-item">
+              <i class="fas fa-briefcase"></i> Browse Jobs
+            </a>
+            <a href="{% url 'marketplace:notifications' %}" class="dash-nav-item">
+              <i class="fas fa-bell"></i> Notifications
+              {% if unread_count %}
+                <span class="dash-nav-badge">{{ unread_count }}</span>
+              {% endif %}
+            </a>
+            <a href="{% url 'marketplace:worker_profile_edit' %}" class="dash-nav-item">
+              <i class="fas fa-sliders"></i> Profile Settings
+            </a>
+            <a href="{% url 'marketplace:portfolio_add' %}" class="dash-nav-item">
+              <i class="fas fa-images"></i> Add Portfolio
+            </a>
+          </nav>
+
+          {# ─── Rates ────────────────────────────────────────────────────── #}
+          {% if worker.hourly_rate or worker.daily_rate %}
+          <div class="rates-card">
+            <p class="rates-title">My Rates</p>
+            {% if worker.hourly_rate %}
+              <div class="rate-row">
+                <span class="rate-label"><i class="fas fa-clock" style="margin-right:6px; font-size:0.8rem;"></i>Hourly</span>
+                <span class="rate-value">₦{{ worker.hourly_rate|intcomma }}/hr</span>
+              </div>
+            {% endif %}
+            {% if worker.daily_rate %}
+              <div class="rate-row">
+                <span class="rate-label"><i class="fas fa-sun" style="margin-right:6px; font-size:0.8rem;"></i>Daily</span>
+                <span class="rate-value">₦{{ worker.daily_rate|intcomma }}/day</span>
+              </div>
+            {% endif %}
+            <div class="rate-row">
+              <span class="rate-label"><i class="fas fa-briefcase" style="margin-right:6px; font-size:0.8rem;"></i>Experience</span>
+              <span style="font-size:0.82rem; color:var(--text-2);">{{ worker.get_experience_level_display }}</span>
+            </div>
+          </div>
+          {% endif %}
+
+        </div>{# /sidebar-collapsible #}
+      </aside>{# end sidebar #}
+
+
+      <div class="dash-main">
+
+        {# ─── Welcome banner ───────────────────────────────────────────── #}
+        <div class="welcome-banner fade-up d1">
+          <div>
+            <div class="welcome-title">
+              Welcome back, {{ worker.user.get_full_name|default:worker.user.username|truncatechars:20 }} 👋
+            </div>
+            <p class="welcome-sub">
+              {% if top_matches %}
+                You have <strong style="color:var(--amber);">{{ top_matches|length }} new AI-matched job{{ top_matches|length|pluralize }}</strong> waiting for you.
+                Your profile is <strong style="color:var(--amber);">{{ worker.profile_completion }}%</strong> complete.
+              {% else %}
+                Complete your profile to start receiving personalised job matches powered by AI.
+              {% endif %}
+            </p>
+          </div>
+          <div class="welcome-actions">
+            <a href="{% url 'marketplace:job_list' %}" class="btn btn-ghost btn-sm">
+              <i class="fas fa-search"></i> Browse Jobs
+            </a>
+            <a href="{% url 'marketplace:worker_matches' %}" class="btn btn-primary btn-sm">
+              <i class="fas fa-wand-magic-sparkles"></i> View Matches
+            </a>
+          </div>
+        </div>
+
+        {# ─── Stats strip ──────────────────────────────────────────────── #}
+        <div class="stats-strip fade-up d2">
+          <div class="stat-tile">
+            <div class="stat-icon amber"><i class="fas fa-wand-magic-sparkles"></i></div>
+            <div>
+              <div class="stat-num">{{ top_matches|length }}</div>
+              <div class="stat-label">AI Job Matches</div>
+            </div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-icon green"><i class="fas fa-file-lines"></i></div>
+            <div>
+              <div class="stat-num">{{ recent_apps|length }}</div>
+              <div class="stat-label">Applications Sent</div>
+            </div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-icon sky"><i class="fas fa-bookmark"></i></div>
+            <div>
+              <div class="stat-num">{{ saved_jobs|length }}</div>
+              <div class="stat-label">Saved Jobs</div>
+            </div>
+          </div>
+        </div>
+
+        {# ─── AI Matches ───────────────────────────────────────────────── #}
+        <section class="fade-up d2">
+          <div class="section-hdr">
+            <h2 class="section-hdr-title">
+              <i class="fas fa-wand-magic-sparkles"></i>
+              AI Job Recommendations
+            </h2>
+            <a href="{% url 'marketplace:worker_matches' %}" class="section-link">
+              View all <i class="fas fa-arrow-right" style="font-size:0.75rem;"></i>
+            </a>
+          </div>
+
+          {% if top_matches %}
+            <div class="match-grid">
+              {% for match in top_matches %}
+              {% with score_pct=match.score|floatformat:2 %}
+              <article class="match-card">
+                <div class="match-top">
+                  <div style="min-width:0; flex:1;">
+                    <div class="match-title">{{ match.job.title }}</div>
+                    <div class="match-employer">
+                      <i class="fas fa-building" style="font-size:0.7rem; margin-right:4px; color:var(--text-3);"></i>
+                      {% if match.job.employer.company_name %}
+                        {{ match.job.employer.company_name }}
+                      {% else %}
+                        {{ match.job.employer.user.username }}
+                      {% endif %}
+                    </div>
+                  </div>
+                  {% with score_int=match.score|floatformat:0 %}
+                  <div class="match-score-ring">
+                    <svg viewBox="0 0 46 46">
+                      <circle class="ms-track" cx="23" cy="23" r="19"/>
+                      <circle class="ms-fill"  cx="23" cy="23" r="19"
+                        stroke-dasharray="119.4"
+                        stroke-dashoffset="{{ 119.4|floatformat:1 }}"
+                        data-score="{{ match.score }}"
+                        {% if match.score >= 0.75 %}stroke="var(--emerald)"
+                        {% elif match.score >= 0.60 %}stroke="var(--amber)"
+                        {% else %}stroke="var(--orange)"{% endif %}/>
+                    </svg>
+                    <div class="ms-label">{{ match.score|floatformat:0|add:"%" }}
+                    </div>
+                  </div>
+                  {% endwith %}
+                </div>
+
+                <div class="match-meta">
+                  {% if match.job.trade_category %}
+                    <span class="match-tag">
+                      <i class="fas fa-hard-hat" style="font-size:0.65rem;"></i>
+                      {{ match.job.trade_category.name }}
+                    </span>
+                  {% endif %}
+                  <span class="match-tag">
+                    <i class="fas fa-briefcase" style="font-size:0.65rem;"></i>
+                    {{ match.job.get_job_type_display }}
+                  </span>
+                  {% if match.job.state %}
+                    <span class="match-tag">
+                      <i class="fas fa-location-dot" style="font-size:0.65rem;"></i>
+                      {{ match.job.get_state_display }}
+                    </span>
+                  {% endif %}
+                  {% if match.job.is_remote %}
+                    <span class="match-tag" style="color:var(--emerald); border-color:rgba(16,185,129,0.2);">
+                      <i class="fas fa-wifi" style="font-size:0.65rem;"></i> Remote
+                    </span>
+                  {% endif %}
+                </div>
+
+                {% if match.job.pay_min or match.job.pay_max %}
+                <div class="match-pay">
+                  <i class="fas fa-naira-sign" style="font-size:0.75rem;"></i>
+                  {% if match.job.pay_min and match.job.pay_max %}
+                    {{ match.job.pay_min|intcomma }} – {{ match.job.pay_max|intcomma }}
+                  {% elif match.job.pay_min %}
+                    from {{ match.job.pay_min|intcomma }}
+                  {% else %}
+                    up to {{ match.job.pay_max|intcomma }}
+                  {% endif %}
+                  <span style="color:var(--text-3); font-weight:400;">/ {{ match.job.get_pay_type_display }}</span>
+                </div>
+                {% endif %}
+
+                <div class="match-actions">
+                  <a href="{% url 'marketplace:job_detail' pk=match.job.pk %}"
+                     class="btn btn-ghost btn-sm">
+                    <i class="fas fa-eye"></i> View
+                  </a>
+                  <a href="{% url 'marketplace:job_apply' pk=match.job.pk %}"
+                     class="btn btn-primary btn-sm">
+                    <i class="fas fa-paper-plane"></i> Apply
+                  </a>
+                </div>
+              </article>
+              {% endwith %}
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="card">
+              <div class="empty-state">
+                <div class="empty-icon"><i class="fas fa-wand-magic-sparkles"></i></div>
+                <div class="empty-title">No matches yet</div>
+                <p class="empty-sub">
+                  Complete your profile with a bio, trade category, and skills to unlock AI-powered job recommendations.
+                </p>
+                <a href="{% url 'marketplace:worker_profile_edit' %}" class="btn btn-primary btn-sm">
+                  <i class="fas fa-pen-to-square"></i> Complete Profile
+                </a>
+              </div>
+            </div>
+          {% endif %}
+        </section>
+
+        {# ─── Recent Applications ──────────────────────────────────────── #}
+        <section class="fade-up d3">
+          <div class="section-hdr">
+            <h2 class="section-hdr-title">
+              <i class="fas fa-file-lines"></i>
+              Recent Applications
+            </h2>
+            <a href="{% url 'marketplace:worker_applications' %}" class="section-link">
+              All applications <i class="fas fa-arrow-right" style="font-size:0.75rem;"></i>
+            </a>
+          </div>
+
+          {% if recent_apps %}
+            <div class="app-table-wrap">
+              <table class="app-table">
+                <thead>
+                  <tr>
+                    <th>Job</th>
+                    <th>Status</th>
+                    <th>Applied</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for app in recent_apps %}
+                  <tr>
+                    <td>
+                      <div class="app-job-title">{{ app.job.title }}</div>
+                      <div class="app-job-company">
+                        {% if app.job.employer.company_name %}
+                          {{ app.job.employer.company_name }}
+                        {% else %}
+                          {{ app.job.employer.user.username }}
+                        {% endif %}
+                      </div>
+                    </td>
+                    <td>
+                      <span class="status-pill status-{{ app.status }}">
+                        {{ app.get_status_display }}
+                      </span>
+                    </td>
+                    <td style="white-space:nowrap; font-size:0.8rem; color:var(--text-3);">
+                      {{ app.applied_at|date:"d M Y" }}
+                    </td>
+                    <td style="text-align:right;">
+                      <a href="{% url 'marketplace:job_detail' pk=app.job.pk %}"
+                         class="btn btn-ghost btn-sm" style="padding:5px 12px;">
+                        View
+                      </a>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="card">
+              <div class="empty-state">
+                <div class="empty-icon"><i class="fas fa-file-lines"></i></div>
+                <div class="empty-title">No applications yet</div>
+                <p class="empty-sub">Browse jobs or check your AI matches and send your first application.</p>
+                <a href="{% url 'marketplace:job_list' %}" class="btn btn-primary btn-sm">
+                  <i class="fas fa-briefcase"></i> Browse Jobs
+                </a>
+              </div>
+            </div>
+          {% endif %}
+        </section>
+
+        {# ─── Saved Jobs ───────────────────────────────────────────────── #}
+        <section class="fade-up d4">
+          <div class="section-hdr">
+            <h2 class="section-hdr-title">
+              <i class="fas fa-bookmark"></i>
+              Saved Jobs
+            </h2>
+            <a href="{% url 'marketplace:job_list' %}" class="section-link">
+              Browse more <i class="fas fa-arrow-right" style="font-size:0.75rem;"></i>
+            </a>
+          </div>
+
+          {% if saved_jobs %}
+            <div class="saved-grid">
+              {% for saved in saved_jobs %}
+              <a href="{% url 'marketplace:job_detail' pk=saved.job.pk %}" class="saved-card">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+                  <div class="saved-title">{{ saved.job.title }}</div>
+                  <form method="post" action="{% url 'marketplace:job_save_toggle' pk=saved.job.pk %}"
+                        style="flex-shrink:0;" onclick="event.stopPropagation();">
+                    {% csrf_token %}
+                    <button type="submit" style="background:none; border:none; cursor:pointer;
+                      color:var(--amber); font-size:0.95rem; padding:2px;"
+                      title="Unsave job">
+                      <i class="fas fa-bookmark"></i>
+                    </button>
+                  </form>
+                </div>
+                <div class="saved-meta">
+                  <span class="saved-co">
+                    <i class="fas fa-building" style="font-size:0.7rem; margin-right:4px; color:var(--text-3);"></i>
+                    {% if saved.job.employer.company_name %}
+                      {{ saved.job.employer.company_name }}
+                    {% else %}
+                      {{ saved.job.employer.user.username }}
+                    {% endif %}
+                  </span>
+                  {% if saved.job.trade_category %}
+                    <span class="match-tag">{{ saved.job.trade_category.name }}</span>
+                  {% endif %}
+                  {% if saved.job.state %}
+                    <span class="match-tag">
+                      <i class="fas fa-location-dot" style="font-size:0.65rem;"></i>
+                      {{ saved.job.get_state_display }}
+                    </span>
+                  {% endif %}
+                </div>
+                <div class="saved-date">
+                  <i class="fas fa-clock" style="margin-right:4px; font-size:0.7rem;"></i>
+                  Saved {{ saved.saved_at|timesince }} ago
+                </div>
+              </a>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="card">
+              <div class="empty-state">
+                <div class="empty-icon"><i class="fas fa-bookmark"></i></div>
+                <div class="empty-title">No saved jobs</div>
+                <p class="empty-sub">Tap the bookmark icon on any job to save it for later.</p>
+                <a href="{% url 'marketplace:job_list' %}" class="btn btn-primary btn-sm">
+                  <i class="fas fa-briefcase"></i> Explore Jobs
+                </a>
+              </div>
+            </div>
+          {% endif %}
+        </section>
+
+      </div>{# end dash-main #}
+    </div>{# end dash-grid #}
+  </div>{# end container #}
+</main>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+  // ── Mobile sidebar toggle ─────────────────────────────────────────────
+  const toggleBtn = document.getElementById('sidebarToggle');
+  const sidebarContent = document.getElementById('sidebarContent');
+  if (toggleBtn && sidebarContent) {
+    toggleBtn.addEventListener('click', () => {
+      const isOpen = sidebarContent.classList.toggle('open');
+      toggleBtn.classList.toggle('open', isOpen);
+      toggleBtn.setAttribute('aria-expanded', isOpen);
+    });
+    // Auto-open sidebar on desktop (above 1024px)
+    if (window.innerWidth > 1024) {
+      sidebarContent.classList.add('open');
+    }
+  }
+
+  // ── Profile completion ring ────────────────────────────────────────────
+  const ring = document.getElementById('completionRing');
+  if (ring) {
+    const pct    = parseFloat(ring.dataset.pct) || 0;
+    const circ   = 188.5;
+    const offset = circ - (pct / 100) * circ;
+    ring.style.strokeDashoffset = circ;
+    requestAnimationFrame(() => {
+      ring.style.transition = 'stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)';
+      ring.style.strokeDashoffset = offset;
+    });
+  }
+
+  // ── Match score rings (r=19 → circ ≈ 119.4) ───────────────────────────
+  document.querySelectorAll('.ms-fill').forEach(el => {
+    const score  = parseFloat(el.dataset.score) || 0;
+    const circ   = 119.4;
+    const offset = circ - score * circ;
+    el.style.strokeDashoffset = circ;
+    requestAnimationFrame(() => {
+      el.style.transition = 'stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1)';
+      el.style.strokeDashoffset = offset;
+    });
+  });
+
+  // ── Fix match score labels ─────────────────────────────────────────────
+  document.querySelectorAll('.ms-label').forEach(el => {
+    const fill  = el.closest('.match-score-ring').querySelector('.ms-fill');
+    if (fill) {
+      const score = parseFloat(fill.dataset.score) || 0;
+      el.textContent = Math.round(score * 100) + '%';
+    }
+  });
+
+  // ── Navbar scroll ──────────────────────────────────────────────────────
+  const navbar = document.getElementById('navbar');
+  if (navbar) {
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    }, { passive: true });
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+{% block title %}Contact Groups — TradeLink NG{% endblock %}
+{% block nav_contacts %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ═══════════════════════════════════════════════
+     GROUP MANAGEMENT PAGE
+  ═══════════════════════════════════════════════ */
+  .groups-page {
+    padding-top: calc(var(--nav-h) + 40px);
+    min-height: 100vh; position: relative; z-index: 1;
+    padding-bottom: 80px;
+  }
+
+  /* ── HEADER ── */
+  .groups-header {
+    background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(249,115,22,0.05) 100%);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 32px 0 24px; margin-bottom: 36px;
+  }
+  .groups-header .container {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px;
+  }
+  .groups-header h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    font-weight: 800; letter-spacing: -0.5px;
+  }
+  .groups-header p { color: var(--text-2); font-size: 0.88rem; margin-top: 4px; }
+
+  /* ── LAYOUT ── */
+  .groups-layout {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 28px;
+    align-items: start;
+  }
+
+  /* ── GROUP GRID ── */
+  .group-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .group-card {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl); padding: 22px 20px;
+    display: flex; gap: 16px; align-items: flex-start;
+    transition: var(--t); position: relative;
+  }
+  .group-card:hover {
+    border-color: var(--border-strong); transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+  .group-icon-wrap {
+    width: 48px; height: 48px; border-radius: var(--r-lg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .group-card-content { flex: 1; min-width: 0; }
+  .group-card-name {
+    font-weight: 700; font-size: 1rem; margin-bottom: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .group-card-count { font-size: 0.82rem; color: var(--text-3); margin-bottom: 12px; }
+  .group-card-actions { display: flex; gap: 6px; }
+  .group-action-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 10px; border-radius: var(--r-md);
+    font-size: 0.74rem; font-weight: 600; text-decoration: none;
+    border: 1px solid var(--border-subtle); background: var(--surface-1);
+    color: var(--text-2); transition: var(--t); cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+  }
+  .group-action-btn:hover { color: var(--amber); border-color: var(--border-strong); }
+  .group-action-btn.del:hover { color: #F87171; border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.06); }
+
+  /* ── EMPTY GROUPS ── */
+  .empty-groups {
+    text-align: center; padding: 60px 24px;
+    background: var(--bg-card); border: 1px dashed var(--border-subtle);
+    border-radius: var(--r-xl); grid-column: 1 / -1;
+  }
+  .empty-groups .empty-icon { font-size: 3rem; color: var(--border-strong); margin-bottom: 16px; }
+  .empty-groups h3 { font-family: 'Fraunces', serif; font-weight: 700; margin-bottom: 8px; }
+  .empty-groups p { color: var(--text-2); font-size: 0.88rem; }
+
+  /* ── CREATE FORM (sidebar) ── */
+  .create-group-card {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl); overflow: hidden;
+    position: sticky; top: calc(var(--nav-h) + 20px);
+  }
+  .create-group-header {
+    padding: 18px 22px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(245,158,11,0.04);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .create-group-header h3 {
+    font-family: 'Fraunces', serif; font-weight: 700; font-size: 0.95rem;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .create-group-header h3 i { color: var(--amber); }
+  .create-group-body { padding: 22px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* Field styles */
+  .cg-field { display: flex; flex-direction: column; gap: 6px; }
+  .cg-label { font-size: 0.78rem; font-weight: 600; color: var(--text-2); letter-spacing: 0.2px; }
+  .cg-input, .cg-select {
+    width: 100%; padding: 11px 14px;
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg); color: var(--text-1);
+    font-family: 'Outfit', sans-serif; font-size: 0.9rem;
+    transition: var(--t); outline: none;
+  }
+  .cg-input:focus, .cg-select:focus {
+    border-color: var(--amber); background: rgba(245,158,11,0.04);
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.10);
+  }
+  .cg-input::placeholder { color: var(--text-3); }
+  .cg-select option { background: var(--bg-card); }
+
+  /* Color swatches */
+  .color-swatches {
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .color-swatch {
+    width: 28px; height: 28px; border-radius: 50%;
+    cursor: pointer; transition: var(--t);
+    border: 2px solid transparent;
+  }
+  .color-swatch:hover, .color-swatch.selected {
+    transform: scale(1.2); border-color: var(--text-1);
+  }
+
+  /* ── STATS ── */
+  .groups-stat-row {
+    display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px;
+  }
+  .stat-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: var(--r-pill);
+    font-size: 0.82rem; font-weight: 600;
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    color: var(--text-2);
+  }
+  .stat-pill i { color: var(--amber); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 840px) {
+    .groups-layout { grid-template-columns: 1fr; }
+    .create-group-card { position: static; }
+    .group-grid { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="groups-page">
+
+  <!-- Header -->
+  <div class="groups-header">
+    <div class="container">
+      <div>
+        <span class="eyebrow"><i class="fas fa-tags"></i> Contact Groups</span>
+        <h1>Manage <span class="amber-text">Groups</span></h1>
+        <p>Organise your contacts into labelled groups for quick access</p>
+      </div>
+      <a href="{% url 'contacts:contact_list' %}" class="btn btn-ghost btn-sm">
+        <i class="fas fa-arrow-left"></i> Back to Contacts
+      </a>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- Messages -->
+    {% for msg in messages %}
+    <div style="padding:12px 18px; border-radius:var(--r-lg); margin-bottom:20px;
+                background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.25);
+                color:#6EE7B7; font-size:0.9rem;">
+      <i class="fas fa-check-circle"></i> {{ msg }}
+    </div>
+    {% endfor %}
+
+    <!-- Quick stats -->
+    <div class="groups-stat-row">
+      <span class="stat-pill"><i class="fas fa-tags"></i> {{ groups.count }} Group{{ groups.count|pluralize }}</span>
+      <span class="stat-pill"><i class="fas fa-users"></i>
+        {% widthratio groups|length 1 1 as x %}
+        {{ groups.0.owner.contacts.count|default:"0" }} Total Contacts
+      </span>
+    </div>
+
+    <div class="groups-layout">
+
+      <!-- ════ GROUPS GRID ════ -->
+      <div>
+        {% if groups %}
+        <div class="group-grid">
+          {% for group in groups %}
+          <div class="group-card fade-up">
+            <div class="group-icon-wrap"
+                 style="background:{{ group.color }}18; border-color:{{ group.color }}30;">
+              <i class="fas {{ group.icon }}" style="color:{{ group.color }};"></i>
+            </div>
+            <div class="group-card-content">
+              <div class="group-card-name">{{ group.name }}</div>
+              <div class="group-card-count">
+                <i class="fas fa-users" style="font-size:0.72rem;"></i>
+                {{ group.cnt }} contact{{ group.cnt|pluralize }}
+              </div>
+              <div class="group-card-actions">
+                <a href="{% url 'contacts:contact_list' %}?group={{ group.pk }}"
+                   class="group-action-btn">
+                  <i class="fas fa-eye"></i> View
+                </a>
+                <form method="post"
+                      action="{% url 'contacts:group_delete' group.pk %}"
+                      style="margin:0;"
+                      onsubmit="return confirm('Delete group \'{{ group.name }}\'? Contacts will not be deleted.');">
+                  {% csrf_token %}
+                  <button type="submit" class="group-action-btn del">
+                    <i class="fas fa-trash-alt"></i> Delete
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-groups">
+          <div class="empty-icon"><i class="fas fa-tags"></i></div>
+          <h3>No groups yet</h3>
+          <p>Create your first group to start organising your contacts.</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- ════ CREATE FORM ════ -->
+      <div>
+        <div class="create-group-card fade-up d2">
+          <div class="create-group-header">
+            <h3><i class="fas fa-plus-circle"></i> Create New Group</h3>
+          </div>
+          <div class="create-group-body">
+            <form method="post" novalidate>
+              {% csrf_token %}
+
+              <div class="cg-field" style="margin-bottom:16px;">
+                <label class="cg-label">Group Name *</label>
+                <input type="text" name="name" class="cg-input"
+                       placeholder="e.g. Clients, VIP, Suppliers"
+                       value="{{ form.name.value|default:'' }}" required>
+                {% for e in form.name.errors %}
+                <span style="font-size:0.76rem; color:#F87171;"><i class="fas fa-exclamation-circle"></i> {{ e }}</span>
+                {% endfor %}
+              </div>
+
+              <div class="cg-field" style="margin-bottom:16px;">
+                <label class="cg-label">Color</label>
+                <div class="color-swatches" id="colorSwatches">
+                  {% for val, label in form.color.field.choices %}
+                  <div class="color-swatch {% if val == '#F59E0B' %}selected{% endif %}"
+                       style="background:{{ val }};"
+                       data-color="{{ val }}"
+                       title="{{ label }}"
+                       onclick="selectColor('{{ val }}', this)">
+                  </div>
+                  {% endfor %}
+                </div>
+                <input type="hidden" name="color" id="colorInput" value="{{ form.color.value|default:'#F59E0B' }}">
+              </div>
+
+              <div class="cg-field" style="margin-bottom:20px;">
+                <label class="cg-label">Icon</label>
+                <select name="icon" class="cg-select">
+                  {% for val, label in form.icon.field.choices %}
+                  <option value="{{ val }}" {% if form.icon.value == val %}selected{% endif %}>
+                    {{ label }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <!-- Preview -->
+              <div style="margin-bottom:20px; padding:14px; border-radius:var(--r-lg);
+                          background:var(--surface-1); border:1px solid var(--border-subtle);
+                          display:flex; align-items:center; gap:12px;">
+                <div id="previewIcon" style="width:40px; height:40px; border-radius:var(--r-md);
+                     background:#F59E0B18; border:1px solid #F59E0B30;
+                     display:flex; align-items:center; justify-content:center;">
+                  <i class="fas fa-tag" id="previewIconEl" style="color:#F59E0B; font-size:1rem;"></i>
+                </div>
+                <div>
+                  <div style="font-weight:600; font-size:0.88rem;" id="previewName">Group Preview</div>
+                  <div style="font-size:0.75rem; color:var(--text-3);">0 contacts</div>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">
+                <i class="fas fa-plus"></i> Create Group
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /layout -->
+  </div><!-- /container -->
+</div><!-- /groups-page -->
+
+<script>
+  function selectColor(color, el) {
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('colorInput').value = color;
+    // Update preview
+    const iconWrap = document.getElementById('previewIcon');
+    const iconEl   = document.getElementById('previewIconEl');
+    iconWrap.style.background = color + '18';
+    iconWrap.style.borderColor = color + '30';
+    iconEl.style.color = color;
+  }
+
+  // Live name preview
+  document.querySelector('input[name=name]').addEventListener('input', function() {
+    document.getElementById('previewName').textContent = this.value || 'Group Preview';
+  });
+
+  // Live icon preview
+  document.querySelector('select[name=icon]').addEventListener('change', function() {
+    const iconEl = document.getElementById('previewIconEl');
+    iconEl.className = 'fas ' + this.value + ' ';
+    iconEl.style.fontSize = '1rem';
+  });
+</script>
+{% endblock %}

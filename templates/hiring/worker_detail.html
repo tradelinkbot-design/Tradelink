@@ -1,0 +1,675 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}{{ worker.user.get_full_name|default:worker.user.username }} — Trade Profile{% endblock %}
+
+{% block extra_head %}
+<style>
+  .profile-layout {
+    min-height: 100vh;
+    padding: calc(var(--nav-h) + 40px) clamp(16px, 5vw, 64px) 80px;
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Breadcrumb */
+  .breadcrumb-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+    font-size: 0.85rem;
+    color: var(--text-3);
+  }
+  .breadcrumb-nav a {
+    color: var(--text-2);
+    text-decoration: none;
+    transition: var(--t);
+  }
+  .breadcrumb-nav a:hover {
+    color: var(--amber);
+  }
+
+  /* Grid Layout */
+  .profile-grid {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 32px;
+    align-items: flex-start;
+  }
+  @media (max-width: 960px) {
+    .profile-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Sidebar Card */
+  .sidebar-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 32px 24px;
+    text-align: center;
+    position: sticky;
+    top: calc(var(--nav-h) + 20px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .avatar-lg {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--surface-2), var(--surface-1));
+    border: 3px solid var(--amber);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--amber);
+    box-shadow: var(--shadow-amber);
+  }
+  .avatar-lg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .profile-name {
+    font-family: 'Fraunces', serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 4px;
+    color: var(--text-1);
+  }
+  .profile-trade {
+    color: var(--amber);
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+  }
+  .profile-loc {
+    color: var(--text-3);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .badge-cluster {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 24px;
+  }
+
+  .quick-facts {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    padding: 16px;
+    margin-bottom: 24px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-size: 0.88rem;
+  }
+  .fact-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .fact-label {
+    color: var(--text-3);
+  }
+  .fact-val {
+    color: var(--text-1);
+    font-weight: 600;
+  }
+
+  .cta-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .cta-stack .btn {
+    width: 100%;
+  }
+
+  /* Main Sections */
+  .section-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .content-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 32px;
+    box-shadow: var(--shadow-sm);
+  }
+  .content-card-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-1);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .content-card-title i {
+    color: var(--amber);
+    font-size: 1.1rem;
+  }
+
+  .bio-text {
+    color: var(--text-2);
+    line-height: 1.8;
+    white-space: pre-line;
+    font-size: 0.95rem;
+  }
+
+  /* Skills & Endorsements */
+  .skills-cluster {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .endorse-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    padding: 6px 14px;
+    border-radius: var(--r-pill);
+    font-size: 0.88rem;
+    color: var(--text-1);
+    transition: var(--t);
+  }
+  .endorse-chip:hover {
+    border-color: var(--border-strong);
+  }
+  .endorse-count {
+    background: var(--surface-2);
+    color: var(--amber);
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+  .endorse-btn {
+    background: none;
+    border: none;
+    color: var(--text-3);
+    cursor: pointer;
+    padding: 2px;
+    transition: var(--t);
+    display: inline-flex;
+    align-items: center;
+  }
+  .endorse-btn:hover, .endorse-btn.endorsed {
+    color: var(--amber);
+  }
+
+  /* Timeline */
+  .timeline {
+    position: relative;
+    padding-left: 24px;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    bottom: 6px;
+    left: 6px;
+    width: 2px;
+    background: var(--border-subtle);
+  }
+  .timeline-item {
+    position: relative;
+    margin-bottom: 28px;
+  }
+  .timeline-item:last-child {
+    margin-bottom: 0;
+  }
+  .timeline-dot {
+    position: absolute;
+    left: -24px;
+    top: 5px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--bg-card);
+    border: 2px solid var(--amber);
+  }
+  .timeline-role {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-1);
+    margin-bottom: 2px;
+  }
+  .timeline-meta {
+    color: var(--amber);
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+  }
+  .timeline-date {
+    color: var(--text-3);
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+  }
+  .timeline-desc {
+    color: var(--text-2);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    white-space: pre-line;
+  }
+
+  /* Certifications */
+  .cert-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .cert-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    padding: 18px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .cert-icon {
+    font-size: 1.6rem;
+    color: var(--amber);
+    flex-shrink: 0;
+  }
+  .cert-title {
+    font-weight: 700;
+    color: var(--text-1);
+    font-size: 0.92rem;
+    margin-bottom: 2px;
+  }
+  .cert-issuer {
+    color: var(--text-2);
+    font-size: 0.82rem;
+  }
+  .cert-year {
+    color: var(--text-3);
+    font-size: 0.78rem;
+    margin-top: 4px;
+  }
+
+  /* Portfolio items */
+  .portfolio-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+  }
+  .portfolio-thumb {
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    aspect-ratio: 4/3;
+  }
+  .portfolio-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: var(--t);
+  }
+  .portfolio-thumb:hover img {
+    transform: scale(1.05);
+  }
+
+  /* Reviews */
+  .review-item {
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .review-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+  .review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .reviewer-name {
+    font-weight: 700;
+    color: var(--text-1);
+    font-size: 0.92rem;
+  }
+  .review-stars {
+    color: var(--amber);
+    font-size: 0.85rem;
+  }
+  .review-body {
+    color: var(--text-2);
+    font-size: 0.88rem;
+    line-height: 1.6;
+  }
+  .review-date {
+    color: var(--text-3);
+    font-size: 0.78rem;
+    margin-top: 6px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-layout">
+
+  {# ── Breadcrumb ── #}
+  <div class="breadcrumb-nav">
+    <a href="{% url 'home' %}">Home</a>
+    <span>/</span>
+    <a href="{% url 'hiring:talent_search' %}">Talent Search</a>
+    <span>/</span>
+    <span style="color: var(--text-1);">{{ worker.user.get_full_name|default:worker.user.username }}</span>
+  </div>
+
+  <div class="profile-grid">
+
+    {# ── Left Sticky Profile Card ── #}
+    <div class="sidebar-card">
+      <div class="avatar-lg">
+        {% if worker.user.image %}
+          <img src="{{ worker.user.image.url }}" alt="{{ worker.user.username }}">
+        {% else %}
+          {{ worker.user.username|first|upper }}
+        {% endif %}
+      </div>
+
+      <h1 class="profile-name">{{ worker.user.get_full_name|default:worker.user.username }}</h1>
+      <div class="profile-trade">{{ worker.trade_category.name|default:"Skilled Trades" }}</div>
+      <div class="profile-loc">
+        <i class="fas fa-map-marker-alt"></i>
+        {{ worker.get_state_display|default:worker.state|title }}{% if worker.lga %}, {{ worker.lga }}{% endif %}
+      </div>
+
+      <div class="badge-cluster">
+        {% if worker.is_verified %}
+          <span class="badge badge-sky"><i class="fas fa-check-circle"></i> Identity Verified</span>
+        {% endif %}
+        {% if worker.open_to_employment %}
+          <span class="badge badge-green"><i class="fas fa-dot-circle"></i> Open to Work</span>
+        {% endif %}
+        {% if worker.is_featured %}
+          <span class="badge badge-amber"><i class="fas fa-star"></i> Featured</span>
+        {% endif %}
+      </div>
+
+      {% if avg_rating %}
+        <div style="margin-bottom: 20px;">
+          <span style="color: var(--amber); font-weight: 800; font-size: 1.1rem;">★ {{ avg_rating }}</span>
+          <span style="color: var(--text-3); font-size: 0.85rem;">({{ reviews|length }} reviews)</span>
+        </div>
+      {% endif %}
+
+      <div class="quick-facts">
+        <div class="fact-item">
+          <span class="fact-label">Experience</span>
+          <span class="fact-val">{{ worker.years_experience }} Years ({{ worker.get_experience_level_display }})</span>
+        </div>
+        {% if worker.expected_monthly_salary %}
+          <div class="fact-item">
+            <span class="fact-label">Expected Salary</span>
+            <span class="fact-val">₦{{ worker.expected_monthly_salary|intcomma }}/mo</span>
+          </div>
+        {% endif %}
+        {% if worker.notice_period %}
+          <div class="fact-item">
+            <span class="fact-label">Notice Period</span>
+            <span class="fact-val">{{ worker.notice_period }}</span>
+          </div>
+        {% endif %}
+        <div class="fact-item">
+          <span class="fact-label">Work Type</span>
+          <span class="fact-val">{{ worker.get_employment_preference_display|default:"Full-Time or Contract" }}</span>
+        </div>
+      </div>
+
+      {# Actions #}
+      {% if request.user.is_authenticated and request.user != worker.user %}
+        <div class="cta-stack">
+          {% if not existing_interest %}
+            <a href="{% url 'hiring:send_interest' worker.pk %}" class="btn btn-primary">
+              <i class="fas fa-paper-plane"></i> Contact for Hire
+            </a>
+          {% else %}
+            <button class="btn btn-ghost" disabled style="opacity: 0.8;">
+              <i class="fas fa-check"></i> Outreach Sent ({{ existing_interest.get_status_display }})
+            </button>
+          {% endif %}
+
+          <button id="js-save-toggle" class="btn {% if is_saved %}btn-outline{% else %}btn-ghost{% endif %}" data-url="{% url 'hiring:save_worker' worker.pk %}">
+            <i class="{% if is_saved %}fas{% else %}far{% endif %} fa-bookmark"></i>
+            <span id="js-save-label">{% if is_saved %}Saved in Shortlist{% else %}Save to Shortlist{% endif %}</span>
+          </button>
+        </div>
+      {% elif not request.user.is_authenticated %}
+        <div class="cta-stack">
+          <a href="{% url 'signin' %}?next={{ request.path }}" class="btn btn-primary">
+            Sign In to Contact
+          </a>
+        </div>
+      {% endif %}
+    </div>
+
+    {# ── Right Main Content ── #}
+    <div class="section-stack">
+
+      {# About / Bio #}
+      {% if worker.bio %}
+        <div class="content-card">
+          <div class="content-card-title">
+            <i class="fas fa-user-tie"></i> About
+          </div>
+          <div class="bio-text">{{ worker.bio }}</div>
+        </div>
+      {% endif %}
+
+      {# Skills & Endorsements #}
+      <div class="content-card">
+        <div class="content-card-title">
+          <i class="fas fa-tools"></i> Skills & Endorsements
+        </div>
+        {% if endorsements %}
+          <div class="skills-cluster">
+            {% for e in endorsements %}
+              <div class="endorse-chip">
+                <span>{{ e.skill__name }}</span>
+                <span class="endorse-count">×{{ e.count }}</span>
+                {% if request.user.is_authenticated and request.user != worker.user %}
+                  <button class="endorse-btn js-endorse-btn {% if e.skill__id in my_endorsed_skill_ids %}endorsed{% endif %}"
+                    data-url="{% url 'hiring:endorse_skill' worker.pk e.skill__id %}"
+                    title="{% if e.skill__id in my_endorsed_skill_ids %}Remove endorsement{% else %}Endorse this skill{% endif %}">
+                    <i class="fas fa-thumbs-up"></i>
+                  </button>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p style="color: var(--text-3); font-size: 0.9rem;">No skills or endorsements listed yet.</p>
+        {% endif %}
+      </div>
+
+      {# Work Experience #}
+      {% if work_history %}
+        <div class="content-card">
+          <div class="content-card-title">
+            <i class="fas fa-briefcase"></i> Work Experience
+          </div>
+          <div class="timeline">
+            {% for entry in work_history %}
+              <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-role">{{ entry.role_title }}</div>
+                <div class="timeline-meta">{{ entry.employer_name }}{% if entry.location_state %} · {{ entry.get_location_state_display|default:entry.location_state|title }}{% endif %}</div>
+                <div class="timeline-date">
+                  {{ entry.start_date|date:"M Y" }} –
+                  {% if entry.is_current %}
+                    <span style="color: var(--emerald); font-weight: 600;">Present</span>
+                  {% elif entry.end_date %}
+                    {{ entry.end_date|date:"M Y" }}
+                  {% endif %}
+                </div>
+                {% if entry.description %}
+                  <div class="timeline-desc">{{ entry.description }}</div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      {# Certifications & Qualifications #}
+      {% if certifications %}
+        <div class="content-card">
+          <div class="content-card-title">
+            <i class="fas fa-certificate"></i> Certifications & Qualifications
+          </div>
+          <div class="cert-list">
+            {% for cert in certifications %}
+              <div class="cert-card">
+                <div class="cert-icon"><i class="fas fa-award"></i></div>
+                <div>
+                  <div class="cert-title">
+                    {{ cert.name }}
+                    {% if cert.is_verified %}
+                      <span class="badge badge-sky" style="margin-left: 6px;"><i class="fas fa-check"></i> Verified</span>
+                    {% endif %}
+                  </div>
+                  <div class="cert-issuer">{{ cert.issuing_body }}</div>
+                  {% if cert.year_obtained %}
+                    <div class="cert-year">Acquired: {{ cert.year_obtained }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      {# Portfolio #}
+      {% if portfolio %}
+        <div class="content-card">
+          <div class="content-card-title">
+            <i class="fas fa-images"></i> Work Portfolio
+          </div>
+          <div class="portfolio-gallery">
+            {% for item in portfolio %}
+              <div class="portfolio-thumb">
+                {% if item.image %}
+                  <img src="{{ item.image.url }}" alt="{{ item.caption|default:'Work sample' }}">
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      {# Reviews #}
+      {% if reviews %}
+        <div class="content-card">
+          <div class="content-card-title">
+            <i class="fas fa-comment-alt"></i> Ratings & Reviews
+          </div>
+          {% for r in reviews %}
+            <div class="review-item">
+              <div class="review-header">
+                <div class="reviewer-name">{{ r.reviewer.get_full_name|default:r.reviewer.username }}</div>
+                <div class="review-stars">
+                  {% for i in "12345" %}
+                    {% if forloop.counter <= r.rating %}★{% else %}☆{% endif %}
+                  {% endfor %}
+                </div>
+              </div>
+              <div class="review-body">{{ r.comment }}</div>
+              <div class="review-date">{{ r.created_at|date:"d M Y" }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+    </div>
+
+  </div>
+
+</div>
+
+{% block extra_scripts %}
+<script>
+  // Shortlist save button toggle
+  const saveBtn = document.getElementById('js-save-toggle');
+  const saveLabel = document.getElementById('js-save-label');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', function() {
+      fetch(this.dataset.url, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        const icon = this.querySelector('i');
+        if (data.saved) {
+          this.className = 'btn btn-outline';
+          icon.className = 'fas fa-bookmark';
+          saveLabel.textContent = 'Saved in Shortlist';
+        } else {
+          this.className = 'btn btn-ghost';
+          icon.className = 'far fa-bookmark';
+          saveLabel.textContent = 'Save to Shortlist';
+        }
+      });
+    });
+  }
+
+  // Endorsement toggle
+  document.querySelectorAll('.js-endorse-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      fetch(this.dataset.url, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.action === 'added') {
+          this.classList.add('endorsed');
+        } else {
+          this.classList.remove('endorsed');
+        }
+        const countSpan = this.closest('.endorse-chip').querySelector('.endorse-count');
+        if (countSpan) countSpan.textContent = `×${data.count}`;
+      });
+    });
+  });
+</script>
+{% endblock %}
+{% endblock %}

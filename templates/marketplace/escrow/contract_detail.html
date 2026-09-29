@@ -1,0 +1,896 @@
+{% extends "base.html" %}
+{% block title %}{{ contract.title }} — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Layout ── */
+  .page-wrap {
+    padding-top: calc(var(--nav-h) + 48px);
+    padding-bottom: 80px;
+    min-height: 100vh;
+    position: relative; z-index: 1;
+  }
+
+  /* ── Back link ── */
+  .back-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--text-2); font-size: 0.88rem; font-weight: 500;
+    text-decoration: none; margin-bottom: 28px;
+    transition: var(--t);
+  }
+  .back-link:hover { color: var(--amber); }
+
+  /* ── Two-column layout ── */
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 28px;
+    align-items: start;
+  }
+
+  /* ── Contract header card ── */
+  .contract-header-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .contract-header-card::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--amber), var(--orange));
+  }
+  .contract-title-row {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 16px;
+    margin-bottom: 18px; flex-wrap: wrap;
+  }
+  .contract-title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.2rem, 3vw, 1.7rem);
+    font-weight: 800; line-height: 1.25;
+    letter-spacing: -0.3px;
+  }
+  .contract-parties {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    padding: 20px 0;
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 20px;
+  }
+  .party-label {
+    font-size: 0.73rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 4px;
+  }
+  .party-name {
+    font-weight: 600;
+    color: var(--text-1);
+    font-size: 0.95rem;
+  }
+  .contract-meta-row {
+    display: flex; gap: 24px; flex-wrap: wrap;
+  }
+  .meta-chip {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 0.84rem; color: var(--text-2);
+  }
+  .meta-chip i { color: var(--text-3); font-size: 0.8rem; width: 14px; }
+
+  /* ── Section title ── */
+  .section-heading {
+    font-family: 'Fraunces', serif;
+    font-size: 1.1rem; font-weight: 700;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-heading i { color: var(--amber); font-size: 0.9rem; }
+
+  /* ── Milestone card ── */
+  .milestone-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 22px 24px;
+    margin-bottom: 12px;
+    position: relative;
+    overflow: hidden;
+    transition: var(--t);
+  }
+  .milestone-card:hover { border-color: var(--border-strong); }
+
+  /* Status left accent */
+  .milestone-card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 4px;
+    border-radius: 4px 0 0 4px;
+  }
+  .ms-unfunded::before   { background: var(--text-3); }
+  .ms-funded::before     { background: var(--sky); }
+  .ms-in_review::before  { background: var(--amber); }
+  .ms-approved::before   { background: var(--emerald); }
+  .ms-released::before   { background: var(--emerald); }
+  .ms-disputed::before   { background: var(--orange); }
+  .ms-refunded::before   { background: var(--text-3); }
+
+  .milestone-top {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 12px;
+    margin-bottom: 8px; flex-wrap: wrap;
+  }
+  .milestone-title {
+    font-weight: 700; font-size: 1rem;
+    color: var(--text-1); line-height: 1.3; flex: 1;
+  }
+  .milestone-amount {
+    font-family: 'Fraunces', serif;
+    font-size: 1.15rem; font-weight: 800;
+    color: var(--amber);
+    white-space: nowrap;
+  }
+  .milestone-desc {
+    color: var(--text-2); font-size: 0.88rem;
+    line-height: 1.6; margin-bottom: 14px;
+  }
+
+  /* Milestone timeline row */
+  .milestone-timeline {
+    display: flex; gap: 18px; flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .tl-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.78rem; color: var(--text-3);
+  }
+  .tl-item i { font-size: 0.72rem; }
+  .tl-item span { color: var(--text-2); }
+
+  /* Submission note */
+  .submission-note {
+    background: rgba(245,158,11,0.06);
+    border: 1px solid rgba(245,158,11,0.15);
+    border-radius: var(--r-lg);
+    padding: 14px 16px;
+    margin-bottom: 14px;
+  }
+  .submission-note-label {
+    font-size: 0.74rem; font-weight: 700;
+    letter-spacing: 1.2px; text-transform: uppercase;
+    color: var(--amber); margin-bottom: 6px;
+  }
+  .submission-note p { font-size: 0.88rem; color: var(--text-2); line-height: 1.6; }
+
+  /* Milestone actions */
+  .milestone-actions {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  /* ── Add milestone form ── */
+  .add-milestone-card {
+    background: var(--bg-card);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--r-xl);
+    padding: 24px;
+    margin-top: 8px;
+  }
+  .add-milestone-card h4 {
+    font-family: 'Fraunces', serif;
+    font-size: 1rem; font-weight: 700;
+    margin-bottom: 18px; color: var(--text-1);
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label {
+    font-size: 0.8rem; font-weight: 600;
+    color: var(--text-2);
+  }
+  .form-label .req { color: var(--orange); }
+  .form-control {
+    width: 100%; padding: 11px 14px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    color: var(--text-1);
+    font-family: 'Outfit', sans-serif; font-size: 0.9rem;
+    transition: var(--t); outline: none;
+  }
+  .form-control::placeholder { color: var(--text-3); }
+  .form-control:focus {
+    border-color: var(--amber);
+    background: rgba(245,158,11,0.04);
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.12);
+  }
+  textarea.form-control { resize: vertical; min-height: 80px; }
+
+  /* ── Sidebar cards ── */
+  .sidebar-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 22px 24px;
+    margin-bottom: 16px;
+  }
+  .sidebar-card-title {
+    font-family: 'Fraunces', serif;
+    font-size: 0.88rem; font-weight: 700;
+    color: var(--text-2); margin-bottom: 16px;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .stats-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .stat-box {
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    padding: 14px;
+    text-align: center;
+  }
+  .stat-value {
+    font-family: 'Fraunces', serif;
+    font-size: 1.35rem; font-weight: 800;
+    color: var(--amber); display: block; margin-bottom: 4px;
+  }
+  .stat-label {
+    font-size: 0.73rem; color: var(--text-3);
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+
+  /* Status timeline */
+  .status-timeline { list-style: none; }
+  .status-tl-item {
+    display: flex; gap: 14px; align-items: flex-start;
+    padding-bottom: 16px; position: relative;
+  }
+  .status-tl-item:not(:last-child)::before {
+    content: '';
+    position: absolute; left: 11px; top: 22px;
+    width: 2px; height: calc(100% - 10px);
+    background: var(--border-subtle);
+  }
+  .tl-dot {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--surface-2);
+    border: 2px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 0.6rem; color: var(--text-3);
+  }
+  .tl-dot.done {
+    background: rgba(16,185,129,0.15);
+    border-color: var(--emerald);
+    color: var(--emerald);
+  }
+  .tl-text { font-size: 0.85rem; padding-top: 3px; }
+  .tl-text strong { color: var(--text-1); display: block; }
+  .tl-text time { font-size: 0.77rem; color: var(--text-3); }
+
+  /* Bank account warning */
+  .bank-alert {
+    background: rgba(249,115,22,0.08);
+    border: 1px solid rgba(249,115,22,0.2);
+    border-radius: var(--r-lg);
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .bank-alert i { color: var(--orange); margin-top: 2px; flex-shrink: 0; }
+  .bank-alert p { font-size: 0.87rem; color: var(--text-2); line-height: 1.55; }
+  .bank-alert a { color: var(--amber); text-decoration: none; font-weight: 600; }
+  .bank-alert a:hover { text-decoration: underline; }
+
+  /* ── Modal ── */
+  .modal-backdrop {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 2000;
+    align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--bg-card);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-xl);
+    padding: 28px 32px;
+    width: 100%; max-width: 480px;
+    animation: fadeUp 0.22s var(--ease) both;
+  }
+  .modal h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.15rem; font-weight: 800;
+    margin-bottom: 6px;
+  }
+  .modal .modal-sub {
+    color: var(--text-2); font-size: 0.88rem;
+    margin-bottom: 20px; line-height: 1.55;
+  }
+  .modal-actions {
+    display: flex; gap: 10px; margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  .modal-close {
+    position: absolute; top: 18px; right: 18px;
+    background: none; border: none;
+    color: var(--text-3); cursor: pointer; font-size: 1rem;
+    transition: var(--t);
+  }
+  .modal-close:hover { color: var(--text-1); }
+
+  /* ── Status badges ── */
+  .badge-unfunded  { background: rgba(250,245,235,0.06); color: var(--text-3); border: 1px solid var(--border-subtle); }
+  .badge-funded    { background: rgba(56,189,248,0.10);  color: #7DD3FC; border: 1px solid rgba(56,189,248,0.2); }
+  .badge-in_review { background: rgba(245,158,11,0.12);  color: #FCD34D; border: 1px solid rgba(245,158,11,0.2); }
+  .badge-approved  { background: rgba(16,185,129,0.12);  color: #6EE7B7; border: 1px solid rgba(16,185,129,0.2); }
+  .badge-released  { background: rgba(16,185,129,0.18);  color: #34D399; border: 1px solid rgba(16,185,129,0.3); }
+  .badge-disputed  { background: rgba(249,115,22,0.12);  color: #FDA975; border: 1px solid rgba(249,115,22,0.2); }
+  .badge-refunded  { background: rgba(250,245,235,0.06); color: var(--text-3); border: 1px solid var(--border-subtle); }
+
+  /* ── Flash messages ── */
+  .flash-messages { margin-bottom: 24px; }
+  .flash {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px; border-radius: var(--r-lg);
+    font-size: 0.88rem; margin-bottom: 8px;
+  }
+  .flash-success { background: rgba(16,185,129,0.10); border: 1px solid rgba(16,185,129,0.2); color: #6EE7B7; }
+  .flash-error   { background: rgba(249,115,22,0.10); border: 1px solid rgba(249,115,22,0.2); color: #FDA975; }
+  .flash-info    { background: rgba(56,189,248,0.10); border: 1px solid rgba(56,189,248,0.2); color: #7DD3FC; }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .detail-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 600px) {
+    .contract-header-card { padding: 20px; }
+    .contract-parties { grid-template-columns: 1fr; gap: 12px; }
+    .form-row { grid-template-columns: 1fr; }
+    .milestone-card { padding: 16px 18px; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .modal { padding: 22px 20px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+  <div class="container">
+
+    <!-- Flash messages -->
+    {% if messages %}
+    <div class="flash-messages">
+      {% for message in messages %}
+      <div class="flash flash-{% if message.tags == 'error' %}error{% elif message.tags == 'success' %}success{% else %}info{% endif %}">
+        <i class="fas fa-{% if message.tags == 'error' %}exclamation-circle{% elif message.tags == 'success' %}check-circle{% else %}info-circle{% endif %}"></i>
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Back link -->
+    <a href="{% url 'marketplace:contract_list' %}" class="back-link fade-in">
+      <i class="fas fa-arrow-left"></i> All Contracts
+    </a>
+
+    <div class="detail-grid">
+
+      <!-- ── LEFT COLUMN ── -->
+      <div>
+
+        <!-- Contract header -->
+        <div class="contract-header-card fade-up">
+          <div class="contract-title-row">
+            <h1 class="contract-title">{{ contract.title }}</h1>
+            <span class="badge badge-{{ contract.status }}">
+              <i class="fas fa-circle" style="font-size:0.45rem;"></i>
+              {{ contract.get_status_display }}
+            </span>
+          </div>
+
+          <div class="contract-parties">
+            <div>
+              <p class="party-label">Employer</p>
+              <p class="party-name">{{ contract.employer.company_name|default:contract.employer.user.username }}</p>
+            </div>
+            <div>
+              <p class="party-label">Worker</p>
+              <p class="party-name">{{ contract.worker.user.get_full_name|default:contract.worker.user.username }}</p>
+            </div>
+          </div>
+
+          <div class="contract-meta-row">
+            <span class="meta-chip">
+              <i class="fas fa-briefcase"></i>
+              <span>{{ contract.job.title }}</span>
+            </span>
+            <span class="meta-chip">
+              <i class="fas fa-calendar-plus"></i>
+              <span>Started {{ contract.created_at|date:"d M Y" }}</span>
+            </span>
+            <span class="meta-chip">
+              <i class="fas fa-percentage"></i>
+              <span>{{ contract.platform_fee_pct }}% platform fee</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Bank account warning for workers without bank details -->
+        {% if not is_employer and not has_bank_account %}
+        <div class="bank-alert fade-up d1">
+          <i class="fas fa-exclamation-triangle"></i>
+          <p>
+            You need to <a href="{% url 'edit_profile' %}#bank">add a bank account</a>
+            before you can receive milestone payouts. Set it up now so you're ready when funds are released.
+          </p>
+        </div>
+        {% endif %}
+
+        <!-- Milestones -->
+        <div class="section-heading fade-up d2">
+          <i class="fas fa-flag-checkered"></i>
+          Milestones
+          <span class="badge badge-amber" style="margin-left:auto; font-size:0.73rem;">{{ milestones.count }}</span>
+        </div>
+
+        {% if milestones %}
+          {% for milestone in milestones %}
+          <div class="milestone-card ms-{{ milestone.status }} fade-up d{{ forloop.counter|add:2 }}"
+               id="milestone-{{ milestone.pk }}">
+
+            <div class="milestone-top">
+              <div class="milestone-title">{{ milestone.title }}</div>
+              <div style="display:flex; gap:10px; align-items:center;">
+                <span class="badge badge-{{ milestone.status }}">
+                  {{ milestone.get_status_display }}
+                </span>
+                <span class="milestone-amount">₦{{ milestone.amount|floatformat:0 }}</span>
+              </div>
+            </div>
+
+            <p class="milestone-desc">{{ milestone.description }}</p>
+
+            <!-- Timeline dates -->
+            <div class="milestone-timeline">
+              {% if milestone.due_date %}
+              <span class="tl-item">
+                <i class="fas fa-calendar-day"></i>
+                Due: <span>{{ milestone.due_date|date:"d M Y" }}</span>
+              </span>
+              {% endif %}
+              {% if milestone.funded_at %}
+              <span class="tl-item">
+                <i class="fas fa-lock"></i>
+                Funded: <span>{{ milestone.funded_at|date:"d M Y" }}</span>
+              </span>
+              {% endif %}
+              {% if milestone.submitted_at %}
+              <span class="tl-item">
+                <i class="fas fa-paper-plane"></i>
+                Submitted: <span>{{ milestone.submitted_at|date:"d M Y" }}</span>
+              </span>
+              {% endif %}
+              {% if milestone.approved_at %}
+              <span class="tl-item">
+                <i class="fas fa-check-circle"></i>
+                Approved: <span>{{ milestone.approved_at|date:"d M Y" }}</span>
+              </span>
+              {% endif %}
+              {% if milestone.auto_release_at and milestone.status == 'in_review' %}
+              <span class="tl-item" style="color: var(--amber);">
+                <i class="fas fa-clock"></i>
+                Auto-releases: <span>{{ milestone.auto_release_at|date:"d M Y, H:i" }}</span>
+              </span>
+              {% endif %}
+            </div>
+
+            <!-- Submission note (from worker) -->
+            {% if milestone.submission_note %}
+            <div class="submission-note">
+              <p class="submission-note-label">Worker's delivery note</p>
+              <p>{{ milestone.submission_note }}</p>
+            </div>
+            {% endif %}
+
+            <!-- Worker payout info -->
+            {% if milestone.worker_amount %}
+            <div class="submission-note" style="background: rgba(16,185,129,0.06); border-color: rgba(16,185,129,0.2);">
+              <p class="submission-note-label" style="color: var(--emerald);">Worker payout (after 10% platform fee)</p>
+              <p style="display:flex; gap:24px; flex-wrap:wrap;">
+                <span>Gross: <strong>₦{{ milestone.amount|floatformat:0 }}</strong></span>
+                <span>Platform fee (10%): <strong style="color:var(--orange);">–₦<span class="fee-calc" data-gross="{{ milestone.amount }}" data-net="{{ milestone.worker_amount }}"></span></strong></span>
+                <span>Net payout: <strong style="color:var(--emerald);">₦{{ milestone.worker_amount|floatformat:0 }}</strong></span>
+              </p>
+            </div>
+            {% endif %}
+
+            <!-- PENDING_OTP status box -->
+            {% if milestone.status == 'pending_otp' %}
+            <div class="submission-note" style="background: rgba(245,158,11,0.06); border-color: rgba(245,158,11,0.3);">
+              <p class="submission-note-label" style="color: var(--amber);"><i class="fas fa-key"></i> Transfer Awaiting OTP Approval</p>
+              <p style="font-size:0.85rem; color:var(--text-2); margin-bottom:10px;">
+                A payout of <strong>₦{{ milestone.worker_amount|floatformat:0 }}</strong> has been initiated
+                (Transfer code: <code>{{ milestone.paystack_transfer_ref }}</code>).
+                Paystack requires OTP confirmation before funds are released.
+              </p>
+              {% if request.user.is_staff %}
+              <form method="post" action="{% url 'marketplace:milestone_finalize_otp' pk=milestone.pk %}" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                {% csrf_token %}
+                <input type="text" name="otp" placeholder="Enter Paystack OTP"
+                       class="form-control" style="max-width:180px; padding:8px 14px; font-size:0.9rem;"
+                       maxlength="10" required autocomplete="one-time-code">
+                <button type="submit" class="btn btn-primary btn-sm">
+                  <i class="fas fa-key"></i> Confirm OTP
+                </button>
+              </form>
+              {% else %}
+              <p style="font-size:0.82rem; color:var(--text-3);">
+                <i class="fas fa-info-circle"></i> An admin will approve this transfer shortly.
+              </p>
+              {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Dispute info -->
+            {% if milestone.status == 'disputed' %}
+            {% if milestone.dispute %}
+            <div class="submission-note" style="background: rgba(249,115,22,0.06); border-color: rgba(249,115,22,0.2);">
+              <p class="submission-note-label" style="color: var(--orange);">Dispute raised</p>
+              <p>{{ milestone.dispute.reason }}</p>
+              {% if milestone.dispute.resolution != 'pending' %}
+              <p style="margin-top: 8px; font-weight: 600; color: var(--text-1);">
+                Resolution: {{ milestone.dispute.get_resolution_display }}
+              </p>
+              {% if milestone.dispute.resolution_note %}
+              <p>{{ milestone.dispute.resolution_note }}</p>
+              {% endif %}
+              {% endif %}
+            </div>
+            {% endif %}
+            {% endif %}
+
+            <!-- ── Action buttons ── -->
+            <div class="milestone-actions">
+
+              {% if is_employer %}
+                {% if milestone.status == 'unfunded' %}
+                <form method="post" action="{% url 'marketplace:milestone_fund' pk=milestone.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fas fa-lock"></i> Fund Escrow
+                  </button>
+                </form>
+                {% endif %}
+
+                {% if milestone.status == 'in_review' %}
+                <button type="button" class="btn btn-primary btn-sm"
+                        onclick="openApproveModal('{{ milestone.pk }}', '{{ milestone.title|escapejs }}')">
+                  <i class="fas fa-check"></i> Approve Work
+                </button>
+                <button type="button" class="btn btn-ghost btn-sm"
+                        onclick="openDisputeModal('{{ milestone.pk }}')">
+                  <i class="fas fa-exclamation-triangle"></i> Raise Dispute
+                </button>
+                {% endif %}
+
+              {% else %}
+                {% if milestone.status == 'funded' %}
+                <button type="button" class="btn btn-primary btn-sm"
+                        onclick="openSubmitModal('{{ milestone.pk }}', '{{ milestone.title|escapejs }}')">
+                  <i class="fas fa-paper-plane"></i> Submit Work
+                </button>
+                {% endif %}
+
+                {% if milestone.status == 'in_review' %}
+                <span class="meta-chip" style="font-size:0.82rem; color: var(--amber);">
+                  <i class="fas fa-clock"></i> Awaiting employer approval
+                </span>
+                {% endif %}
+
+                {% if milestone.status == 'in_review' or milestone.status == 'funded' %}
+                <button type="button" class="btn btn-ghost btn-sm"
+                        onclick="openDisputeModal('{{ milestone.pk }}')">
+                  <i class="fas fa-exclamation-triangle"></i> Raise Dispute
+                </button>
+                {% endif %}
+              {% endif %}
+
+              {% if milestone.status == 'released' %}
+              <span class="meta-chip" style="color: var(--emerald); font-size:0.82rem;">
+                <i class="fas fa-check-double"></i> Payment released
+              </span>
+              {% endif %}
+
+              {% if milestone.status == 'pending_otp' %}
+              <span class="meta-chip" style="color: var(--amber); font-size:0.82rem;">
+                <i class="fas fa-hourglass-half"></i> Payout pending OTP
+              </span>
+              {% endif %}
+
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="milestone-card ms-unfunded" style="text-align:center; padding:32px;">
+            <i class="fas fa-flag" style="font-size:1.4rem; color:var(--text-3); margin-bottom:12px;"></i>
+            <p style="color:var(--text-2); font-size:0.9rem;">No milestones yet.</p>
+            {% if is_employer %}
+            <p style="color:var(--text-3); font-size:0.83rem; margin-top:4px;">Use the form below to add the first milestone.</p>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        <!-- Add milestone form (employer only) -->
+        {% if is_employer %}
+        <div class="add-milestone-card fade-up">
+          <h4><i class="fas fa-plus-circle" style="color:var(--amber); margin-right:8px;"></i>Add Milestone</h4>
+          <form method="post" action="{% url 'marketplace:milestone_create' contract_pk=contract.pk %}">
+            {% csrf_token %}
+            <div class="form-group" style="margin-bottom:12px;">
+              <label class="form-label">Title <span class="req">*</span></label>
+              <input type="text" name="title" class="form-control"
+                     placeholder="e.g. Foundation work complete" required>
+            </div>
+            <div class="form-group" style="margin-bottom:12px;">
+              <label class="form-label">Description <span class="req">*</span></label>
+              <textarea name="description" class="form-control"
+                        placeholder="Describe what the worker must deliver for this milestone to be approved…" required></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Amount (₦) <span class="req">*</span></label>
+                <input type="number" name="amount" class="form-control"
+                       placeholder="0.00" min="100" step="0.01" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Due Date</label>
+                <input type="date" name="due_date" class="form-control">
+              </div>
+            </div>
+            <div style="margin-top:16px;">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create Milestone
+              </button>
+            </div>
+          </form>
+        </div>
+        {% endif %}
+
+      </div><!-- /left column -->
+
+      <!-- ── RIGHT COLUMN (sidebar) ── -->
+      <div>
+
+        <!-- Summary stats -->
+        <div class="sidebar-card fade-up d1">
+          <p class="sidebar-card-title">Contract Summary</p>
+          <div class="stats-grid">
+            <div class="stat-box">
+              <span class="stat-value">{{ milestones.count }}</span>
+              <span class="stat-label">Milestones</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-value" id="total-value">—</span>
+              <span class="stat-label">Total Value</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-value" id="funded-count">—</span>
+              <span class="stat-label">In Escrow</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-value" id="released-count">—</span>
+              <span class="stat-label">Released</span>
+            </div>
+          </div>
+          <script>
+            (function(){
+              var data = [
+                {% for m in milestones %}
+                { amount: {{ m.amount }}, status: "{{ m.status }}" }{% if not forloop.last %},{% endif %}
+                {% endfor %}
+              ];
+              var total    = data.reduce(function(s,m){ return s + m.amount; }, 0);
+              var funded   = data.filter(function(m){ return m.status === 'funded' || m.status === 'in_review'; }).length;
+              var released = data.filter(function(m){ return m.status === 'released'; }).length;
+              function fmt(n){
+                if(n >= 1000000) return '₦' + (n/1000000).toFixed(1) + 'M';
+                if(n >= 1000)    return '₦' + (n/1000).toFixed(1) + 'k';
+                return '₦' + n.toLocaleString();
+              }
+              document.getElementById('total-value').textContent   = fmt(total);
+              document.getElementById('funded-count').textContent   = funded;
+              document.getElementById('released-count').textContent = released;
+            })();
+          </script>
+        </div>
+
+        <!-- Status legend -->
+        <div class="sidebar-card fade-up d2">
+          <p class="sidebar-card-title">Milestone Lifecycle</p>
+          <ul class="status-timeline">
+            <li class="status-tl-item">
+              <div class="tl-dot"><i class="fas fa-circle"></i></div>
+              <div class="tl-text"><strong>Unfunded</strong><time>Milestone created, awaiting payment</time></div>
+            </li>
+            <li class="status-tl-item">
+              <div class="tl-dot {% if milestones|length > 0 %}done{% endif %}"><i class="fas fa-lock"></i></div>
+              <div class="tl-text"><strong>Funded</strong><time>Employer paid into escrow</time></div>
+            </li>
+            <li class="status-tl-item">
+              <div class="tl-dot"><i class="fas fa-paper-plane"></i></div>
+              <div class="tl-text"><strong>In Review</strong><time>Worker submitted work</time></div>
+            </li>
+            <li class="status-tl-item">
+              <div class="tl-dot"><i class="fas fa-check"></i></div>
+              <div class="tl-text"><strong>Approved</strong><time>Employer approved, payout queued</time></div>
+            </li>
+            <li class="status-tl-item" style="padding-bottom:0;">
+              <div class="tl-dot done"><i class="fas fa-check-double"></i></div>
+              <div class="tl-text"><strong>Released</strong><time>Funds transferred to worker</time></div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Worker bank account shortcut -->
+        {% if not is_employer %}
+        <div class="sidebar-card fade-up d3">
+          <p class="sidebar-card-title">Payout Details</p>
+          {% if has_bank_account %}
+          <p style="font-size:0.87rem; color:var(--text-2); margin-bottom:12px;">
+            Your bank account is set up and ready to receive payments.
+          </p>
+          <a href="{% url 'edit_profile' %}#bank" class="btn btn-ghost btn-sm" style="width:100%; justify-content:center;">
+            <i class="fas fa-university"></i> Update Bank Account
+          </a>
+          {% else %}
+          <p style="font-size:0.87rem; color:var(--text-2); margin-bottom:12px;">
+            Add your bank account to receive milestone payouts via Paystack.
+          </p>
+          <a href="{% url 'edit_profile' %}#bank" class="btn btn-primary btn-sm" style="width:100%; justify-content:center;">
+            <i class="fas fa-plus"></i> Add Bank Account
+          </a>
+          {% endif %}
+        </div>
+        {% endif %}
+
+      </div><!-- /sidebar -->
+
+    </div><!-- /detail-grid -->
+  </div><!-- /container -->
+</div>
+
+<!-- ── MODALS ── -->
+
+<!-- Submit work modal -->
+<div class="modal-backdrop" id="submitModal">
+  <div class="modal" style="position:relative;">
+    <button class="modal-close" onclick="closeModal('submitModal')"><i class="fas fa-times"></i></button>
+    <h3><i class="fas fa-paper-plane" style="color:var(--amber); margin-right:8px;"></i>Submit Work</h3>
+    <p class="modal-sub" id="submitModalSub">Mark this milestone as complete and notify the employer for review.</p>
+    <form method="post" id="submitWorkForm" action="">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label">Delivery note (optional)</label>
+        <textarea name="submission_note" class="form-control"
+                  placeholder="Describe what you delivered, include any links or notes for the employer…"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Submit Work</button>
+        <button type="button" class="btn btn-ghost" onclick="closeModal('submitModal')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Approve work modal -->
+<div class="modal-backdrop" id="approveModal">
+  <div class="modal" style="position:relative;">
+    <button class="modal-close" onclick="closeModal('approveModal')"><i class="fas fa-times"></i></button>
+    <h3><i class="fas fa-check-circle" style="color:var(--emerald); margin-right:8px;"></i>Approve Work</h3>
+    <p class="modal-sub" id="approveModalSub">
+      By approving, the escrowed funds will be transferred to the worker. This action cannot be undone.
+    </p>
+    <form method="post" id="approveWorkForm" action="">
+      {% csrf_token %}
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Confirm & Release Payment</button>
+        <button type="button" class="btn btn-ghost" onclick="closeModal('approveModal')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Dispute modal -->
+<div class="modal-backdrop" id="disputeModal">
+  <div class="modal" style="position:relative;">
+    <button class="modal-close" onclick="closeModal('disputeModal')"><i class="fas fa-times"></i></button>
+    <h3><i class="fas fa-exclamation-triangle" style="color:var(--orange); margin-right:8px;"></i>Raise a Dispute</h3>
+    <p class="modal-sub">Explain why you're raising a dispute. An admin will review and resolve it. Funds remain in escrow until resolved.</p>
+    <form method="post" id="disputeForm" action="" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label">Reason <span class="req" style="color:var(--orange);">*</span></label>
+        <textarea name="reason" class="form-control" rows="4"
+                  placeholder="Describe the issue in detail…" required></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Evidence (optional)</label>
+        <input type="file" name="evidence" class="form-control"
+               accept="image/*,.pdf,.doc,.docx">
+        <span style="font-size:0.75rem; color:var(--text-3); margin-top:4px;">Images, PDFs, or documents</span>
+      </div>
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-sm" style="background: var(--orange); color: #fff;">
+          <i class="fas fa-exclamation-triangle"></i> Raise Dispute
+        </button>
+        <button type="button" class="btn btn-ghost" onclick="closeModal('disputeModal')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openSubmitModal(milestoneId, title) {
+    document.getElementById('submitWorkForm').action =
+      '/escrow/milestones/' + milestoneId + '/submit/';
+    document.getElementById('submitModalSub').textContent =
+      'Submit work for "' + title + '" and notify the employer for review.';
+    document.getElementById('submitModal').classList.add('open');
+  }
+  function openApproveModal(milestoneId, title) {
+    document.getElementById('approveWorkForm').action =
+      '/escrow/milestones/' + milestoneId + '/approve/';
+    document.getElementById('approveModalSub').textContent =
+      'Approve "' + title + '" and release the escrowed payment to the worker. This cannot be undone.';
+    document.getElementById('approveModal').classList.add('open');
+  }
+  function openDisputeModal(milestoneId) {
+    document.getElementById('disputeForm').action =
+      '/escrow/milestones/' + milestoneId + '/dispute/';
+    document.getElementById('disputeModal').classList.add('open');
+  }
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+  // Close on backdrop click
+  document.querySelectorAll('.modal-backdrop').forEach(function(backdrop) {
+    backdrop.addEventListener('click', function(e) {
+      if (e.target === backdrop) closeModal(backdrop.id);
+    });
+  });
+  // Close on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-backdrop.open').forEach(function(m) {
+        m.classList.remove('open');
+      });
+    }
+  });
+  // Compute platform fee display: gross - net
+  document.querySelectorAll('.fee-calc').forEach(function(el) {
+    var gross = parseFloat(el.dataset.gross) || 0;
+    var net   = parseFloat(el.dataset.net)   || 0;
+    var fee   = gross - net;
+    el.textContent = Math.round(fee).toLocaleString();
+  });
+</script>
+
+{% endblock %}

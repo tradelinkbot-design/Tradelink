@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+{% block title %}Browse Trades — TradeLink NG{% endblock %}
+{% block nav_trades %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* =====================================================
+     TRADES LIST — /trades/
+  ===================================================== */
+
+  .page-hero {
+    padding-top: calc(var(--nav-h) + 64px);
+    padding-bottom: 64px;
+    position: relative; z-index: 1;
+    text-align: center;
+  }
+  .page-hero h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+    font-weight: 900; line-height: 1.1;
+    letter-spacing: -2px; margin-bottom: 16px;
+  }
+  .page-hero p {
+    color: var(--text-2); font-size: 1.05rem;
+    max-width: 520px; margin: 0 auto;
+  }
+
+  /* ===== STATS BAR ===== */
+  .stats-bar {
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(19,16,8,0.5);
+    padding: 24px 0;
+    position: relative; z-index: 1;
+  }
+  .stats-bar-inner {
+    max-width: 1200px; margin: 0 auto;
+    padding: 0 clamp(20px,4vw,48px);
+    display: flex; align-items: center;
+    justify-content: center; gap: 48px;
+    flex-wrap: wrap;
+  }
+  .stat-item { text-align: center; }
+  .stat-num {
+    font-family: 'Fraunces', serif;
+    font-size: 1.6rem; font-weight: 800; line-height: 1;
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: 4px;
+  }
+  .stat-lbl { font-size: 0.8rem; color: var(--text-3); font-weight: 500; }
+  .stat-divider { width: 1px; height: 36px; background: var(--border-subtle); }
+
+  /* ===== TRADE GRID ===== */
+  .trades-section {
+    padding: 80px 0 96px; position: relative; z-index: 1;
+  }
+  .container {
+    max-width: 1200px; margin: 0 auto;
+    padding: 0 clamp(20px,4vw,48px);
+  }
+  .section-header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    flex-wrap: wrap; gap: 20px; margin-bottom: 40px;
+  }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 0.78rem; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--amber); margin-bottom: 12px;
+  }
+  .eyebrow::before {
+    content: ''; display: block; width: 20px; height: 2px;
+    background: var(--amber); border-radius: 2px;
+  }
+  .section-title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    font-weight: 800; line-height: 1.2; letter-spacing: -1px;
+  }
+  .amber-text {
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .trades-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .trade-card {
+    padding: 28px 24px; cursor: pointer;
+    text-decoration: none; display: flex;
+    flex-direction: column; gap: 14px;
+    transition: var(--t);
+  }
+  .trade-icon-wrap {
+    width: 52px; height: 52px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.25rem; flex-shrink: 0;
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    color: var(--amber); transition: var(--t);
+  }
+  .trade-card:hover .trade-icon-wrap {
+    background: var(--surface-2);
+    border-color: var(--border-strong);
+    transform: scale(1.08) rotate(-3deg);
+  }
+  .trade-body { flex: 1; }
+  .trade-name {
+    font-family: 'Fraunces', serif;
+    font-size: 1.05rem; font-weight: 700;
+    color: var(--text-1); margin-bottom: 6px;
+    transition: var(--t);
+  }
+  .trade-card:hover .trade-name { color: var(--amber); }
+  .trade-desc {
+    font-size: 0.82rem; color: var(--text-3);
+    line-height: 1.6; display: -webkit-box;
+    -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .trade-counts {
+    display: flex; gap: 12px; flex-wrap: wrap;
+  }
+  .trade-count-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 0.78rem; color: var(--text-3);
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    padding: 3px 10px; border-radius: var(--r-pill);
+  }
+  .trade-count-pill i { font-size: 0.7rem; }
+  .trade-count-pill.jobs i { color: var(--amber); }
+  .trade-count-pill.workers i { color: var(--emerald); }
+  .trade-arrow {
+    margin-top: auto;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-3); font-size: 0.75rem; transition: var(--t);
+  }
+  .trade-card:hover .trade-arrow {
+    background: rgba(245,158,11,0.15);
+    color: var(--amber); border-color: var(--border-strong);
+    transform: translateX(4px);
+  }
+
+  /* ===== EMPTY STATE ===== */
+  .empty-state {
+    text-align: center; padding: 80px 24px;
+    color: var(--text-3);
+  }
+  .empty-state i {
+    font-size: 3rem; color: var(--border-strong);
+    margin-bottom: 20px; display: block;
+  }
+  .empty-state h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.4rem; color: var(--text-2); margin-bottom: 8px;
+  }
+
+  /* ===== CTA STRIP ===== */
+  .cta-strip {
+    background: var(--bg-raised);
+    border-top: 1px solid var(--border-subtle);
+    padding: 64px 0;
+    position: relative; z-index: 1;
+  }
+  .cta-strip-inner {
+    max-width: 760px; margin: 0 auto;
+    padding: 0 clamp(20px,4vw,48px);
+    text-align: center;
+  }
+  .cta-strip h2 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 800; margin-bottom: 16px;
+    letter-spacing: -1px;
+  }
+  .cta-strip p {
+    color: var(--text-2); font-size: 0.95rem;
+    margin-bottom: 32px; line-height: 1.75;
+  }
+  .cta-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 1024px) {
+    .trades-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 768px) {
+    .trades-grid { grid-template-columns: repeat(2, 1fr); }
+    .stats-bar-inner { gap: 24px; }
+    .stat-divider { display: none; }
+  }
+  @media (max-width: 480px) {
+    .trades-grid { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- PAGE HERO -->
+<section class="page-hero">
+  <div class="container">
+    <p class="eyebrow">All Trades</p>
+    <h1>Browse Nigeria's<br><span class="amber-text">Skilled Trades</span></h1>
+    <p>From electricians to hair stylists — discover every discipline and the opportunities waiting inside.</p>
+  </div>
+</section>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stats-bar-inner">
+    <div class="stat-item">
+      <div class="stat-num">{{ categories.count }}</div>
+      <div class="stat-lbl">Active Trades</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <div class="stat-num">{{ categories|length }}+</div>
+      <div class="stat-lbl">Disciplines</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <div class="stat-num">36</div>
+      <div class="stat-lbl">States Covered</div>
+    </div>
+  </div>
+</div>
+
+<!-- TRADES GRID -->
+<section class="trades-section">
+  <div class="container">
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">Explore</p>
+        <h2 class="section-title">All <span class="amber-text">Trade Categories</span></h2>
+      </div>
+      <a href="{% url 'marketplace:job_list' %}" class="btn btn-outline">
+        <i class="fas fa-briefcase"></i> Browse All Jobs
+      </a>
+    </div>
+
+    {% if categories %}
+      <div class="trades-grid">
+        {% for category in categories %}
+          <a href="{% url 'marketplace:trade_detail' slug=category.slug %}"
+             class="card trade-card fade-up"
+             style="animation-delay: {{ forloop.counter0|divisibleby:4|yesno:'0ms,' }}{% cycle '0ms' '80ms' '160ms' '240ms' %}">
+
+            <div class="trade-icon-wrap">
+              {% if category.icon_class %}
+                <i class="{{ category.icon_class }}"></i>
+              {% else %}
+                <i class="fas fa-tools"></i>
+              {% endif %}
+            </div>
+
+            <div class="trade-body">
+              <div class="trade-name">{{ category.name }}</div>
+              {% if category.description %}
+                <p class="trade-desc">{{ category.description }}</p>
+              {% endif %}
+            </div>
+
+            <div class="trade-counts">
+              <span class="trade-count-pill jobs">
+                <i class="fas fa-briefcase"></i>
+                {{ category.job_count }} job{{ category.job_count|pluralize }}
+              </span>
+              <span class="trade-count-pill workers">
+                <i class="fas fa-users"></i>
+                {{ category.worker_count }} worker{{ category.worker_count|pluralize }}
+              </span>
+            </div>
+
+            <div class="trade-arrow">
+              <i class="fas fa-arrow-right"></i>
+            </div>
+
+          </a>
+        {% endfor %}
+      </div>
+
+    {% else %}
+      <div class="empty-state">
+        <i class="fas fa-hard-hat"></i>
+        <h3>No active trade categories yet</h3>
+        <p>Check back soon — new trades are being added.</p>
+      </div>
+    {% endif %}
+
+  </div>
+</section>
+
+<!-- BOTTOM CTA -->
+<div class="cta-strip">
+  <div class="cta-strip-inner">
+    <p class="eyebrow" style="justify-content:center; margin-bottom:16px;">Get Started</p>
+    <h2>Can't Find Your Trade? <span class="amber-text">Tell Us.</span></h2>
+    <p>We're always expanding. If your skill isn't listed, let us know and we'll add it — or post a job for any trade category.</p>
+    <div class="cta-actions">
+      <a href="{% url 'marketplace:job_list' %}" class="btn btn-primary btn-lg">
+        <i class="fas fa-search"></i> Browse All Jobs
+      </a>
+      <a href="{% url 'home' %}" class="btn btn-ghost btn-lg">
+        <i class="fas fa-home"></i> Back to Home
+      </a>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Intersection Observer for staggered fade-up
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.animationPlayState = 'running';
+      }
+    });
+  }, { threshold: 0.08 });
+
+  document.querySelectorAll('.fade-up').forEach((el, i) => {
+    el.style.animationPlayState = 'paused';
+    el.style.animationDelay = `${(i % 4) * 80}ms`;
+    observer.observe(el);
+  });
+</script>
+{% endblock %}

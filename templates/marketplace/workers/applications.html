@@ -1,0 +1,1061 @@
+{% extends "base.html" %}
+{% block title %}My Applications — TradeLink NG{% endblock %}
+{% block nav_jobs %}active{% endblock %}
+
+{# ─────────────────────────────────────────────────────────────────────────────
+   Context — WorkerApplicationsView:
+     applications  — QuerySet[JobApplication] ordered by -applied_at
+                     select_related: job__employer, job__trade_category
+                     Fields used:
+                       .id, .status, .applied_at, .updated_at
+                       .clip_match_score, .cover_note, .employer_note
+                       .job.title, .job.state, .job.job_type, .job.pay_min
+                       .job.pay_type, .job.trade_category.name
+                       .job.employer.company_name / .user.username
+                       .job.employer.logo, .job.employer.is_verified
+     unread_count  — int (navbar badge)
+   Actions rendered:
+     withdraw  → POST marketplace:application_withdraw pk=app.pk
+                 (only when status == 'pending')
+───────────────────────────────────────────────────────────────────────────── #}
+
+{% block extra_head %}
+<style>
+/* =====================================================
+   MY APPLICATIONS — TradeLink NG
+   Shows every job a worker has applied to,
+   with status timeline, AI score, employer note,
+   cover note preview, and withdraw action.
+===================================================== */
+
+/* ── PAGE SHELL ── */
+.wa-page { padding-top: var(--nav-h); position: relative; z-index: 1; }
+
+/* ── BREADCRUMB ── */
+.wa-crumb {
+  padding: 20px 0;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.wa-crumb-inner {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.82rem; color: var(--text-3);
+}
+.wa-crumb a {
+  color: var(--text-3); text-decoration: none; transition: var(--t);
+  display: flex; align-items: center; gap: 6px;
+}
+.wa-crumb a:hover { color: var(--amber); }
+.wa-crumb-sep { font-size: 0.62rem; color: var(--text-3); }
+
+/* ── HERO ── */
+.wa-hero {
+  padding: 48px 0 44px;
+  background: linear-gradient(
+    160deg,
+    rgba(245,158,11,0.05) 0%,
+    rgba(249,115,22,0.02) 50%,
+    transparent 100%
+  );
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative; overflow: hidden;
+}
+.wa-hero::before {
+  content: '';
+  position: absolute; top: -80px; right: -80px;
+  width: 420px; height: 420px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,158,11,0.07), transparent 65%);
+  pointer-events: none;
+}
+
+/* ── STATS ROW ── */
+.wa-stats {
+  display: flex; gap: 0; flex-wrap: wrap;
+  margin-top: 28px;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); overflow: hidden;
+}
+.wa-stat-item {
+  flex: 1; min-width: 110px; padding: 18px 22px;
+  border-right: 1px solid var(--border-subtle);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.wa-stat-item:last-child { border-right: none; }
+.wa-stat-val {
+  font-family: 'Fraunces', serif; font-size: 1.7rem; font-weight: 900;
+  line-height: 1;
+}
+.wa-stat-val.amber  {
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.wa-stat-val.emerald { color: var(--emerald); }
+.wa-stat-val.sky     { color: var(--sky); }
+.wa-stat-val.muted   { color: var(--text-3); }
+.wa-stat-val.red     { color: #F87171; }
+.wa-stat-lbl {
+  font-size: 0.75rem; font-weight: 600; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 0.8px;
+}
+
+/* ── FILTER TABS ── */
+.wa-tabs {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  padding: 24px 0 0;
+}
+.wa-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 16px; border-radius: var(--r-md);
+  font-size: 0.83rem; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border-subtle); background: transparent;
+  color: var(--text-3); transition: var(--t); font-family: 'Outfit', sans-serif;
+}
+.wa-tab:hover { background: var(--surface-1); color: var(--text-2); border-color: var(--border-strong); }
+.wa-tab.active {
+  background: var(--surface-2); color: var(--amber);
+  border-color: rgba(245,158,11,0.3);
+}
+/* pulseDot used on active-status indicators — defined in base.html */
+.wa-tab-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: var(--r-pill); font-size: 0.68rem; font-weight: 800;
+  background: rgba(245,158,11,0.15); color: var(--amber);
+}
+.wa-tab.active .wa-tab-count { background: rgba(245,158,11,0.25); }
+
+/* ── MAIN BODY ── */
+.wa-body { padding: 40px 0 80px; }
+.wa-layout {
+  display: grid;
+  grid-template-columns: 1fr 268px;
+  gap: 32px; align-items: start;
+}
+
+/* ── APPLICATION CARD ── */
+.wa-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); overflow: hidden;
+  transition: var(--t); margin-bottom: 14px; position: relative;
+}
+.wa-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.32);
+}
+
+/* Left accent bar — colour-coded by status */
+.wa-card::after {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; border-radius: 0 0 0 var(--r-xl);
+  transition: background 0.3s;
+}
+.wa-card[data-status="pending"]     ::after { background: var(--amber); }
+.wa-card[data-status="shortlisted"] ::after { background: var(--sky); }
+.wa-card[data-status="accepted"]    ::after { background: var(--emerald); }
+.wa-card[data-status="rejected"]    ::after { background: #EF4444; }
+.wa-card[data-status="withdrawn"]   ::after { background: var(--text-3); }
+
+/* Card header */
+.wa-card-header {
+  padding: 20px 24px 16px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 16px; align-items: flex-start;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.wa-employer-logo {
+  width: 50px; height: 50px; border-radius: 13px; flex-shrink: 0;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; overflow: hidden;
+}
+.wa-employer-logo img { width: 100%; height: 100%; object-fit: cover; }
+
+.wa-card-title-block { min-width: 0; }
+.wa-job-title {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: var(--t);
+}
+.wa-card:hover .wa-job-title { color: var(--amber); }
+.wa-employer-name {
+  font-size: 0.81rem; color: var(--text-3);
+  display: flex; align-items: center; gap: 5px; margin-bottom: 8px;
+}
+.wa-card-meta {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+}
+.wa-meta-item {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 0.77rem; color: var(--text-3);
+}
+.wa-meta-item i { font-size: 0.66rem; }
+
+/* Status badge */
+.wa-status-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: var(--r-pill);
+  font-size: 0.73rem; font-weight: 700; white-space: nowrap; flex-shrink: 0;
+}
+.wa-s-pending     { background: rgba(245,158,11,0.1);  border: 1px solid rgba(245,158,11,0.25);  color: var(--amber); }
+.wa-s-shortlisted { background: rgba(56,189,248,0.1);  border: 1px solid rgba(56,189,248,0.22);  color: var(--sky); }
+.wa-s-accepted    { background: rgba(16,185,129,0.1);  border: 1px solid rgba(16,185,129,0.22);  color: var(--emerald); }
+.wa-s-rejected    { background: rgba(239,68,68,0.08);  border: 1px solid rgba(239,68,68,0.2);    color: #F87171; }
+.wa-s-withdrawn   { background: rgba(250,245,235,0.04);border: 1px solid var(--border-subtle);   color: var(--text-3); }
+
+/* AI score chip */
+.wa-ai-score {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: var(--r-pill);
+  background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2);
+  font-size: 0.73rem; font-weight: 700; color: var(--amber);
+}
+.wa-ai-score i { font-size: 0.62rem; }
+
+/* Card body */
+.wa-card-body { padding: 16px 24px; }
+
+/* Status timeline */
+.wa-timeline {
+  display: flex; align-items: flex-start;
+  gap: 0; margin-bottom: 14px;
+}
+.wa-tl-step {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; gap: 5px; position: relative;
+  min-width: 56px;
+}
+/* connector line between steps */
+.wa-tl-step:not(:last-child)::after {
+  content: '';
+  position: absolute; top: 9px; left: 50%; right: -50%;
+  height: 2px; background: var(--border-subtle); z-index: 0;
+}
+.wa-tl-step.tl-done::after  { background: var(--emerald); }
+.wa-tl-step.tl-skip::after  { background: #EF4444; }
+
+.wa-tl-dot {
+  width: 20px; height: 20px; border-radius: 50%; z-index: 1; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.58rem; font-weight: 700; border: 2px solid var(--border-subtle);
+  background: var(--bg-card); color: var(--text-3); transition: var(--t);
+}
+.wa-tl-step.tl-done .wa-tl-dot   { background: var(--emerald); border-color: var(--emerald);  color: #fff; }
+.wa-tl-step.tl-active .wa-tl-dot { background: var(--amber);   border-color: var(--amber);    color: #0C0A08; }
+.wa-tl-step.tl-skip .wa-tl-dot   { background: #EF4444;        border-color: #EF4444;          color: #fff; }
+
+.wa-tl-label {
+  font-size: 0.66rem; font-weight: 600; color: var(--text-3);
+  text-align: center; white-space: nowrap; line-height: 1.3;
+}
+.wa-tl-step.tl-done .wa-tl-label   { color: var(--emerald); }
+.wa-tl-step.tl-active .wa-tl-label { color: var(--amber); }
+.wa-tl-step.tl-skip .wa-tl-label   { color: #F87171; }
+
+/* Cover note preview */
+.wa-cover-note {
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--border-strong);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+  font-size: 0.85rem; color: var(--text-2); line-height: 1.7;
+  font-style: italic; margin-bottom: 12px;
+}
+.wa-cover-note-label {
+  font-size: 0.68rem; font-weight: 700; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 0.8px;
+  font-style: normal; display: block; margin-bottom: 5px;
+}
+
+/* Employer note (shortlisted/accepted/rejected) */
+.wa-employer-note {
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  font-size: 0.85rem; line-height: 1.7; margin-bottom: 12px;
+}
+.wa-employer-note.note-positive {
+  background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.18);
+  border-left: 3px solid var(--emerald); color: var(--text-2);
+}
+.wa-employer-note.note-negative {
+  background: rgba(239,68,68,0.05);  border: 1px solid rgba(239,68,68,0.15);
+  border-left: 3px solid #EF4444; color: var(--text-2);
+}
+.wa-employer-note.note-neutral {
+  background: rgba(56,189,248,0.05); border: 1px solid rgba(56,189,248,0.15);
+  border-left: 3px solid var(--sky); color: var(--text-2);
+}
+.wa-employer-note-label {
+  font-size: 0.68rem; font-weight: 700; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-bottom: 4px;
+}
+
+/* Card footer */
+.wa-card-footer {
+  padding: 12px 24px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px;
+  background: rgba(255,255,255,0.01);
+}
+.wa-footer-dates { font-size: 0.76rem; color: var(--text-3); display: flex; gap: 14px; flex-wrap: wrap; }
+.wa-footer-dates span { display: flex; align-items: center; gap: 5px; }
+.wa-footer-dates i   { font-size: 0.65rem; color: var(--text-3); }
+.wa-footer-actions   { display: flex; align-items: center; gap: 8px; }
+
+/* Withdraw confirm overlay */
+.wa-withdraw-confirm {
+  display: none; padding: 14px 16px;
+  background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+  border-radius: var(--r-md); margin: 0 24px 14px;
+}
+.wa-withdraw-confirm.open { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.wa-withdraw-confirm p {
+  flex: 1; font-size: 0.83rem; color: var(--text-2); line-height: 1.55;
+}
+
+/* ── SIDEBAR ── */
+.wa-sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+.wa-sidebar-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 22px; overflow: hidden; position: relative;
+}
+.wa-sidebar-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(245,158,11,0.03), transparent 70%);
+  pointer-events: none;
+}
+.wa-sidebar-title {
+  font-family: 'Fraunces', serif; font-size: 0.95rem; font-weight: 800;
+  margin-bottom: 16px; padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; gap: 8px;
+}
+.wa-sidebar-title i { color: var(--amber); font-size: 0.82rem; }
+
+/* Status key in sidebar */
+.wa-key-row {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 0; border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.81rem;
+}
+.wa-key-row:last-of-type { border-bottom: none; }
+.wa-key-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.wa-key-name  { flex: 1; color: var(--text-2); font-weight: 600; }
+.wa-key-desc  { font-size: 0.74rem; color: var(--text-3); }
+
+/* Quick links */
+.wa-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--r-md);
+  text-decoration: none; color: var(--text-2);
+  font-size: 0.85rem; font-weight: 600; transition: var(--t);
+  border: 1px solid transparent;
+}
+.wa-link:hover {
+  background: var(--surface-1); border-color: var(--border-subtle); color: var(--text-1);
+}
+.wa-link i { color: var(--amber); width: 16px; text-align: center; font-size: 0.8rem; }
+.wa-link-arrow { margin-left: auto; font-size: 0.63rem; color: var(--text-3); transition: var(--t); }
+.wa-link:hover .wa-link-arrow { color: var(--amber); transform: translateX(3px); }
+
+/* ── EMPTY STATE ── */
+.wa-empty {
+  padding: 80px 24px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+.wa-empty-icon {
+  width: 80px; height: 80px; border-radius: 22px;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; color: var(--text-3);
+}
+.wa-empty-title {
+  font-family: 'Fraunces', serif; font-size: 1.4rem; font-weight: 800;
+}
+.wa-empty-sub {
+  font-size: 0.92rem; color: var(--text-2); max-width: 380px;
+  line-height: 1.75;
+}
+
+/* ── MESSAGES ── */
+.wa-messages {
+  position: fixed; top: calc(var(--nav-h) + 16px); right: 20px;
+  z-index: 3000; display: flex; flex-direction: column; gap: 10px;
+  max-width: 380px; pointer-events: none;
+}
+.wa-msg {
+  padding: 12px 18px; border-radius: var(--r-lg);
+  font-size: 0.87rem; font-weight: 600;
+  display: flex; align-items: center; gap: 10px;
+  box-shadow: var(--shadow-md); pointer-events: all; cursor: pointer;
+  animation: waMsgIn 0.35s var(--ease) both;
+}
+.wa-msg-success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #6EE7B7; }
+.wa-msg-error   { background: rgba(239,68,68,0.15);  border: 1px solid rgba(239,68,68,0.3);  color: #FCA5A5; }
+.wa-msg-info    { background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.25); color: var(--sky); }
+@keyframes waMsgIn { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:translateX(0); } }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1024px) {
+  .wa-layout { grid-template-columns: 1fr; }
+  .wa-sidebar { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+}
+@media (max-width: 768px) {
+  .wa-stats { border-radius: var(--r-lg); }
+  .wa-stat-item { min-width: 90px; padding: 14px 16px; }
+  .wa-stat-val  { font-size: 1.4rem; }
+  .wa-card-header { grid-template-columns: auto 1fr; }
+}
+@media (max-width: 560px) {
+  .wa-sidebar    { grid-template-columns: 1fr; }
+  .wa-tabs       { gap: 6px; }
+  .wa-tab        { font-size: 0.78rem; padding: 6px 12px; }
+  .wa-timeline   { gap: 0; }
+  .wa-footer-dates { gap: 8px; }
+}
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+{# ── Floating messages ── #}
+{% if messages %}
+<div class="wa-messages">
+  {% for message in messages %}
+  <div class="wa-msg wa-msg-{{ message.tags }}" onclick="this.remove()">
+    {% if 'success' in message.tags %}<i class="fas fa-circle-check"></i>
+    {% elif 'error' in message.tags %}<i class="fas fa-circle-exclamation"></i>
+    {% else %}<i class="fas fa-circle-info"></i>{% endif %}
+    {{ message }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Pre-count statuses for stats row (done in template to avoid extra view queries) ── #}
+{% with total=applications|length %}
+
+<div class="wa-page">
+
+  {# ── Breadcrumb ── #}
+  <div class="wa-crumb">
+    <div class="container">
+      <div class="wa-crumb-inner">
+        <a href="{% url 'marketplace:worker_dashboard' %}">
+          <i class="fas fa-gauge" style="font-size:0.72rem;"></i> Dashboard
+        </a>
+        <span class="wa-crumb-sep"><i class="fas fa-chevron-right"></i></span>
+        <span style="color:var(--amber);font-weight:600;">My Applications</span>
+      </div>
+    </div>
+  </div>
+
+  {# ── Hero ── #}
+  <div class="wa-hero">
+    <div class="container">
+
+      <p class="eyebrow">Worker</p>
+      <h1 style="font-family:'Fraunces',serif;font-size:clamp(1.7rem,3.5vw,2.6rem);font-weight:900;letter-spacing:-1px;line-height:1.1;margin-bottom:8px;">
+        My <span class="amber-text">Applications</span>
+      </h1>
+      <p style="color:var(--text-2);font-size:0.95rem;max-width:480px;line-height:1.7;">
+        Track every job you've applied for.
+        {% if total %}
+          You have <strong style="color:var(--text-1);">{{ total }}</strong>
+          application{{ total|pluralize }} in total.
+        {% endif %}
+      </p>
+
+      {# Stats row — only shown when there are applications #}
+      {% if applications %}
+      <div class="wa-stats fade-up">
+
+        <div class="wa-stat-item">
+          <div class="wa-stat-val amber">{{ total }}</div>
+          <div class="wa-stat-lbl">Total</div>
+        </div>
+
+        {# Count each status — Django template filters #}
+        <div class="wa-stat-item">
+          <div class="wa-stat-val amber">
+            {% with cnt=0 %}
+            {% for a in applications %}{% if a.status == 'pending' %}{% with cnt=cnt|add:1 %}{% endwith %}{% endif %}{% endfor %}
+            {{ applications|dictsortreversed:"status"|length }}
+            {% endwith %}
+            {# Simpler: render dynamically via JS from data attributes #}
+          </div>
+          <div class="wa-stat-lbl">Pending</div>
+        </div>
+
+        <div class="wa-stat-item">
+          <div class="wa-stat-val sky" id="stat-shortlisted">—</div>
+          <div class="wa-stat-lbl">Shortlisted</div>
+        </div>
+
+        <div class="wa-stat-item">
+          <div class="wa-stat-val emerald" id="stat-accepted">—</div>
+          <div class="wa-stat-lbl">Accepted</div>
+        </div>
+
+        <div class="wa-stat-item">
+          <div class="wa-stat-val red" id="stat-rejected">—</div>
+          <div class="wa-stat-lbl">Rejected</div>
+        </div>
+
+      </div>
+      {% endif %}
+
+      {# Filter tabs #}
+      {% if applications %}
+      <div class="wa-tabs">
+        <button class="wa-tab active" data-filter="all" onclick="filterApps('all', this)">
+          All <span class="wa-tab-count" id="count-all">{{ total }}</span>
+        </button>
+        <button class="wa-tab" data-filter="pending" onclick="filterApps('pending', this)">
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--amber);display:inline-block;animation:pulseDot 2s ease-in-out infinite;"></span>
+          Pending <span class="wa-tab-count" id="count-pending">0</span>
+        </button>
+        <button class="wa-tab" data-filter="shortlisted" onclick="filterApps('shortlisted', this)">
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--sky);display:inline-block;"></span>
+          Shortlisted <span class="wa-tab-count" id="count-shortlisted">0</span>
+        </button>
+        <button class="wa-tab" data-filter="accepted" onclick="filterApps('accepted', this)">
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--emerald);display:inline-block;"></span>
+          Accepted <span class="wa-tab-count" id="count-accepted">0</span>
+        </button>
+        <button class="wa-tab" data-filter="rejected" onclick="filterApps('rejected', this)">
+          <span style="width:7px;height:7px;border-radius:50%;background:#EF4444;display:inline-block;"></span>
+          Rejected <span class="wa-tab-count" id="count-rejected">0</span>
+        </button>
+        <button class="wa-tab" data-filter="withdrawn" onclick="filterApps('withdrawn', this)">
+          Withdrawn <span class="wa-tab-count" id="count-withdrawn">0</span>
+        </button>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>{# /hero #}
+
+
+  {# ── Body ── #}
+  <section class="wa-body">
+    <div class="container">
+
+      {% if applications %}
+
+      <div class="wa-layout">
+
+        {# ── Application cards ── #}
+        <div id="appsList">
+
+          {% for app in applications %}
+          <div class="wa-card fade-up"
+               data-status="{{ app.status }}"
+               style="animation-delay: {{ forloop.counter0|stringformat:'d' }}00ms;"
+               id="app-{{ app.pk }}">
+
+            {# ── Card header ── #}
+            <div class="wa-card-header">
+
+              {# Employer logo #}
+              <div class="wa-employer-logo">
+                {% if app.job.employer.logo %}
+                  <img src="{{ app.job.employer.logo.url }}" alt="{{ app.job.employer }}">
+                {% else %}
+                  <i class="fas fa-building" style="color:var(--text-3);"></i>
+                {% endif %}
+              </div>
+
+              {# Job info #}
+              <div class="wa-card-title-block">
+                <a href="{% url 'marketplace:job_detail' pk=app.job.pk %}"
+                   style="text-decoration:none;">
+                  <div class="wa-job-title">{{ app.job.title }}</div>
+                </a>
+                <div class="wa-employer-name">
+                  <i class="fas fa-building" style="font-size:0.66rem;"></i>
+                  {{ app.job.employer.company_name|default:app.job.employer.user.username }}
+                  {% if app.job.employer.is_verified %}
+                  <i class="fas fa-circle-check" style="color:var(--emerald);font-size:0.64rem;"></i>
+                  {% endif %}
+                </div>
+                <div class="wa-card-meta">
+                  {% if app.job.trade_category %}
+                  <div class="wa-meta-item">
+                    <i class="fas fa-layer-group"></i>
+                    {{ app.job.trade_category.name }}
+                  </div>
+                  {% endif %}
+                  {% if app.job.state %}
+                  <div class="wa-meta-item">
+                    <i class="fas fa-map-pin"></i>
+                    {{ app.job.get_state_display }}
+                  </div>
+                  {% endif %}
+                  <div class="wa-meta-item">
+                    <i class="fas fa-clock"></i>
+                    {{ app.job.get_job_type_display }}
+                  </div>
+                  {% if app.job.pay_min %}
+                  <div class="wa-meta-item" style="color:var(--amber);font-weight:600;">
+                    <i class="fas fa-naira-sign"></i>
+                    ₦{{ app.job.pay_min|floatformat:0 }}
+                    <span style="font-weight:400;color:var(--text-3);font-size:0.7rem;">/ {{ app.job.get_pay_type_display }}</span>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              {# Status badge #}
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex-shrink:0;">
+                <span class="wa-status-badge
+                  {% if app.status == 'pending' %}wa-s-pending
+                  {% elif app.status == 'shortlisted' %}wa-s-shortlisted
+                  {% elif app.status == 'accepted' %}wa-s-accepted
+                  {% elif app.status == 'rejected' %}wa-s-rejected
+                  {% else %}wa-s-withdrawn{% endif %}">
+                  {% if app.status == 'pending' %}
+                    <i class="fas fa-clock" style="font-size:0.62rem;"></i> Pending
+                  {% elif app.status == 'shortlisted' %}
+                    <i class="fas fa-list-check" style="font-size:0.62rem;"></i> Shortlisted
+                  {% elif app.status == 'accepted' %}
+                    <i class="fas fa-circle-check" style="font-size:0.62rem;"></i> Accepted!
+                  {% elif app.status == 'rejected' %}
+                    <i class="fas fa-circle-xmark" style="font-size:0.62rem;"></i> Rejected
+                  {% else %}
+                    <i class="fas fa-ban" style="font-size:0.62rem;"></i> Withdrawn
+                  {% endif %}
+                </span>
+                {% if app.clip_match_score %}
+                <span class="wa-ai-score">
+                  <i class="fas fa-brain"></i>
+                  {% widthratio app.clip_match_score 1 100 %}% match
+                </span>
+                {% endif %}
+              </div>
+
+            </div>{# /header #}
+
+            {# ── Card body ── #}
+            <div class="wa-card-body">
+
+              {# Status timeline #}
+              <div class="wa-timeline">
+
+                {# Step 1: Submitted — always done #}
+                <div class="wa-tl-step tl-done">
+                  <div class="wa-tl-dot"><i class="fas fa-check" style="font-size:0.55rem;"></i></div>
+                  <div class="wa-tl-label">Submitted</div>
+                </div>
+
+                {# Step 2: Under Review #}
+                <div class="wa-tl-step
+                  {% if app.status == 'pending' %}tl-active
+                  {% elif app.status == 'withdrawn' %}tl-skip
+                  {% elif app.status != 'pending' %}tl-done{% endif %}">
+                  <div class="wa-tl-dot">
+                    {% if app.status in 'shortlisted,accepted,rejected' %}
+                      <i class="fas fa-check" style="font-size:0.55rem;"></i>
+                    {% elif app.status == 'withdrawn' %}
+                      <i class="fas fa-xmark" style="font-size:0.55rem;"></i>
+                    {% else %}
+                      2
+                    {% endif %}
+                  </div>
+                  <div class="wa-tl-label">Under<br>Review</div>
+                </div>
+
+                {# Step 3: Shortlisted / Rejected split #}
+                {% if app.status == 'rejected' %}
+                <div class="wa-tl-step tl-skip">
+                  <div class="wa-tl-dot"><i class="fas fa-xmark" style="font-size:0.55rem;"></i></div>
+                  <div class="wa-tl-label">Rejected</div>
+                </div>
+                {% else %}
+                <div class="wa-tl-step
+                  {% if app.status == 'shortlisted' or app.status == 'accepted' %}tl-done{% endif %}">
+                  <div class="wa-tl-dot">
+                    {% if app.status == 'shortlisted' or app.status == 'accepted' %}
+                      <i class="fas fa-check" style="font-size:0.55rem;"></i>
+                    {% else %}3{% endif %}
+                  </div>
+                  <div class="wa-tl-label">Short-<br>listed</div>
+                </div>
+                {% endif %}
+
+                {# Step 4: Accepted #}
+                <div class="wa-tl-step {% if app.status == 'accepted' %}tl-done{% endif %}">
+                  <div class="wa-tl-dot">
+                    {% if app.status == 'accepted' %}<i class="fas fa-check" style="font-size:0.55rem;"></i>
+                    {% else %}4{% endif %}
+                  </div>
+                  <div class="wa-tl-label">Accepted</div>
+                </div>
+
+              </div>{# /timeline #}
+
+              {# Cover note preview #}
+              {% if app.cover_note %}
+              <div class="wa-cover-note">
+                <span class="wa-cover-note-label">Your cover note</span>
+                {{ app.cover_note|truncatechars:200 }}
+              </div>
+              {% endif %}
+
+              {# Employer note — shown when status changes from pending #}
+              {% if app.employer_note %}
+              <div class="wa-employer-note
+                {% if app.status == 'accepted' or app.status == 'shortlisted' %}note-positive
+                {% elif app.status == 'rejected' %}note-negative
+                {% else %}note-neutral{% endif %}">
+                <span class="wa-employer-note-label">
+                  <i class="fas fa-building" style="margin-right:4px;"></i>
+                  Message from {{ app.job.employer.company_name|default:app.job.employer.user.username }}
+                </span>
+                {{ app.employer_note }}
+              </div>
+              {% endif %}
+
+              {# Accepted — congratulations call-out #}
+              {% if app.status == 'accepted' %}
+              <div style="padding:14px 16px;border-radius:var(--r-lg);background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);display:flex;align-items:center;gap:12px;margin-bottom:0;">
+                <div style="width:36px;height:36px;border-radius:10px;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;font-size:1rem;color:var(--emerald);flex-shrink:0;">
+                  <i class="fas fa-party-horn"></i>
+                </div>
+                <div style="flex-grow: 1;">
+                  <div style="font-weight:700;font-size:0.9rem;color:var(--emerald);margin-bottom:2px;">Congratulations — you were accepted!</div>
+                  <div style="font-size:0.8rem;color:var(--text-2);">The employer has accepted your application. Expect them to contact you soon.</div>
+                </div>
+                <a href="{% url 'marketplace:review_submit' pk=app.job.pk %}" class="btn btn-sm" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:var(--amber);text-decoration:none;flex-shrink:0;padding:6px 12px;border-radius:var(--r-md);font-weight:600;font-size:0.8rem;">
+                  <i class="fas fa-star"></i> Leave Review
+                </a>
+              </div>
+              {% endif %}
+
+            </div>{# /body #}
+
+            {# Withdraw confirm strip (hidden until triggered) #}
+            {% if app.status == 'pending' %}
+            <div class="wa-withdraw-confirm" id="confirm-{{ app.pk }}">
+              <p>Are you sure you want to withdraw your application for <strong>{{ app.job.title }}</strong>? This cannot be undone.</p>
+              <div style="display:flex;gap:8px;flex-shrink:0;">
+                <button type="button"
+                        class="btn btn-ghost btn-sm"
+                        onclick="cancelWithdraw('{{ app.pk }}')">Cancel</button>
+                <form method="POST"
+                      action="{% url 'marketplace:application_withdraw' pk=app.pk %}">
+                  {% csrf_token %}
+                  <button type="submit"
+                          class="btn btn-sm"
+                          style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#F87171;">
+                    <i class="fas fa-ban"></i> Yes, Withdraw
+                  </button>
+                </form>
+              </div>
+            </div>
+            {% endif %}
+
+            {# ── Card footer ── #}
+            <div class="wa-card-footer">
+              <div class="wa-footer-dates">
+                <span>
+                  <i class="fas fa-calendar-plus"></i>
+                  Applied {{ app.applied_at|date:"d M Y" }}
+                </span>
+                {% if app.updated_at != app.applied_at %}
+                <span>
+                  <i class="fas fa-rotate"></i>
+                  Updated {{ app.updated_at|date:"d M Y" }}
+                </span>
+                {% endif %}
+              </div>
+
+              <div class="wa-footer-actions">
+                {# View job — always available #}
+                <a href="{% url 'marketplace:job_detail' pk=app.job.pk %}"
+                   class="btn btn-ghost btn-sm">
+                  <i class="fas fa-external-link-alt" style="font-size:0.72rem;"></i>
+                  View Job
+                </a>
+
+                {# Withdraw — only when pending #}
+                {% if app.status == 'pending' %}
+                <button type="button"
+                        class="btn btn-ghost btn-sm"
+                        style="color:#F87171;border-color:rgba(239,68,68,0.2);"
+                        onclick="askWithdraw('{{ app.pk }}')">
+                  <i class="fas fa-ban" style="font-size:0.72rem;"></i>
+                  Withdraw
+                </button>
+                {% endif %}
+
+                {# Apply to a similar job — when rejected or withdrawn #}
+                {% if app.status == 'rejected' or app.status == 'withdrawn' %}
+                <a href="{% url 'marketplace:job_list' %}"
+                   class="btn btn-ghost btn-sm">
+                  <i class="fas fa-search" style="font-size:0.72rem;"></i>
+                  Find Similar
+                </a>
+                {% endif %}
+              </div>
+
+            </div>{# /footer #}
+
+          </div>{# /wa-card #}
+          {% endfor %}
+
+          {# ── No results for active filter ── #}
+          <div id="noFilterResults"
+               style="display:none;padding:48px 24px;text-align:center;">
+            <div style="width:56px;height:56px;border-radius:16px;background:var(--surface-1);border:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:var(--text-3);margin:0 auto 14px;">
+              <i class="fas fa-filter"></i>
+            </div>
+            <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:800;margin-bottom:6px;">
+              No <span id="noFilterLabel">—</span> applications
+            </div>
+            <p style="font-size:0.86rem;color:var(--text-2);max-width:300px;margin:0 auto;">
+              You don't have any applications with that status yet.
+            </p>
+          </div>
+
+        </div>{# /appsList #}
+
+        {# ── Sidebar ── #}
+        <div class="wa-sidebar">
+
+          {# Status key #}
+          <div class="wa-sidebar-card fade-in">
+            <div class="wa-sidebar-title">
+              <i class="fas fa-circle-info"></i> Status Guide
+            </div>
+            <div class="wa-key-row">
+              <span class="wa-key-dot" style="background:var(--amber);"></span>
+              <span class="wa-key-name">Pending</span>
+              <span class="wa-key-desc">Awaiting employer review</span>
+            </div>
+            <div class="wa-key-row">
+              <span class="wa-key-dot" style="background:var(--sky);"></span>
+              <span class="wa-key-name">Shortlisted</span>
+              <span class="wa-key-desc">Employer is considering you</span>
+            </div>
+            <div class="wa-key-row">
+              <span class="wa-key-dot" style="background:var(--emerald);"></span>
+              <span class="wa-key-name">Accepted</span>
+              <span class="wa-key-desc">You got the job!</span>
+            </div>
+            <div class="wa-key-row">
+              <span class="wa-key-dot" style="background:#EF4444;"></span>
+              <span class="wa-key-name">Rejected</span>
+              <span class="wa-key-desc">Employer went with someone else</span>
+            </div>
+            <div class="wa-key-row">
+              <span class="wa-key-dot" style="background:var(--text-3);"></span>
+              <span class="wa-key-name">Withdrawn</span>
+              <span class="wa-key-desc">You cancelled this application</span>
+            </div>
+          </div>
+
+          {# AI match info #}
+          <div class="wa-sidebar-card fade-in d1">
+            <div class="wa-sidebar-title">
+              <i class="fas fa-brain"></i> AI Match Scores
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-2);line-height:1.65;margin-bottom:12px;">
+              The % match score next to each application is a <strong style="color:var(--text-1);">snapshot</strong>
+              taken at the time you applied — combining text, location, experience, portfolio, and rating signals.
+            </p>
+            <a href="{% url 'marketplace:worker_matches' %}"
+               class="btn btn-primary btn-sm"
+               style="width:100%;justify-content:center;">
+              <i class="fas fa-bolt"></i> View New AI Matches
+            </a>
+          </div>
+
+          {# Quick links #}
+          <div class="wa-sidebar-card fade-in d2">
+            <div class="wa-sidebar-title">
+              <i class="fas fa-compass"></i> Quick Links
+            </div>
+            <a href="{% url 'marketplace:job_list' %}" class="wa-link">
+              <i class="fas fa-search"></i> Browse All Jobs
+              <i class="fas fa-chevron-right wa-link-arrow"></i>
+            </a>
+            <a href="{% url 'marketplace:worker_matches' %}" class="wa-link">
+              <i class="fas fa-brain"></i> AI Matches
+              <i class="fas fa-chevron-right wa-link-arrow"></i>
+            </a>
+            <a href="{% url 'marketplace:worker_profile_edit' %}" class="wa-link">
+              <i class="fas fa-user-pen"></i> Edit Profile
+              <i class="fas fa-chevron-right wa-link-arrow"></i>
+            </a>
+            <a href="{% url 'marketplace:worker_dashboard' %}" class="wa-link">
+              <i class="fas fa-gauge"></i> Dashboard
+              <i class="fas fa-chevron-right wa-link-arrow"></i>
+            </a>
+          </div>
+
+        </div>{# /sidebar #}
+
+      </div>{# /layout #}
+
+
+      {# ── Empty state — no applications at all ── #}
+      {% else %}
+
+      <div class="card wa-empty">
+        <div class="wa-empty-icon"><i class="fas fa-paper-plane"></i></div>
+        <div class="wa-empty-title">No applications yet</div>
+        <p class="wa-empty-sub">
+          Find jobs that match your skills and start applying.
+          Our AI recommends the best ones for you.
+        </p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+          <a href="{% url 'marketplace:worker_matches' %}" class="btn btn-primary btn-lg">
+            <i class="fas fa-brain"></i> View AI Matches
+          </a>
+          <a href="{% url 'marketplace:job_list' %}" class="btn btn-ghost btn-lg">
+            <i class="fas fa-search"></i> Browse All Jobs
+          </a>
+        </div>
+      </div>
+
+      {% endif %}
+
+    </div>
+  </section>
+
+</div>{# /wa-page #}
+{% endwith %}
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+/* ─────────────────────────────────────────────────────────────
+   1.  COUNT STATUSES & POPULATE STATS + TABS
+   Read data-status from every card, update the stat numbers
+   and tab counts, then set the pending stat in the hero.
+───────────────────────────────────────────────────────────── */
+(function buildCounts() {
+  const counts = { all: 0, pending: 0, shortlisted: 0, accepted: 0, rejected: 0, withdrawn: 0 };
+
+  document.querySelectorAll('.wa-card[data-status]').forEach(card => {
+    const st = card.dataset.status;
+    counts.all++;
+    if (counts[st] !== undefined) counts[st]++;
+  });
+
+  /* Tab badges */
+  Object.keys(counts).forEach(k => {
+    const el = document.getElementById('count-' + k);
+    if (el) el.textContent = counts[k];
+  });
+
+  /* Hero stat boxes */
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('stat-shortlisted', counts.shortlisted);
+  set('stat-accepted',    counts.accepted);
+  set('stat-rejected',    counts.rejected);
+
+  /* Pending stat — second box in the stats row (first is "total") */
+  const pendingStat = document.querySelector('.wa-stats .wa-stat-item:nth-child(2) .wa-stat-val');
+  if (pendingStat) pendingStat.textContent = counts.pending;
+})();
+
+
+/* ─────────────────────────────────────────────────────────────
+   2.  FILTER TABS — show / hide cards by status
+───────────────────────────────────────────────────────────── */
+function filterApps(status, btn) {
+  /* Update active tab */
+  document.querySelectorAll('.wa-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+
+  let visible = 0;
+  document.querySelectorAll('.wa-card[data-status]').forEach(card => {
+    const show = status === 'all' || card.dataset.status === status;
+    card.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+
+  /* Empty message */
+  const noRes = document.getElementById('noFilterResults');
+  const lbl   = document.getElementById('noFilterLabel');
+  if (noRes) {
+    noRes.style.display = visible === 0 ? 'block' : 'none';
+    if (lbl && status !== 'all') lbl.textContent = status;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   3.  WITHDRAW CONFIRM — show / hide inline confirmation strip
+───────────────────────────────────────────────────────────── */
+function askWithdraw(pk) {
+  const strip = document.getElementById('confirm-' + pk);
+  if (strip) {
+    strip.classList.add('open');
+    strip.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+function cancelWithdraw(pk) {
+  const strip = document.getElementById('confirm-' + pk);
+  if (strip) strip.classList.remove('open');
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   4.  SCROLL-TRIGGERED FADE-UP
+───────────────────────────────────────────────────────────── */
+const fadeObs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.style.animationPlayState = 'running';
+      fadeObs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.06 });
+
+document.querySelectorAll('.fade-up').forEach(el => {
+  el.style.animationPlayState = 'paused';
+  fadeObs.observe(el);
+});
+
+/* Sidebar cards staggered fade-in */
+document.querySelectorAll('.fade-in').forEach((el, i) => {
+  el.style.opacity   = '0';
+  el.style.transform = 'translateY(10px)';
+  el.style.transition = `opacity 0.45s ${0.1 + i * 0.09}s ease, transform 0.45s ${0.1 + i * 0.09}s ease`;
+  const o = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting) {
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0)';
+      o.disconnect();
+    }
+  }, { threshold: 0.1 });
+  o.observe(el);
+});
+
+
+/* ─────────────────────────────────────────────────────────────
+   5.  AUTO-DISMISS MESSAGES
+───────────────────────────────────────────────────────────── */
+document.querySelectorAll('.wa-msg').forEach(el => {
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.4s';
+    el.style.opacity    = '0';
+    setTimeout(() => el.remove(), 440);
+  }, 4000);
+});
+</script>
+{% endblock %}

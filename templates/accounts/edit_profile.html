@@ -1,0 +1,695 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}My Profile — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── PAGE SHELL ──────────────────────────────────────────────────────────── */
+  .profile-page {
+    min-height: 100vh;
+    padding: calc(var(--nav-h) + 48px) clamp(16px,5vw,64px) 80px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  .profile-hero {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+
+  .profile-hero h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.5rem, 4vw, 2.2rem);
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--text-1) 0%, var(--amber) 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .profile-hero p {
+    color: var(--text-2);
+    font-size: 0.95rem;
+    margin-top: 4px;
+  }
+
+  /* ── TABS ────────────────────────────────────────────────────────────────── */
+  .profile-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 36px;
+  }
+  .tab-btn {
+    padding: 10px 24px;
+    border: none;
+    background: none;
+    color: var(--text-2);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: var(--t);
+    border-radius: var(--r-md) var(--r-md) 0 0;
+  }
+  .tab-btn:hover { color: var(--text-1); background: var(--surface-1); }
+  .tab-btn.active {
+    color: var(--amber);
+    border-bottom-color: var(--amber);
+    background: var(--surface-1);
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; animation: fadeUp 0.35s var(--ease) both; }
+
+  /* ── CARD ────────────────────────────────────────────────────────────────── */
+  .profile-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 36px;
+    position: relative;
+    overflow: hidden;
+  }
+  .profile-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 40% at 80% 0%, rgba(245,158,11,0.07) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  /* ── AVATAR UPLOAD ───────────────────────────────────────────────────────── */
+  .avatar-section {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    margin-bottom: 36px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--border-subtle);
+    flex-wrap: wrap;
+  }
+  .avatar-wrap {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    flex-shrink: 0;
+  }
+  .avatar-img {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--border-strong);
+    background: var(--bg-raised);
+  }
+  .avatar-placeholder {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--amber-dark), var(--orange));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.2rem; font-weight: 800; color: #0C0A08;
+    border: 3px solid var(--border-strong);
+  }
+  .avatar-edit-btn {
+    position: absolute;
+    bottom: 2px; right: 2px;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    border: 2px solid var(--bg-base);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: #0C0A08; font-size: 0.72rem;
+    transition: var(--t);
+  }
+  .avatar-edit-btn:hover { transform: scale(1.12); filter: brightness(1.1); }
+  #avatar-file { display: none; }
+
+  .avatar-info h3 { font-size: 1.1rem; font-weight: 700; color: var(--text-1); }
+  .avatar-info p  { font-size: 0.84rem; color: var(--text-3); margin-top: 4px; }
+  .avatar-upload-btn {
+    margin-top: 12px;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 18px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-pill);
+    background: var(--surface-1);
+    color: var(--text-2);
+    font-size: 0.82rem; font-weight: 600;
+    cursor: pointer; transition: var(--t);
+  }
+  .avatar-upload-btn:hover { border-color: var(--amber); color: var(--amber); }
+
+  /* ── FORM GRID ───────────────────────────────────────────────────────────── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+  .form-grid .full-col { grid-column: 1 / -1; }
+
+  .field-group { display: flex; flex-direction: column; gap: 7px; }
+  .field-group label {
+    font-size: 0.82rem; font-weight: 600;
+    color: var(--text-2); letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .field-input {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    padding: 12px 16px;
+    color: var(--text-1);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    transition: var(--t);
+    width: 100%;
+  }
+  .field-input:focus {
+    outline: none;
+    border-color: var(--amber);
+    background: rgba(245,158,11,0.05);
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.12);
+  }
+  .field-input:disabled, .field-input[readonly] {
+    opacity: 0.45; cursor: not-allowed;
+  }
+  .field-hint {
+    font-size: 0.78rem; color: var(--text-3);
+  }
+
+  /* Phone input with prefix */
+  .phone-wrap {
+    display: flex; align-items: stretch;
+  }
+  .phone-prefix {
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    border-right: none;
+    border-radius: var(--r-md) 0 0 var(--r-md);
+    padding: 12px 14px;
+    color: var(--text-2);
+    font-size: 0.9rem; font-weight: 600;
+    white-space: nowrap;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .phone-wrap .field-input {
+    border-radius: 0 var(--r-md) var(--r-md) 0;
+    flex: 1;
+  }
+
+  /* ── FORM ACTIONS ────────────────────────────────────────────────────────── */
+  .form-actions {
+    display: flex; justify-content: flex-end; gap: 12px;
+    margin-top: 28px; padding-top: 24px;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  /* ── BANK ACCOUNT SECTION ────────────────────────────────────────────────── */
+  .bank-status-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px;
+    border-radius: var(--r-pill);
+    font-size: 0.82rem; font-weight: 700;
+    margin-bottom: 28px;
+  }
+  .bank-status-badge.verified {
+    background: rgba(16,185,129,0.12);
+    border: 1px solid rgba(16,185,129,0.3);
+    color: var(--emerald);
+  }
+  .bank-status-badge.pending {
+    background: rgba(245,158,11,0.10);
+    border: 1px solid rgba(245,158,11,0.28);
+    color: var(--amber);
+  }
+  .bank-status-badge.none {
+    background: rgba(250,245,235,0.06);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-3);
+  }
+
+  /* Bank select */
+  .bank-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23F59E0B' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+    cursor: pointer;
+  }
+  .bank-select option { background: #181410; color: var(--text-1); }
+
+  /* Real-time resolve box */
+  .resolve-box {
+    margin-top: 10px;
+    min-height: 36px;
+    border-radius: var(--r-md);
+    padding: 10px 14px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    display: none;
+    align-items: center;
+    gap: 8px;
+  }
+  .resolve-box.loading {
+    display: flex;
+    background: rgba(245,158,11,0.07);
+    border: 1px solid rgba(245,158,11,0.2);
+    color: var(--amber);
+  }
+  .resolve-box.success {
+    display: flex;
+    background: rgba(16,185,129,0.08);
+    border: 1px solid rgba(16,185,129,0.25);
+    color: var(--emerald);
+  }
+  .resolve-box.error {
+    display: flex;
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.25);
+    color: #F87171;
+  }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(245,158,11,0.3);
+    border-top-color: var(--amber);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Existing account card */
+  .existing-account-card {
+    background: rgba(16,185,129,0.05);
+    border: 1px solid rgba(16,185,129,0.2);
+    border-radius: var(--r-lg);
+    padding: 20px 24px;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 16px; flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+  .account-detail { }
+  .account-detail .label { font-size: 0.78rem; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; }
+  .account-detail .value { font-size: 1rem; font-weight: 700; color: var(--text-1); margin-top: 2px; }
+  .account-detail .sub   { font-size: 0.85rem; color: var(--text-2); margin-top: 2px; }
+
+  /* Info box */
+  .info-box {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: rgba(56,189,248,0.07);
+    border: 1px solid rgba(56,189,248,0.2);
+    border-radius: var(--r-md);
+    padding: 14px 18px;
+    margin-bottom: 28px;
+    font-size: 0.85rem; color: var(--sky); line-height: 1.5;
+  }
+  .info-box i { flex-shrink: 0; margin-top: 2px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="profile-page fade-up">
+
+  <div class="profile-hero">
+    <div>
+      <h1>Account Settings</h1>
+      <p>Manage your profile and payout details — changes take effect immediately.</p>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  {% if messages %}
+    {% for msg in messages %}
+      <div style="background:rgba({% if msg.tags == 'success' %}16,185,129{% elif msg.tags == 'error' %}239,68,68{% else %}245,158,11{% endif %},0.12);border:1px solid rgba({% if msg.tags == 'success' %}16,185,129{% elif msg.tags == 'error' %}239,68,68{% else %}245,158,11{% endif %},0.3);border-radius:var(--r-md);padding:12px 18px;margin-bottom:20px;font-size:0.9rem;color:var(--text-1);display:flex;align-items:center;gap:10px;">
+        <i class="fas fa-{% if msg.tags == 'success' %}check-circle{% elif msg.tags == 'error' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+        {{ msg }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Tabs -->
+  <div class="profile-tabs">
+    <button class="tab-btn active" data-tab="profile" id="tab-profile-btn">
+      <i class="fas fa-user"></i> &nbsp;Profile Info
+    </button>
+    <button class="tab-btn" data-tab="bank" id="tab-bank-btn">
+      <i class="fas fa-university"></i> &nbsp;Bank Account
+      {% if not bank_account %}
+        <span style="background:rgba(239,68,68,0.18);color:#F87171;border-radius:100px;padding:1px 8px;font-size:0.72rem;margin-left:4px;">Required</span>
+      {% elif bank_account.is_verified %}
+        <span style="background:rgba(16,185,129,0.15);color:var(--emerald);border-radius:100px;padding:1px 8px;font-size:0.72rem;margin-left:4px;">✓ Verified</span>
+      {% endif %}
+    </button>
+  </div>
+
+  <!-- ══════════════════════════ TAB 1: PROFILE INFO ══════════════════════════ -->
+  <div class="tab-panel active" id="panel-profile">
+    <div class="profile-card">
+      <form method="post" action="{% url 'edit_profile' %}" enctype="multipart/form-data" id="profile-form">
+        {% csrf_token %}
+
+        <!-- Avatar -->
+        <div class="avatar-section">
+          <div class="avatar-wrap" id="avatar-wrap">
+            {# FIX: was user.image — field name on the model is profile_image #}
+            {% if user.image %}
+              <img src="{{ user.image.url }}" alt="Profile photo" class="avatar-img" id="avatar-preview">
+            {% else %}
+              <div class="avatar-placeholder" id="avatar-preview-placeholder">
+                {{ user.username|first|upper }}
+              </div>
+            {% endif %}
+            <label for="avatar-file" class="avatar-edit-btn" title="Change photo">
+              <i class="fas fa-camera"></i>
+            </label>
+            {# This input must stay here and must never be replaced by JS #}
+            <input type="file" name="profile_image" id="avatar-file" accept="image/*">
+          </div>
+          <div class="avatar-info">
+            <h3>{{ user.get_full_name|default:user.username }}</h3>
+            <p>{{ user.email }}</p>
+            <label for="avatar-file" class="avatar-upload-btn">
+              <i class="fas fa-upload"></i> Change Photo
+            </label>
+          </div>
+        </div>
+
+        <!-- Fields -->
+        <div class="form-grid">
+          <div class="field-group">
+            <label for="id_first_name">First Name</label>
+            <input type="text" name="first_name" id="id_first_name"
+                   class="field-input" placeholder="John"
+                   value="{{ user.first_name|default:'' }}">
+          </div>
+
+          <div class="field-group">
+            <label for="id_last_name">Last Name</label>
+            <input type="text" name="last_name" id="id_last_name"
+                   class="field-input" placeholder="Doe"
+                   value="{{ user.last_name|default:'' }}">
+          </div>
+
+          <div class="field-group">
+            <label for="id_username">Username</label>
+            <input type="text" name="username" id="id_username"
+                   class="field-input" placeholder="johndoe"
+                   value="{{ user.username }}" autocomplete="username">
+          </div>
+
+          <div class="field-group">
+            <label for="id_email">Email Address</label>
+            <input type="email" id="id_email"
+                   class="field-input" value="{{ user.email }}" readonly>
+            <span class="field-hint">Email cannot be changed here.</span>
+          </div>
+
+          <div class="field-group full-col">
+            <label for="id_phone_number">Phone Number</label>
+            <div class="phone-wrap">
+              <span class="phone-prefix">🇳🇬 +234</span>
+              <input type="tel" name="phone_number" id="id_phone_number"
+                     class="field-input"
+                     placeholder="8012345678" maxlength="11"
+                     value="{% if user.phone_number %}{{ user.phone_number|slice:'4:' }}{% endif %}">
+            </div>
+            <span class="field-hint">Enter 10 digits after the +234 prefix.</span>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <a href="{% url 'marketplace:dashboard' %}" class="btn btn-ghost">Cancel</a>
+          <button type="submit" class="btn btn-primary" id="save-profile-btn">
+            <i class="fas fa-save"></i> Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════ TAB 2: BANK ACCOUNT ══════════════════════════ -->
+  <div class="tab-panel" id="panel-bank">
+    <div class="profile-card">
+
+      <!-- Info banner -->
+      <div class="info-box">
+        <i class="fas fa-info-circle"></i>
+        <div>
+          Your bank account is used to receive payouts when a job milestone is released or a marketplace order is completed.
+          The account name is verified in real-time via Paystack before saving.
+        </div>
+      </div>
+
+      <!-- Existing account display -->
+      {% if bank_account %}
+        <div class="bank-status-badge {% if bank_account.is_verified %}verified{% else %}pending{% endif %}">
+          <i class="fas fa-{% if bank_account.is_verified %}check-circle{% else %}clock{% endif %}"></i>
+          {% if bank_account.is_verified %}Verified Account{% else %}Verification Pending{% endif %}
+        </div>
+
+        <div class="existing-account-card" id="existing-account-card">
+          <div class="account-detail">
+            <div class="label">Account Name</div>
+            <div class="value" id="display-account-name">{{ bank_account.account_name }}</div>
+          </div>
+          <div class="account-detail">
+            <div class="label">Account Number</div>
+            <div class="value">****{{ bank_account.account_number|slice:"-4:" }}</div>
+          </div>
+          <div class="account-detail">
+            <div class="label">Bank</div>
+            <div class="value">{{ bank_account.bank_name }}</div>
+          </div>
+          <button type="button" class="btn btn-ghost" onclick="document.getElementById('bank-form-section').style.display='block';this.closest('.existing-account-card').style.display='none';">
+            <i class="fas fa-edit"></i> Update
+          </button>
+        </div>
+
+        <div id="bank-form-section" style="display:none;">
+      {% else %}
+        <div class="bank-status-badge none">
+          <i class="fas fa-exclamation-circle"></i> No bank account added yet
+        </div>
+        <div id="bank-form-section">
+      {% endif %}
+
+          <form method="post" action="{% url 'bank_account_profile' %}" id="bank-form">
+            {% csrf_token %}
+            <input type="hidden" name="account_name"   id="hidden-account-name">
+            <input type="hidden" name="bank_name"      id="hidden-bank-name">
+
+            <div class="form-grid">
+              <!-- Bank Select -->
+              <div class="field-group full-col">
+                <label for="id_bank_code">Bank</label>
+                <select name="bank_code" id="id_bank_code" class="field-input bank-select">
+                  <option value="">Loading banks…</option>
+                </select>
+              </div>
+
+              <!-- Account Number -->
+              <div class="field-group full-col">
+                <label for="id_account_number">Account Number (10 digits)</label>
+                <input type="text" name="account_number" id="id_account_number"
+                       class="field-input" placeholder="0123456789"
+                       maxlength="10" inputmode="numeric" autocomplete="off"
+                       value="{% if bank_account %}{{ bank_account.account_number }}{% endif %}">
+
+                <!-- Real-time resolve result -->
+                <div class="resolve-box" id="resolve-box">
+                  <div class="spinner" id="resolve-spinner"></div>
+                  <span id="resolve-text"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              {% if bank_account %}
+                <button type="button" class="btn btn-ghost"
+                  onclick="document.getElementById('bank-form-section').style.display='none';document.getElementById('existing-account-card').style.display='flex';">
+                  Cancel
+                </button>
+              {% endif %}
+              <button type="submit" class="btn btn-primary" id="save-bank-btn" disabled>
+                <i class="fas fa-lock"></i> Confirm &amp; Save Account
+              </button>
+            </div>
+          </form>
+
+        </div><!-- /bank-form-section -->
+    </div><!-- /profile-card -->
+  </div><!-- /panel-bank -->
+
+</main>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  'use strict';
+
+  /* ── TAB SWITCHING ─────────────────────────────────────────────────── */
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // Open bank tab directly if URL has #bank
+  if (window.location.hash === '#bank') {
+    document.querySelector('[data-tab="bank"]').click();
+  }
+
+  /* ── AVATAR PREVIEW ────────────────────────────────────────────────── */
+  /*
+   * FIX: The old code rebuilt avatar-wrap.innerHTML on every file select.
+   * That destroyed the original <input type="file"> element (along with its
+   * selected file in memory) and replaced it with a fresh empty one.
+   * By the time the form submitted, request.FILES was always empty.
+   *
+   * Fix: only update the visible image — never touch the file input.
+   */
+  const avatarFile = document.getElementById('avatar-file');
+  if (avatarFile) {
+    avatarFile.addEventListener('change', function () {
+      if (!this.files || !this.files[0]) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        const wrap = document.getElementById('avatar-wrap');
+
+        // Hide the letter-placeholder if present
+        const placeholder = document.getElementById('avatar-preview-placeholder');
+        if (placeholder) placeholder.style.display = 'none';
+
+        // Update existing preview img, or create one if showing placeholder
+        let img = document.getElementById('avatar-preview');
+        if (!img) {
+          img = document.createElement('img');
+          img.alt     = 'Preview';
+          img.className = 'avatar-img';
+          img.id      = 'avatar-preview';
+          // Insert before the camera label so DOM order is preserved
+          const cameraLabel = wrap.querySelector('.avatar-edit-btn');
+          wrap.insertBefore(img, cameraLabel);
+        }
+        img.src = e.target.result;
+        // The file input itself is untouched — its .files[0] remains valid for form submission
+      };
+      reader.readAsDataURL(this.files[0]);
+    });
+  }
+
+  /* ── BANK ACCOUNT: LOAD BANK LIST ──────────────────────────────────── */
+  const bankSelect     = document.getElementById('id_bank_code');
+  const acctInput      = document.getElementById('id_account_number');
+  const resolveBox     = document.getElementById('resolve-box');
+  const resolveText    = document.getElementById('resolve-text');
+  const resolveSpinner = document.getElementById('resolve-spinner');
+  const saveBankBtn    = document.getElementById('save-bank-btn');
+  const hiddenAcctName = document.getElementById('hidden-account-name');
+  const hiddenBankName = document.getElementById('hidden-bank-name');
+
+  if (bankSelect) {
+    fetch("{% url 'bank_list' %}", { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(r => r.json())
+      .then(data => {
+        bankSelect.innerHTML = '<option value="">— Select your bank —</option>';
+        (data.banks || []).forEach(b => {
+          const opt = document.createElement('option');
+          opt.value = b.code;
+          opt.textContent = b.name;
+          opt.dataset.name = b.name;
+          {% if bank_account %}
+          if (b.code === '{{ bank_account.bank_code }}') opt.selected = true;
+          {% endif %}
+          bankSelect.appendChild(opt);
+        });
+      })
+      .catch(() => {
+        bankSelect.innerHTML = '<option value="">Could not load banks — refresh page</option>';
+      });
+  }
+
+  /* ── REAL-TIME ACCOUNT RESOLVE ─────────────────────────────────────── */
+  let resolveTimer = null;
+  let currentAccountName = '';
+
+  function setResolveSate(state, msg) {
+    resolveBox.className = 'resolve-box ' + state;
+    resolveSpinner.style.display = (state === 'loading') ? 'block' : 'none';
+    resolveText.textContent = msg;
+    currentAccountName = (state === 'success') ? msg : '';
+    hiddenAcctName.value = currentAccountName;
+    if (saveBankBtn) {
+      saveBankBtn.disabled = (state !== 'success');
+      saveBankBtn.innerHTML = (state === 'success')
+        ? '<i class="fas fa-check-circle"></i> Confirm &amp; Save Account'
+        : '<i class="fas fa-lock"></i> Confirm &amp; Save Account';
+    }
+  }
+
+  function tryResolve() {
+    const acct = (acctInput ? acctInput.value : '').trim();
+    const code = (bankSelect ? bankSelect.value : '').trim();
+    const bankName = bankSelect && bankSelect.selectedOptions[0]
+                     ? bankSelect.selectedOptions[0].dataset.name || ''
+                     : '';
+    hiddenBankName.value = bankName;
+
+    if (acct.length !== 10 || !code) {
+      resolveBox.className = 'resolve-box';
+      if (saveBankBtn) saveBankBtn.disabled = true;
+      return;
+    }
+
+    setResolveSate('loading', 'Verifying account…');
+
+    const url = `{% url 'bank_resolve' %}?account_number=${encodeURIComponent(acct)}&bank_code=${encodeURIComponent(code)}`;
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(r => r.json())
+      .then(data => {
+        if (data.account_name) {
+          setResolveSate('success', '✓ ' + data.account_name);
+        } else {
+          setResolveSate('error', data.error || 'Could not verify account.');
+        }
+      })
+      .catch(() => setResolveSate('error', 'Network error — try again.'));
+  }
+
+  if (acctInput) {
+    acctInput.addEventListener('input', () => {
+      clearTimeout(resolveTimer);
+      if (saveBankBtn) saveBankBtn.disabled = true;
+      resolveTimer = setTimeout(tryResolve, 500);
+    });
+  }
+  if (bankSelect) {
+    bankSelect.addEventListener('change', () => {
+      clearTimeout(resolveTimer);
+      resolveTimer = setTimeout(tryResolve, 200);
+    });
+  }
+
+  /* ── PROFILE FORM: SAVE FEEDBACK ───────────────────────────────────── */
+  const profileForm = document.getElementById('profile-form');
+  if (profileForm) {
+    profileForm.addEventListener('submit', () => {
+      const btn = document.getElementById('save-profile-btn');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+      }
+    });
+  }
+
+})();
+</script>
+{% endblock %}

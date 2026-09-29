@@ -1,0 +1,1615 @@
+{% extends "base.html" %}
+{% block title %}Employer Dashboard — {{ employer.company_name|default:request.user.username }} — TradeLink NG{% endblock %}
+{% block nav_employers %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   EMPLOYER DASHBOARD v4 — TradeLink NG
+   Layout: sticky left sidebar + scrollable main content
+   Design: dark amber system, Fraunces serif + Outfit sans
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Shell ─────────────────────────────────────────────────────────────── */
+.emp-shell {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: 100vh;
+  padding-top: var(--nav-h);
+  position: relative;
+  z-index: 1;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════════════════════ */
+.emp-sidebar {
+  position: sticky;
+  top: var(--nav-h);
+  height: calc(100vh - var(--nav-h));
+  overflow-y: auto;
+  background: var(--bg-raised);
+  border-right: 1px solid rgba(245,158,11,0.1);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 12px 32px;
+  gap: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245,158,11,0.2) transparent;
+}
+.emp-sidebar::-webkit-scrollbar { width: 4px; }
+.emp-sidebar::-webkit-scrollbar-thumb { background: rgba(245,158,11,0.2); border-radius: 4px; }
+
+/* Company block */
+.emp-sb-company {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 10px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  margin-bottom: 10px;
+}
+.emp-sb-logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(245,158,11,0.1);
+  border: 1px solid rgba(245,158,11,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  color: var(--amber);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.emp-sb-logo img { width:100%; height:100%; object-fit:cover; }
+.emp-sb-name {
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--text-1);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.emp-sb-role {
+  font-size: 0.7rem;
+  color: var(--amber);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+
+/* Nav label */
+.emp-sb-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 14px 12px 5px;
+}
+
+/* Nav link */
+.emp-sb-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 13px;
+  border-radius: var(--r-md);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-2);
+  transition: var(--t);
+  position: relative;
+  white-space: nowrap;
+}
+.emp-sb-link i {
+  width: 17px;
+  text-align: center;
+  font-size: 0.85rem;
+  opacity: 0.65;
+  flex-shrink: 0;
+  transition: var(--t);
+}
+.emp-sb-link:hover {
+  color: var(--text-1);
+  background: rgba(245,158,11,0.06);
+}
+.emp-sb-link:hover i { opacity: 1; }
+.emp-sb-link.active {
+  color: var(--amber);
+  background: rgba(245,158,11,0.1);
+  font-weight: 600;
+}
+.emp-sb-link.active i { opacity: 1; color: var(--amber); }
+.emp-sb-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 6px; bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, var(--amber), var(--orange));
+}
+.emp-sb-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  color: #0C0A08;
+  font-size: 0.65rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.emp-sb-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.05);
+  margin: 8px 12px;
+}
+.emp-sb-spacer { flex: 1; min-height: 16px; }
+
+/* Sidebar bottom — verified badge */
+.emp-sb-footer {
+  padding: 12px 10px 4px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  margin-top: 8px;
+}
+.emp-sb-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #34d399;
+  background: rgba(16,185,129,0.1);
+  border: 1px solid rgba(16,185,129,0.2);
+  border-radius: var(--r-pill);
+  padding: 4px 12px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   MAIN CONTENT
+═══════════════════════════════════════════════════════ */
+.emp-main {
+  min-width: 0;
+  padding: 36px 40px 72px;
+  overflow-x: hidden;
+}
+
+/* Page header */
+.emp-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+.emp-header-left {}
+.emp-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--amber);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+.emp-eyebrow::before {
+  content: '';
+  display: block;
+  width: 16px;
+  height: 2px;
+  background: var(--amber);
+  border-radius: 2px;
+}
+.emp-title {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(1.5rem, 3vw, 2.1rem);
+  font-weight: 900;
+  color: var(--text-1);
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+.emp-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-3);
+  margin-top: 6px;
+  font-weight: 400;
+}
+
+.emp-header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+.btn-solid {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  color: #0C0A08;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+  border-radius: var(--r-md);
+  text-decoration: none;
+  transition: var(--t);
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(245,158,11,0.28);
+}
+.btn-solid:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(245,158,11,0.38);
+  color: #0C0A08;
+}
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 18px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-2);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: var(--r-md);
+  text-decoration: none;
+  transition: var(--t);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-outline:hover {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.2);
+  color: var(--text-1);
+  transform: translateY(-1px);
+}
+.btn-sm { padding: 8px 14px; font-size: 0.78rem; }
+
+/* ── Stat cards ────────────────────────────────────────────────────────── */
+.emp-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.emp-stat {
+  background: var(--bg-card);
+  border: 1px solid rgba(255,255,255,0.055);
+  border-radius: var(--r-xl);
+  padding: 20px 22px;
+  position: relative;
+  overflow: hidden;
+  transition: var(--t);
+}
+.emp-stat:hover {
+  border-color: rgba(245,158,11,0.18);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.emp-stat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.88rem;
+  margin-bottom: 14px;
+}
+.si-a { background: rgba(245,158,11,0.12); color: var(--amber);   border: 1px solid rgba(245,158,11,0.2); }
+.si-g { background: rgba(16,185,129,0.12); color: var(--emerald); border: 1px solid rgba(16,185,129,0.2); }
+.si-s { background: rgba(56,189,248,0.12); color: var(--sky);     border: 1px solid rgba(56,189,248,0.2); }
+.si-o { background: rgba(249,115,22,0.12); color: var(--orange);  border: 1px solid rgba(249,115,22,0.2); }
+.emp-stat-num {
+  font-family: 'Fraunces', serif;
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--text-1);
+  line-height: 1;
+  letter-spacing: -0.5px;
+  margin-bottom: 5px;
+}
+.emp-stat-label {
+  font-size: 0.78rem;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+/* ── Section card ──────────────────────────────────────────────────────── */
+.emp-card {
+  background: var(--bg-card);
+  border: 1px solid rgba(255,255,255,0.055);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  margin-bottom: 28px;
+}
+.emp-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 22px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.emp-card-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--text-1);
+}
+.emp-card-count {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 9px;
+  border-radius: var(--r-pill);
+  background: rgba(245,158,11,0.12);
+  border: 1px solid rgba(245,158,11,0.22);
+  color: var(--amber);
+}
+.emp-card-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+/* ── Status filter tabs ────────────────────────────────────────────────── */
+.emp-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 14px 22px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  flex-wrap: wrap;
+  background: rgba(0,0,0,0.15);
+}
+.emp-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--text-3);
+  border: 1px solid transparent;
+  transition: var(--t);
+}
+.emp-tab:hover {
+  color: var(--text-1);
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.08);
+}
+.emp-tab.active {
+  color: var(--amber);
+  background: rgba(245,158,11,0.1);
+  border-color: rgba(245,158,11,0.25);
+}
+.emp-tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Job table ──────────────────────────────────────────────────────────── */
+.emp-job-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.emp-job-table th {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 12px 20px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  white-space: nowrap;
+}
+.emp-job-table th:last-child { text-align: right; }
+.emp-job-table td {
+  padding: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  vertical-align: middle;
+}
+.emp-job-table tr:last-child td { border-bottom: none; }
+.emp-job-table tbody tr {
+  transition: background 0.2s ease;
+}
+.emp-job-table tbody tr:hover {
+  background: rgba(255,255,255,0.025);
+}
+
+/* Job row inner padding wrapper */
+.emp-jrow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+}
+
+/* Status stripe */
+.emp-jstripe {
+  width: 3px;
+  height: 36px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.js-active  { background: var(--emerald); box-shadow: 0 0 8px rgba(16,185,129,0.35); }
+.js-paused  { background: var(--amber); }
+.js-draft   { background: rgba(255,255,255,0.2); }
+.js-filled  { background: var(--sky); box-shadow: 0 0 8px rgba(56,189,248,0.3); }
+.js-closed,
+.js-expired { background: rgba(239,68,68,0.6); }
+
+/* Job info cell */
+.emp-jinfo { min-width: 0; flex: 1; }
+.emp-jtitle {
+  font-family: 'Fraunces', serif;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-1);
+  text-decoration: none;
+  transition: color 0.2s;
+  display: block;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.emp-jtitle:hover { color: var(--amber); }
+.emp-jmeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.73rem;
+  color: var(--text-3);
+  font-weight: 500;
+}
+.emp-jmeta span { display: flex; align-items: center; gap: 4px; }
+.emp-jmeta i { font-size: 0.6rem; }
+
+/* Status + tag pills */
+.emp-jtags { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 20px 14px 20px; }
+.emp-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: var(--r-pill);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.et-default { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--text-2); }
+.et-green   { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: #34d399; }
+.et-amber   { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); color: #fcd34d; }
+.et-sky     { background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.2); color: #7dd3fc; }
+.et-red     { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.2);  color: #fca5a5; }
+.et-orange  { background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.2); color: #fb923c; }
+.emp-tag i  { font-size: 0.5rem; }
+
+/* App count */
+.emp-app-count {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 52px;
+  padding: 0 16px;
+}
+.emp-app-num {
+  font-family: 'Fraunces', serif;
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: var(--amber);
+  line-height: 1;
+}
+.emp-app-lbl {
+  font-size: 0.6rem;
+  color: var(--text-3);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 1px;
+}
+
+/* Action buttons cell */
+.emp-jactions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 0 18px 0 8px;
+  flex-wrap: nowrap;
+}
+.emp-jbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: var(--r-md);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: var(--t);
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.025);
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.emp-jbtn:hover { background: rgba(255,255,255,0.07); color: var(--text-1); border-color: rgba(255,255,255,0.16); }
+.emp-jbtn-amber { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.22); color: var(--amber); }
+.emp-jbtn-amber:hover { background: rgba(245,158,11,0.18); }
+.emp-jbtn-danger { background: rgba(239,68,68,0.07); border-color: rgba(239,68,68,0.18); color: #fca5a5; }
+.emp-jbtn-danger:hover { background: rgba(239,68,68,0.15); }
+.emp-jbtn-icon { padding: 6px 9px; }
+
+.emp-toggle {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 5px 11px;
+  border-radius: var(--r-pill);
+  border: 1px solid;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  transition: var(--t);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.emp-toggle-on  { background: rgba(16,185,129,0.09); color: #34d399; border-color: rgba(16,185,129,0.22); }
+.emp-toggle-on:hover  { background: rgba(16,185,129,0.18); }
+.emp-toggle-off { background: rgba(245,158,11,0.09); color: #fcd34d; border-color: rgba(245,158,11,0.22); }
+.emp-toggle-off:hover { background: rgba(245,158,11,0.18); }
+
+/* Empty state */
+.emp-empty {
+  padding: 56px 24px;
+  text-align: center;
+}
+.emp-empty-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  margin: 0 auto 18px;
+  background: rgba(245,158,11,0.07);
+  border: 1px solid rgba(245,158,11,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  color: var(--amber);
+}
+.emp-empty-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--text-1);
+  margin-bottom: 8px;
+}
+.emp-empty-sub {
+  font-size: 0.85rem;
+  color: var(--text-3);
+  line-height: 1.7;
+  max-width: 320px;
+  margin: 0 auto 22px;
+}
+
+/* ── Pagination ────────────────────────────────────────────────────────── */
+.emp-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 22px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.emp-pag-info {
+  font-size: 0.78rem;
+  color: var(--text-3);
+  font-weight: 500;
+}
+.emp-pag-pages {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.emp-pag-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: var(--r-md);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--text-2);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  transition: var(--t);
+}
+.emp-pag-btn:hover {
+  background: rgba(255,255,255,0.07);
+  color: var(--text-1);
+  border-color: rgba(255,255,255,0.15);
+}
+.emp-pag-btn.current {
+  background: rgba(245,158,11,0.15);
+  border-color: rgba(245,158,11,0.3);
+  color: var(--amber);
+  font-weight: 700;
+  pointer-events: none;
+}
+.emp-pag-btn.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+.emp-pag-ellipsis {
+  font-size: 0.8rem;
+  color: var(--text-3);
+  padding: 0 4px;
+}
+
+/* ── Applications sidebar list ─────────────────────────────────────────── */
+.emp-apps-list { display: flex; flex-direction: column; }
+.emp-app-row {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.2s;
+}
+.emp-app-row:last-child { border-bottom: none; }
+.emp-app-row:hover { background: rgba(255,255,255,0.025); }
+.emp-app-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, var(--amber-dark), var(--orange));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Fraunces', serif;
+  font-weight: 900;
+  font-size: 0.95rem;
+  color: #0C0A08;
+  flex-shrink: 0;
+}
+.emp-app-info {}
+.emp-app-name { font-size: 0.85rem; font-weight: 700; color: var(--text-1); margin-bottom: 2px; }
+.emp-app-job  { font-size: 0.72rem; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+.emp-app-time { font-size: 0.68rem; color: var(--text-3); margin-top: 1px; }
+.emp-app-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.emp-score {
+  font-family: 'Fraunces', serif;
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: var(--amber);
+  white-space: nowrap;
+}
+.emp-score span { font-family: 'Outfit', sans-serif; font-size: 0.6rem; color: var(--text-3); }
+.emp-app-links { display: flex; gap: 5px; }
+.emp-alink {
+  padding: 4px 9px;
+  border-radius: var(--r-md);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.025);
+  color: var(--text-2);
+  transition: var(--t);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.emp-alink:hover { background: rgba(255,255,255,0.07); color: var(--text-1); }
+.emp-alink-primary { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.22); color: var(--amber); }
+.emp-alink-primary:hover { background: rgba(245,158,11,0.18); color: var(--amber); }
+
+.emp-apps-empty {
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 0.85rem;
+}
+.emp-apps-empty i { display: block; font-size: 1.5rem; margin-bottom: 10px; opacity: 0.25; }
+
+/* ── Quick links card ──────────────────────────────────────────────────── */
+.emp-qlinks { padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; }
+.emp-qlink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: var(--r-md);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-2);
+  transition: var(--t);
+}
+.emp-qlink:hover { background: rgba(255,255,255,0.045); color: var(--text-1); transform: translateX(3px); }
+.emp-qlink i { width: 16px; text-align: center; font-size: 0.8rem; color: var(--text-3); flex-shrink: 0; transition: var(--t); }
+.emp-qlink:hover i { color: var(--amber); }
+.emp-qlink-badge {
+  margin-left: auto;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  color: #0C0A08;
+}
+
+/* ── Milestone card ────────────────────────────────────────────────────── */
+.emp-milestone-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.2s;
+}
+.emp-milestone-row:last-child { border-bottom: none; }
+.emp-milestone-row:hover { background: rgba(255,255,255,0.02); }
+.emp-ms-name { font-size: 0.85rem; font-weight: 700; color: var(--text-1); margin-bottom: 2px; }
+.emp-ms-sub  { font-size: 0.7rem; color: var(--text-3); }
+.emp-ms-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.emp-ms-amount { font-family: 'Fraunces', serif; font-size: 0.95rem; font-weight: 900; color: var(--amber); }
+.emp-fund-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-decoration: none;
+  background: rgba(245,158,11,0.1);
+  border: 1px solid rgba(245,158,11,0.25);
+  color: var(--amber);
+  transition: var(--t);
+}
+.emp-fund-btn:hover { background: rgba(245,158,11,0.2); color: var(--amber); }
+
+/* ── Profile nudge ─────────────────────────────────────────────────────── */
+.emp-nudge {
+  margin: 16px;
+  padding: 14px;
+  border-radius: var(--r-lg);
+  background: linear-gradient(135deg, rgba(56,189,248,0.07), rgba(56,189,248,0.02));
+  border: 1px solid rgba(56,189,248,0.15);
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+}
+.emp-nudge-icon {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: rgba(56,189,248,0.1);
+  border: 1px solid rgba(56,189,248,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; color: #7dd3fc;
+  flex-shrink: 0;
+}
+.emp-nudge-text { font-size: 0.78rem; color: var(--text-2); line-height: 1.6; }
+.emp-nudge-text strong { color: var(--text-1); }
+.emp-nudge-text a { color: #7dd3fc; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; margin-top: 5px; }
+
+/* ── AI card ───────────────────────────────────────────────────────────── */
+.emp-ai-body { padding: 14px 20px; }
+.emp-ai-body p { font-size: 0.8rem; color: var(--text-2); line-height: 1.65; margin-bottom: 12px; }
+.emp-ai-link { display: inline-flex; align-items: center; gap: 5px; font-size: 0.8rem; font-weight: 700; color: var(--sky); text-decoration: none; transition: var(--t); }
+.emp-ai-link:hover { opacity: 0.7; }
+
+/* ── Toasts ────────────────────────────────────────────────────────────── */
+.emp-toasts {
+  position: fixed;
+  top: calc(var(--nav-h) + 14px);
+  right: 18px;
+  z-index: 4000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 340px;
+  pointer-events: none;
+}
+.emp-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px;
+  border-radius: var(--r-lg);
+  font-size: 0.85rem;
+  font-weight: 600;
+  pointer-events: all;
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+  animation: toastIn 0.3s cubic-bezier(0.175,0.885,0.32,1.275) both;
+}
+@keyframes toastIn { from { opacity:0; transform:translateX(16px) scale(0.97); } to { opacity:1; transform:none; } }
+.emp-toast-success { background: rgba(16,185,129,0.18); border: 1px solid rgba(16,185,129,0.32); color: #6ee7b7; }
+.emp-toast-error   { background: rgba(239,68,68,0.18);  border: 1px solid rgba(239,68,68,0.32);  color: #fca5a5; }
+.emp-toast-info    { background: rgba(56,189,248,0.14); border: 1px solid rgba(56,189,248,0.28); color: #7dd3fc; }
+
+/* ── Hamburger (mobile sidebar toggle) ─────────────────────────────────── */
+.emp-hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-md);
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.03);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: var(--t);
+}
+.emp-hamburger:hover { background: rgba(255,255,255,0.07); color: var(--text-1); }
+
+/* ── RESPONSIVE ─────────────────────────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .emp-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 1024px) {
+  .emp-shell { grid-template-columns: 220px 1fr; }
+  .emp-main  { padding: 28px 24px 60px; }
+}
+
+@media (max-width: 860px) {
+  .emp-shell { grid-template-columns: 1fr; }
+
+  .emp-sidebar {
+    position: fixed;
+    left: -280px;
+    top: var(--nav-h);
+    width: 260px;
+    height: calc(100vh - var(--nav-h));
+    z-index: 500;
+    transition: left 0.3s ease;
+    box-shadow: none;
+  }
+  .emp-sidebar.open {
+    left: 0;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+  }
+  .emp-sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 499;
+    top: var(--nav-h);
+  }
+  .emp-sidebar-overlay.active { display: block; }
+
+  .emp-hamburger { display: flex; }
+  .emp-main { padding: 24px 18px 60px; }
+  .emp-stats { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+  /* Hide table columns on tablet */
+  .emp-job-table .col-apps,
+  .emp-job-table .col-actions { display: none; }
+  .emp-jtags { padding: 0 16px 12px; }
+}
+
+@media (max-width: 600px) {
+  .emp-main { padding: 18px 14px 56px; }
+  .emp-stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .emp-stat { padding: 16px 16px; }
+  .emp-stat-num { font-size: 1.65rem; }
+  .emp-header { gap: 14px; }
+  .emp-title { font-size: 1.4rem; }
+  .emp-header-actions .btn-outline { display: none; }
+
+  .emp-tabs { padding: 10px 14px; gap: 3px; }
+  .emp-tab  { padding: 5px 10px; font-size: 0.72rem; }
+
+  .emp-card-head { padding: 14px 16px; }
+  .emp-app-row   { grid-template-columns: 36px 1fr; gap: 10px; padding: 12px 14px; }
+  .emp-app-right { display: none; }
+
+  .emp-pagination { flex-direction: column; align-items: flex-start; }
+  .emp-toasts { right: 10px; left: 10px; max-width: none; }
+}
+
+@media (max-width: 400px) {
+  .emp-stats { grid-template-columns: 1fr 1fr; }
+}
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+{# ── Toasts ── #}
+{% if messages %}
+<div class="emp-toasts">
+  {% for message in messages %}
+  <div class="emp-toast emp-toast-{{ message.tags }}" onclick="this.remove()">
+    {% if 'success' in message.tags %}<i class="fas fa-circle-check"></i>
+    {% elif 'error'   in message.tags %}<i class="fas fa-circle-exclamation"></i>
+    {% else %}<i class="fas fa-circle-info"></i>{% endif %}
+    {{ message }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# Mobile sidebar overlay #}
+<div class="emp-sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<div class="emp-shell">
+
+  
+  <aside class="emp-sidebar" id="empSidebar">
+
+    {# Company identity #}
+    <div class="emp-sb-company">
+      <div class="emp-sb-logo">
+        {% if employer.logo %}
+          <img src="{{ employer.logo.url }}" alt="{{ employer.company_name }}">
+        {% else %}
+          <i class="fas fa-building"></i>
+        {% endif %}
+      </div>
+      <div style="min-width:0;">
+        <div class="emp-sb-name">{{ employer.company_name|default:request.user.get_full_name|default:request.user.username }}</div>
+        <div class="emp-sb-role">Employer</div>
+      </div>
+    </div>
+
+    {# Main nav #}
+    <div class="emp-sb-label">Dashboard</div>
+    <a href="{% url 'marketplace:employer_dashboard' %}" class="emp-sb-link active">
+      <i class="fas fa-gauge-high"></i> Overview
+    </a>
+    <a href="{% url 'marketplace:job_create' %}" class="emp-sb-link">
+      <i class="fas fa-plus-circle"></i> Post a Job
+    </a>
+    <a href="{% url 'marketplace:employer_dashboard' %}?status=active" class="emp-sb-link">
+      <i class="fas fa-briefcase"></i> Active Jobs
+      {% if stat_active_jobs > 0 %}
+      <span class="emp-sb-badge">{{ stat_active_jobs }}</span>
+      {% endif %}
+    </a>
+
+    <div class="emp-sb-divider"></div>
+    <div class="emp-sb-label">Applications</div>
+    <a href="{% url 'marketplace:employer_dashboard' %}#applications" class="emp-sb-link">
+      <i class="fas fa-inbox"></i> Pending Review
+      {% if stat_pending_apps > 0 %}
+      <span class="emp-sb-badge">{{ stat_pending_apps }}</span>
+      {% endif %}
+    </a>
+    <a href="{% url 'marketplace:contract_list' %}" class="emp-sb-link">
+      <i class="fas fa-file-contract"></i> Contracts
+      {% if pending_milestones_total > 0 %}
+      <span class="emp-sb-badge">{{ pending_milestones_total }}</span>
+      {% endif %}
+    </a>
+
+    <div class="emp-sb-divider"></div>
+    <div class="emp-sb-label">Account</div>
+    <a href="{% url 'marketplace:employer_profile_edit' %}" class="emp-sb-link">
+      <i class="fas fa-pen-to-square"></i> Edit Profile
+    </a>
+    <a href="{% url 'marketplace:employer_profile_public' pk=employer.pk %}" class="emp-sb-link">
+      <i class="fas fa-eye"></i> Public Profile
+    </a>
+    <a href="{% url 'marketplace:notifications' %}" class="emp-sb-link">
+      <i class="fas fa-bell"></i> Notifications
+      {% if unread_count > 0 %}
+      <span class="emp-sb-badge">{{ unread_count }}</span>
+      {% endif %}
+    </a>
+
+    {% if has_worker_profile %}
+    <div class="emp-sb-divider"></div>
+    <div class="emp-sb-label">Switch Role</div>
+    <a href="{% url 'marketplace:worker_dashboard' %}" class="emp-sb-link" style="color:var(--amber);">
+      <i class="fas fa-hard-hat"></i> Worker Dashboard
+    </a>
+    <a href="{% url 'mktplace:seller_dashboard' %}" class="emp-sb-link">
+      <i class="fas fa-store"></i> Seller Dashboard
+    </a>
+    {% endif %}
+
+    <div class="emp-sb-spacer"></div>
+
+    {# Bottom: browse + verified status #}
+    <a href="{% url 'marketplace:job_list' %}" class="emp-sb-link">
+      <i class="fas fa-search"></i> Browse Jobs
+    </a>
+    <a href="{% url 'mktplace:order_list' %}" class="emp-sb-link">
+      <i class="fas fa-shopping-bag"></i> My Purchases
+    </a>
+
+    {% if employer.is_verified %}
+    <div class="emp-sb-footer">
+      <span class="emp-sb-verified"><i class="fas fa-circle-check"></i> Verified Employer</span>
+    </div>
+    {% endif %}
+
+  </aside>
+
+
+  <main class="emp-main">
+
+    {# ── Page header ── #}
+    <div class="emp-header">
+      <div class="emp-header-left">
+        <div class="emp-eyebrow">
+          <i class="fas fa-gauge-high" style="font-size:0.6rem;"></i> Employer Dashboard
+        </div>
+        <h1 class="emp-title">
+          {{ employer.company_name|default:request.user.get_full_name|default:request.user.username }}
+        </h1>
+        <div class="emp-subtitle">
+          Manage your job listings, review applications, and track your hiring pipeline.
+        </div>
+      </div>
+      <div class="emp-header-actions">
+        {# Mobile hamburger #}
+        <button class="emp-hamburger" onclick="toggleSidebar()" aria-label="Open menu">
+          <i class="fas fa-bars"></i>
+        </button>
+        <a href="{% url 'marketplace:job_create' %}" class="btn-solid" id="btn-post-job">
+          <i class="fas fa-plus"></i> Post a Job
+        </a>
+        <a href="{% url 'marketplace:employer_profile_edit' %}" class="btn-outline">
+          <i class="fas fa-pen-to-square"></i> Edit Profile
+        </a>
+      </div>
+    </div>
+
+    {# ── Stats row ── #}
+    <div class="emp-stats">
+      <div class="emp-stat">
+        <div class="emp-stat-icon si-a"><i class="fas fa-briefcase"></i></div>
+        <div class="emp-stat-num">{{ stat_total_jobs }}</div>
+        <div class="emp-stat-label">Total Jobs Posted</div>
+      </div>
+      <div class="emp-stat">
+        <div class="emp-stat-icon si-g"><i class="fas fa-circle-check"></i></div>
+        <div class="emp-stat-num">{{ stat_active_jobs }}</div>
+        <div class="emp-stat-label">Active Listings</div>
+      </div>
+      <div class="emp-stat">
+        <div class="emp-stat-icon si-s"><i class="fas fa-inbox"></i></div>
+        <div class="emp-stat-num">{{ stat_pending_apps }}</div>
+        <div class="emp-stat-label">Pending Applications</div>
+      </div>
+      <div class="emp-stat">
+        <div class="emp-stat-icon si-o"><i class="fas fa-users"></i></div>
+        <div class="emp-stat-num">{{ stat_total_apps }}</div>
+        <div class="emp-stat-label">Total Applications</div>
+      </div>
+    </div>
+
+    {# ── Milestones alert (only if any) ── #}
+    {% if pending_milestones %}
+    <div class="emp-card" style="border-color:rgba(245,158,11,0.2); margin-bottom:28px;">
+      <div class="emp-card-head" style="border-color:rgba(245,158,11,0.12);">
+        <div style="width:32px;height:32px;border-radius:9px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:var(--amber);">
+          <i class="fas fa-triangle-exclamation"></i>
+        </div>
+        <span class="emp-card-title" style="color:var(--amber);">Escrow Payments Awaiting</span>
+        <span class="emp-card-count">{{ pending_milestones_total }}</span>
+        <div class="emp-card-actions">
+          {% if pending_milestones_total > pending_milestones|length %}
+          <a href="{% url 'marketplace:contract_list' %}" class="btn-outline btn-sm">View all</a>
+          {% endif %}
+        </div>
+      </div>
+      {% for milestone in pending_milestones %}
+      <div class="emp-milestone-row">
+        <div>
+          <div class="emp-ms-name">{{ milestone.title }}</div>
+          <div class="emp-ms-sub">
+            {{ milestone.contract.title|truncatechars:36 }} ·
+            {{ milestone.contract.worker.user.get_full_name|default:milestone.contract.worker.user.username }}
+          </div>
+        </div>
+        <div class="emp-ms-right">
+          <div class="emp-ms-amount">₦{{ milestone.amount|floatformat:0 }}</div>
+          <a href="{% url 'marketplace:contract_detail' pk=milestone.contract.pk %}#milestone-{{ milestone.pk }}"
+             class="emp-fund-btn">
+            <i class="fas fa-lock" style="font-size:0.58rem;"></i> Fund Escrow
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {# ── Job Listings ── #}
+    <div class="emp-card">
+      <div class="emp-card-head">
+        <div style="width:32px;height:32px;border-radius:9px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:var(--amber);">
+          <i class="fas fa-briefcase"></i>
+        </div>
+        <span class="emp-card-title">Job Listings</span>
+        {% if jobs_page.paginator.count > 0 %}
+        <span class="emp-card-count">{{ jobs_page.paginator.count }}</span>
+        {% endif %}
+        <div class="emp-card-actions">
+          <a href="{% url 'marketplace:job_create' %}" class="btn-solid btn-sm">
+            <i class="fas fa-plus"></i> Post New
+          </a>
+        </div>
+      </div>
+
+      {# Status filter tabs #}
+      <div class="emp-tabs" role="tablist">
+        {% with base_url=request.path %}
+        <a href="{{ base_url }}?status=all"
+           class="emp-tab {% if status_filter == 'all' %}active{% endif %}"
+           role="tab">
+          All
+        </a>
+        <a href="{{ base_url }}?status=active"
+           class="emp-tab {% if status_filter == 'active' %}active{% endif %}">
+          <span class="emp-tab-dot" style="background:var(--emerald);"></span> Active
+        </a>
+        <a href="{{ base_url }}?status=paused"
+           class="emp-tab {% if status_filter == 'paused' %}active{% endif %}">
+          <span class="emp-tab-dot" style="background:var(--amber);"></span> Paused
+        </a>
+        <a href="{{ base_url }}?status=draft"
+           class="emp-tab {% if status_filter == 'draft' %}active{% endif %}">
+          <span class="emp-tab-dot" style="background:rgba(255,255,255,0.3);"></span> Draft
+        </a>
+        <a href="{{ base_url }}?status=filled"
+           class="emp-tab {% if status_filter == 'filled' %}active{% endif %}">
+          <span class="emp-tab-dot" style="background:var(--sky);"></span> Filled
+        </a>
+        <a href="{{ base_url }}?status=expired"
+           class="emp-tab {% if status_filter == 'expired' %}active{% endif %}">
+          <span class="emp-tab-dot" style="background:rgba(239,68,68,0.7);"></span> Expired
+        </a>
+        {% endwith %}
+      </div>
+
+      {% if jobs_page.object_list %}
+      <div style="overflow-x:auto;">
+        <table class="emp-job-table">
+          <thead>
+            <tr>
+              <th style="width:42%;">Job</th>
+              <th>Type</th>
+              <th>Pay</th>
+              <th class="col-apps" style="text-align:center;">Apps</th>
+              <th class="col-actions" style="width:1%;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for job in jobs_page.object_list %}
+            <tr data-status="{{ job.status }}" data-job-id="{{ job.pk }}">
+              <td>
+                <div class="emp-jrow">
+                  <div class="emp-jstripe
+                    {% if job.status == 'active' %}js-active
+                    {% elif job.status == 'paused' %}js-paused
+                    {% elif job.status == 'draft' %}js-draft
+                    {% elif job.status == 'filled' %}js-filled
+                    {% elif job.status == 'expired' %}js-expired
+                    {% else %}js-closed{% endif %}"></div>
+                  <div class="emp-jinfo">
+                    <a href="{% url 'marketplace:job_detail' pk=job.pk %}" class="emp-jtitle">
+                      {{ job.title }}
+                    </a>
+                    <div class="emp-jmeta">
+                      {% if job.state %}
+                      <span><i class="fas fa-location-dot"></i>{{ job.get_state_display }}{% if job.lga %}, {{ job.lga }}{% endif %}</span>
+                      {% endif %}
+                      <span><i class="fas fa-eye"></i>{{ job.views_count }}</span>
+                      <span><i class="fas fa-calendar-plus"></i>{{ job.created|timesince }} ago</span>
+                      {% if job.deadline %}
+                      <span><i class="fas fa-calendar-xmark"></i>{{ job.deadline|date:"d M Y" }}</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+                {# Tags row #}
+                <div class="emp-jtags">
+                  {% if job.status == 'active' %}
+                    <span class="emp-tag et-green"><i class="fas fa-circle"></i> Active</span>
+                  {% elif job.status == 'paused' %}
+                    <span class="emp-tag et-amber"><i class="fas fa-pause"></i> Paused</span>
+                  {% elif job.status == 'draft' %}
+                    <span class="emp-tag et-default"><i class="fas fa-pen"></i> Draft</span>
+                  {% elif job.status == 'filled' %}
+                    <span class="emp-tag et-sky"><i class="fas fa-check"></i> Filled</span>
+                  {% elif job.status == 'expired' %}
+                    <span class="emp-tag et-red"><i class="fas fa-clock"></i> Expired</span>
+                  {% else %}
+                    <span class="emp-tag et-red">{{ job.get_status_display }}</span>
+                  {% endif %}
+                  {% if job.trade_category %}
+                  <span class="emp-tag et-amber">{{ job.trade_category.name }}</span>
+                  {% endif %}
+                  {% if job.slots > 1 %}
+                  <span class="emp-tag et-default">{{ job.slots }} slots</span>
+                  {% endif %}
+                  {% if job.is_remote %}
+                  <span class="emp-tag et-sky"><i class="fas fa-wifi"></i> Remote</span>
+                  {% endif %}
+                </div>
+              </td>
+
+              <td style="white-space:nowrap; padding:0 16px; color:var(--text-2); font-size:0.8rem;">
+                {{ job.get_job_type_display }}
+              </td>
+
+              <td style="white-space:nowrap; padding:0 16px; font-size:0.8rem; color:var(--text-2);">
+                {% if job.pay_min or job.pay_max %}
+                  {% if job.pay_min and job.pay_max %}
+                    ₦{{ job.pay_min|floatformat:0 }}–{{ job.pay_max|floatformat:0 }}
+                  {% elif job.pay_min %}
+                    From ₦{{ job.pay_min|floatformat:0 }}
+                  {% else %}
+                    Up to ₦{{ job.pay_max|floatformat:0 }}
+                  {% endif %}
+                {% else %}
+                  <span style="color:var(--text-3);">—</span>
+                {% endif %}
+              </td>
+
+              <td class="col-apps">
+                <div class="emp-app-count">
+                  <span class="emp-app-num">{{ job.app_count }}</span>
+                  <span class="emp-app-lbl">App{{ job.app_count|pluralize }}</span>
+                </div>
+              </td>
+
+              <td class="col-actions">
+                <div class="emp-jactions">
+                  {% if job.app_count > 0 %}
+                  <a href="{% url 'marketplace:job_applications' pk=job.pk %}" class="emp-jbtn emp-jbtn-amber">
+                    <i class="fas fa-users"></i> Review
+                  </a>
+                  {% endif %}
+                  <a href="{% url 'marketplace:job_matches' pk=job.pk %}" class="emp-jbtn" title="AI-matched workers">
+                    <i class="fas fa-brain"></i>
+                  </a>
+                  <a href="{% url 'marketplace:job_edit' pk=job.pk %}" class="emp-jbtn" title="Edit job">
+                    <i class="fas fa-pen"></i>
+                  </a>
+                  {% if job.status == 'active' or job.status == 'paused' %}
+                  <button
+                    class="emp-toggle {% if job.status == 'active' %}emp-toggle-on{% else %}emp-toggle-off{% endif %}"
+                    data-toggle-url="{% url 'marketplace:job_toggle_status' pk=job.pk %}"
+                    onclick="empToggleJob(this)"
+                    title="{% if job.status == 'active' %}Pause{% else %}Activate{% endif %}">
+                    {% if job.status == 'active' %}
+                      <i class="fas fa-pause" style="font-size:0.5rem;"></i> Pause
+                    {% else %}
+                      <i class="fas fa-play" style="font-size:0.5rem;"></i> Live
+                    {% endif %}
+                  </button>
+                  {% endif %}
+                  <form method="POST"
+                        action="{% url 'marketplace:job_delete' pk=job.pk %}"
+                        style="display:inline;"
+                        onsubmit="return confirm('Delete \'{{ job.title|escapejs }}\'? This cannot be undone.');">
+                    {% csrf_token %}
+                    <button type="submit" class="emp-jbtn emp-jbtn-danger emp-jbtn-icon" title="Delete">
+                      <i class="fas fa-trash-can"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {# Pagination #}
+      {% if jobs_page.paginator.num_pages > 1 %}
+      <div class="emp-pagination">
+        <div class="emp-pag-info">
+          Showing {{ jobs_page.start_index }}–{{ jobs_page.end_index }}
+          of {{ jobs_page.paginator.count }} job{{ jobs_page.paginator.count|pluralize }}
+          {% if status_filter != 'all' %}({{ status_filter }}){% endif %}
+        </div>
+        <div class="emp-pag-pages">
+          {# Previous #}
+          {% if jobs_page.has_previous %}
+          <a href="?status={{ status_filter }}&page={{ jobs_page.previous_page_number }}"
+             class="emp-pag-btn" title="Previous">
+            <i class="fas fa-chevron-left" style="font-size:0.65rem;"></i>
+          </a>
+          {% else %}
+          <span class="emp-pag-btn disabled"><i class="fas fa-chevron-left" style="font-size:0.65rem;"></i></span>
+          {% endif %}
+
+          {# Page numbers #}
+          {% for num in jobs_page.paginator.page_range %}
+            {% if num == jobs_page.number %}
+              <span class="emp-pag-btn current">{{ num }}</span>
+            {% elif num == 1 or num == jobs_page.paginator.num_pages %}
+              <a href="?status={{ status_filter }}&page={{ num }}" class="emp-pag-btn">{{ num }}</a>
+            {% elif num >= jobs_page.number|add:"-2" and num <= jobs_page.number|add:"2" %}
+              <a href="?status={{ status_filter }}&page={{ num }}" class="emp-pag-btn">{{ num }}</a>
+            {% elif num == jobs_page.number|add:"-3" or num == jobs_page.number|add:"3" %}
+              <span class="emp-pag-ellipsis">…</span>
+            {% endif %}
+          {% endfor %}
+
+          {# Next #}
+          {% if jobs_page.has_next %}
+          <a href="?status={{ status_filter }}&page={{ jobs_page.next_page_number }}"
+             class="emp-pag-btn" title="Next">
+            <i class="fas fa-chevron-right" style="font-size:0.65rem;"></i>
+          </a>
+          {% else %}
+          <span class="emp-pag-btn disabled"><i class="fas fa-chevron-right" style="font-size:0.65rem;"></i></span>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% else %}
+      {# Empty state #}
+      <div class="emp-empty">
+        <div class="emp-empty-icon"><i class="fas fa-briefcase"></i></div>
+        {% if status_filter != 'all' %}
+        <div class="emp-empty-title">No {{ status_filter }} jobs</div>
+        <div class="emp-empty-sub">You don't have any {{ status_filter }} listings right now.</div>
+        <a href="?status=all" class="btn-outline btn-sm">View All Jobs</a>
+        {% else %}
+        <div class="emp-empty-title">No jobs posted yet</div>
+        <div class="emp-empty-sub">
+          Post your first job and our AI will match you with the best skilled
+          workers in Nigeria within minutes.
+        </div>
+        <a href="{% url 'marketplace:job_create' %}" class="btn-solid" style="display:inline-flex;">
+          <i class="fas fa-plus"></i> Post Your First Job
+        </a>
+        {% endif %}
+      </div>
+      {% endif %}
+
+    </div>{# /job card #}
+
+    {# ── Pending Applications ── #}
+    <div class="emp-card" id="applications">
+      <div class="emp-card-head">
+        <div style="width:32px;height:32px;border-radius:9px;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.2);display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:var(--sky);">
+          <i class="fas fa-inbox"></i>
+        </div>
+        <span class="emp-card-title">Pending Applications</span>
+        {% if stat_pending_apps > 0 %}
+        <span class="emp-card-count">{{ stat_pending_apps }}</span>
+        {% endif %}
+      </div>
+
+      {% if recent_apps %}
+      <div class="emp-apps-list">
+        {% for app in recent_apps %}
+        <div class="emp-app-row">
+          <div class="emp-app-avatar">
+            {{ app.worker.user.get_full_name|default:app.worker.user.username|slice:":1"|upper }}
+          </div>
+          <div class="emp-app-info">
+            <div class="emp-app-name">
+              {{ app.worker.user.get_full_name|default:app.worker.user.username }}
+            </div>
+            <div class="emp-app-job">{{ app.job.title }}</div>
+            <div class="emp-app-time">Applied {{ app.applied_at|timesince }} ago</div>
+          </div>
+          <div class="emp-app-right">
+            {% if app.clip_match_score %}
+            <div class="emp-score">
+              {{ app.clip_match_score|floatformat:0 }}<span>% match</span>
+            </div>
+            {% endif %}
+            <div class="emp-app-links">
+              <a href="{% url 'marketplace:job_applications' pk=app.job.pk %}"
+                 class="emp-alink emp-alink-primary" title="Review applications">
+                <i class="fas fa-eye" style="font-size:0.58rem;"></i> Review
+              </a>
+              <a href="{% url 'marketplace:worker_profile_public' pk=app.worker.pk %}"
+                 class="emp-alink" title="View worker profile">
+                <i class="fas fa-user" style="font-size:0.58rem;"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="emp-apps-empty">
+        <i class="fas fa-inbox"></i>
+        No pending applications right now.
+      </div>
+      {% endif %}
+    </div>
+
+    {# ── Quick Links + AI matching (2-col grid on large screens) ── #}
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+
+      <div class="emp-card" style="margin-bottom:0;">
+        <div class="emp-card-head">
+          <div style="width:32px;height:32px;border-radius:9px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:var(--amber);">
+            <i class="fas fa-bolt"></i>
+          </div>
+          <span class="emp-card-title">Quick Links</span>
+        </div>
+        <div class="emp-qlinks">
+          <a href="{% url 'marketplace:job_create' %}" class="emp-qlink">
+            <i class="fas fa-plus"></i> Post a New Job
+          </a>
+          <a href="{% url 'marketplace:employer_profile_edit' %}" class="emp-qlink">
+            <i class="fas fa-pen-to-square"></i> Edit Company Profile
+          </a>
+          <a href="{% url 'marketplace:employer_profile_public' pk=employer.pk %}" class="emp-qlink">
+            <i class="fas fa-eye"></i> View Public Profile
+          </a>
+          <a href="{% url 'marketplace:contract_list' %}" class="emp-qlink">
+            <i class="fas fa-file-contract"></i> Escrow Contracts
+          </a>
+          <a href="{% url 'marketplace:notifications' %}" class="emp-qlink">
+            <i class="fas fa-bell"></i> Notifications
+            {% if unread_count %}
+            <span class="emp-qlink-badge">{{ unread_count }}</span>
+            {% endif %}
+          </a>
+          <a href="{% url 'marketplace:job_list' %}" class="emp-qlink">
+            <i class="fas fa-briefcase"></i> Browse All Jobs
+          </a>
+        </div>
+        {% if not employer.about or not employer.logo or not employer.industry %}
+        <div class="emp-nudge">
+          <div class="emp-nudge-icon"><i class="fas fa-lightbulb"></i></div>
+          <div class="emp-nudge-text">
+            A complete profile with logo and description attracts
+            <strong>3× more qualified applicants</strong>.
+            <a href="{% url 'marketplace:employer_profile_edit' %}">Update now <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></a>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="emp-card" style="margin-bottom:0; border-color:rgba(56,189,248,0.12);">
+        <div class="emp-card-head" style="border-color:rgba(56,189,248,0.1);">
+          <div style="width:32px;height:32px;border-radius:9px;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.2);display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:var(--sky);">
+            <i class="fas fa-brain"></i>
+          </div>
+          <span class="emp-card-title" style="color:var(--sky);">AI Worker Matching</span>
+        </div>
+        <div class="emp-ai-body">
+          <p>
+            TradeLink's AI ranks workers against your job descriptions using
+            semantic text and portfolio image analysis. Click
+            <strong style="color:var(--amber);">Matches</strong> on any active
+            job to instantly see your top-ranked candidates.
+          </p>
+          {% for job in jobs_page.object_list %}
+            {% if job.status == 'active' %}
+            <a href="{% url 'marketplace:job_matches' pk=job.pk %}" class="emp-ai-link">
+              <i class="fas fa-bolt"></i> "{{ job.title|truncatechars:30 }}"
+            </a>
+            <br style="margin-bottom:6px;">
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>{# /2-col bottom #}
+
+  </main>
+
+</div>{# /shell #}
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+/* ── Mobile sidebar toggle ── */
+function toggleSidebar() {
+  const sb  = document.getElementById('empSidebar');
+  const ov  = document.getElementById('sidebarOverlay');
+  const isOpen = sb.classList.toggle('open');
+  ov.classList.toggle('active', isOpen);
+  document.body.style.overflow = isOpen ? 'hidden' : '';
+}
+function closeSidebar() {
+  document.getElementById('empSidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+/* ── AJAX job status toggle ── */
+function empToggleJob(btn) {
+  const url  = btn.dataset.toggleUrl;
+  const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+  const row  = btn.closest('tr');
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:0.5rem;"></i>';
+
+  fetch(url, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrf, 'Accept': 'application/json' },
+    credentials: 'same-origin',
+  })
+  .then(r => r.json())
+  .then(data => {
+    const newStatus = data.status;
+    const isActive  = newStatus === 'active';
+    row.dataset.status = newStatus;
+
+    // Update stripe
+    const stripe = row.querySelector('.emp-jstripe');
+    if (stripe) {
+      stripe.className = 'emp-jstripe ' + (isActive ? 'js-active' : 'js-paused');
+    }
+
+    // Update status tag
+    const tagEl = row.querySelector('.et-green, .et-amber');
+    if (tagEl) {
+      tagEl.className = isActive ? 'emp-tag et-green' : 'emp-tag et-amber';
+      tagEl.innerHTML = isActive
+        ? '<i class="fas fa-circle"></i> Active'
+        : '<i class="fas fa-pause"></i> Paused';
+    }
+
+    // Update toggle button
+    btn.className = 'emp-toggle ' + (isActive ? 'emp-toggle-on' : 'emp-toggle-off');
+    btn.title = isActive ? 'Pause' : 'Activate';
+    btn.innerHTML = isActive
+      ? '<i class="fas fa-pause" style="font-size:0.5rem;"></i> Pause'
+      : '<i class="fas fa-play"  style="font-size:0.5rem;"></i> Live';
+
+    btn.disabled = false;
+  })
+  .catch(() => {
+    btn.disabled = false;
+    btn.textContent = 'Error';
+    alert('Could not update job status. Please try again.');
+  });
+}
+
+/* ── Auto-dismiss toasts ── */
+document.querySelectorAll('.emp-toast').forEach(el => {
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.3s';
+    el.style.opacity = '0';
+    setTimeout(() => el.remove(), 320);
+  }, 5000);
+});
+
+/* ── Close sidebar on Escape key ── */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeSidebar();
+});
+</script>
+{% endblock %}

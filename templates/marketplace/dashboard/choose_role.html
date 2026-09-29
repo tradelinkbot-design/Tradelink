@@ -1,0 +1,430 @@
+{% extends "base.html" %}
+{% block title %}Choose Your Role — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+/* =====================================================
+   CHOOSE ROLE — TradeLink NG
+===================================================== */
+
+/* ── PAGE SHELL ── */
+.cr-page {
+  min-height: 100vh;
+  padding-top: var(--nav-h);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  padding-bottom: 60px;
+}
+
+/* ── AMBIENT GLOW ── */
+.cr-page::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 30%, rgba(245,158,11,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 80% 70%, rgba(249,115,22,0.05) 0%, transparent 55%);
+  pointer-events: none; z-index: 0;
+}
+
+/* ── INNER WRAPPER ── */
+.cr-inner {
+  position: relative; z-index: 1;
+  width: 100%;
+  max-width: 860px;
+  padding: 0 clamp(16px, 5vw, 48px);
+  text-align: center;
+}
+
+/* ── EYEBROW ── */
+.cr-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 2.5px;
+  text-transform: uppercase; color: var(--amber);
+  margin-bottom: 18px;
+}
+.cr-eyebrow::before {
+  content: ''; display: block;
+  width: 18px; height: 2px;
+  background: var(--amber); border-radius: 2px;
+}
+.cr-eyebrow::after {
+  content: ''; display: block;
+  width: 18px; height: 2px;
+  background: var(--amber); border-radius: 2px;
+}
+
+/* ── HEADING ── */
+.cr-heading {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(1.7rem, 5vw, 3rem);
+  font-weight: 900; line-height: 1.15; letter-spacing: -1px;
+  color: var(--text-1); margin-bottom: 14px;
+}
+.cr-heading .highlight {
+  background: linear-gradient(120deg, var(--amber) 0%, var(--orange) 80%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.cr-sub {
+  font-size: clamp(0.88rem, 2vw, 1rem); color: var(--text-2); line-height: 1.75;
+  max-width: 480px; margin: 0 auto 40px;
+}
+
+/* ── ROLE CARDS ── */
+.cr-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 36px;
+}
+
+.cr-card {
+  background: var(--bg-card);
+  border: 2px solid var(--border-subtle);
+  border-radius: var(--r-xl);
+  padding: 32px 26px 26px;
+  text-decoration: none;
+  display: flex; flex-direction: column; align-items: flex-start;
+  text-align: left;
+  position: relative; overflow: hidden;
+  transition: all 0.32s cubic-bezier(0.4,0,0.2,1);
+  cursor: pointer;
+}
+
+/* Gradient top accent */
+.cr-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  opacity: 0; transition: opacity 0.32s ease;
+}
+.cr-card--worker::before {
+  background: linear-gradient(90deg, var(--amber), var(--orange));
+}
+.cr-card--employer::before {
+  background: linear-gradient(90deg, var(--sky), #818cf8);
+}
+
+/* Inner glow */
+.cr-card::after {
+  content: '';
+  position: absolute; inset: 0;
+  opacity: 0; transition: opacity 0.32s ease; pointer-events: none;
+}
+.cr-card--worker::after {
+  background: linear-gradient(135deg, rgba(245,158,11,0.06) 0%, transparent 60%);
+}
+.cr-card--employer::after {
+  background: linear-gradient(135deg, rgba(56,189,248,0.06) 0%, transparent 60%);
+}
+
+.cr-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 24px 56px rgba(0,0,0,0.45);
+}
+.cr-card--worker:hover {
+  border-color: var(--amber);
+  box-shadow: 0 24px 56px rgba(0,0,0,0.45), 0 0 0 1px rgba(245,158,11,0.12);
+}
+.cr-card--employer:hover {
+  border-color: var(--sky);
+  box-shadow: 0 24px 56px rgba(0,0,0,0.45), 0 0 0 1px rgba(56,189,248,0.12);
+}
+.cr-card:hover::before { opacity: 1; }
+.cr-card:hover::after  { opacity: 1; }
+
+/* Icon badge */
+.cr-icon {
+  width: 52px; height: 52px; border-radius: var(--r-lg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; margin-bottom: 20px; flex-shrink: 0;
+  position: relative; z-index: 1;
+  transition: transform 0.32s ease;
+}
+.cr-card:hover .cr-icon { transform: scale(1.08); }
+
+.cr-icon--worker {
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  color: #0C0A08;
+  box-shadow: 0 6px 20px rgba(245,158,11,0.35);
+}
+.cr-icon--employer {
+  background: linear-gradient(135deg, var(--sky), #818cf8);
+  color: #0C0A08;
+  box-shadow: 0 6px 20px rgba(56,189,248,0.35);
+}
+
+/* Card text */
+.cr-card-label {
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 6px;
+  position: relative; z-index: 1;
+}
+.cr-card--worker .cr-card-label { color: var(--amber); }
+.cr-card--employer .cr-card-label { color: var(--sky); }
+
+.cr-card-title {
+  font-family: 'Fraunces', serif; font-size: 1.25rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 10px; line-height: 1.2;
+  position: relative; z-index: 1;
+}
+
+.cr-card-desc {
+  font-size: 0.87rem; color: var(--text-2); line-height: 1.7;
+  margin-bottom: 20px; flex-grow: 1;
+  position: relative; z-index: 1;
+}
+
+/* Feature list */
+.cr-features {
+  list-style: none; display: flex; flex-direction: column; gap: 8px;
+  margin-bottom: 24px; width: 100%;
+  position: relative; z-index: 1;
+}
+.cr-feature {
+  display: flex; align-items: flex-start; gap: 9px;
+  font-size: 0.82rem; color: var(--text-2);
+}
+.cr-feature i {
+  font-size: 0.72rem; width: 16px; text-align: center; flex-shrink: 0;
+  margin-top: 3px;
+}
+.cr-card--worker  .cr-feature i { color: var(--amber); }
+.cr-card--employer .cr-feature i { color: var(--sky); }
+
+/* CTA button inside card */
+.cr-cta {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 20px; border-radius: var(--r-md);
+  font-family: 'Outfit', sans-serif; font-size: 0.88rem; font-weight: 700;
+  transition: all 0.28s ease; width: 100%; justify-content: center;
+  position: relative; z-index: 1;
+}
+.cr-cta--worker {
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  color: #0C0A08;
+  box-shadow: 0 4px 16px rgba(245,158,11,0.28);
+}
+.cr-cta--worker:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 8px 24px rgba(245,158,11,0.4);
+}
+.cr-cta--employer {
+  background: linear-gradient(135deg, var(--sky), #818cf8);
+  color: #0C0A08;
+  box-shadow: 0 4px 16px rgba(56,189,248,0.28);
+}
+.cr-cta--employer:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 8px 24px rgba(56,189,248,0.35);
+}
+
+/* ── DIVIDER ── */
+.cr-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 0 28px; color: var(--text-3); font-size: 0.78rem;
+}
+.cr-divider::before,
+.cr-divider::after {
+  content: ''; flex: 1; height: 1px;
+  background: var(--border-subtle);
+}
+
+/* ── FOOTER NOTE ── */
+.cr-note {
+  font-size: 0.8rem; color: var(--text-3); line-height: 1.65;
+}
+.cr-note a {
+  color: var(--amber); text-decoration: none; transition: var(--t);
+}
+.cr-note a:hover { color: var(--amber-light); text-decoration: underline; }
+
+/* ── USER GREETING ── */
+.cr-greeting {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-pill); padding: 8px 18px;
+  font-size: 0.83rem; color: var(--text-2);
+  margin-bottom: 28px;
+  max-width: 100%;
+}
+.cr-greeting-avatar {
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Fraunces', serif; font-size: 0.75rem; font-weight: 900;
+  color: #0C0A08;
+}
+.cr-greeting strong { color: var(--text-1); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 680px) {
+  .cr-cards { grid-template-columns: 1fr; gap: 14px; }
+  .cr-card { padding: 24px 20px 20px; }
+  .cr-card:hover { transform: translateY(-3px); }
+  .cr-page { padding-bottom: 40px; justify-content: flex-start; padding-top: calc(var(--nav-h) + 24px); }
+}
+@media (max-width: 480px) {
+  .cr-heading { font-size: 1.6rem; }
+  .cr-eyebrow::before, .cr-eyebrow::after { width: 12px; }
+  .cr-sub { font-size: 0.85rem; margin-bottom: 28px; }
+  .cr-icon { width: 44px; height: 44px; font-size: 1.1rem; }
+  .cr-card-title { font-size: 1.1rem; }
+  .cr-features { gap: 7px; }
+  .cr-feature { font-size: 0.78rem; }
+  .cr-greeting { font-size: 0.78rem; padding: 7px 14px; }
+  .cr-note { font-size: 0.76rem; }
+}
+@media (max-width: 360px) {
+  .cr-inner { padding: 0 14px; }
+  .cr-cta { font-size: 0.82rem; padding: 10px 14px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cr-page">
+  <div class="cr-inner">
+
+    {# ── User greeting pill ── #}
+    <div class="fade-in" style="display:flex; justify-content:center; margin-bottom:28px;">
+      <div class="cr-greeting">
+        <div class="cr-greeting-avatar">
+          {{ request.user.username|slice:":1"|upper }}
+        </div>
+        Signed in as <strong>{{ request.user.username }}</strong>
+      </div>
+    </div>
+
+    {# ── Heading ── #}
+    <div class="cr-eyebrow fade-in d1">Welcome to TradeLink NG</div>
+
+    <h1 class="cr-heading fade-in d2">
+      How will you be<br>
+      <span class="highlight">using the platform?</span>
+    </h1>
+
+    <p class="cr-sub fade-in d3">
+      Choose your role to get started. You can always update your profile later —
+      pick the one that best describes you right now.
+    </p>
+
+    {# ── Role cards ── #}
+    <div class="cr-cards fade-in d3">
+
+      {# ── WORKER CARD ── #}
+      <a href="{% url 'marketplace:worker_profile_edit' %}" class="cr-card cr-card--worker">
+        <div class="cr-icon cr-icon--worker">
+          <i class="fas fa-hard-hat"></i>
+        </div>
+
+        <div class="cr-card-label">I am a Tradesperson</div>
+        <div class="cr-card-title">Find Work &amp; Get Hired</div>
+        <p class="cr-card-desc">
+          Build a professional profile, showcase your portfolio, and get matched
+          to jobs using our AI recommendation engine.
+        </p>
+
+        <ul class="cr-features">
+          <li class="cr-feature">
+            <i class="fas fa-circle-check"></i>
+            AI-powered job matching to your skills
+          </li>
+          <li class="cr-feature">
+            <i class="fas fa-circle-check"></i>
+            Upload portfolio photos of your work
+          </li>
+          <li class="cr-feature">
+            <i class="fas fa-circle-check"></i>
+            Apply to jobs across Nigeria
+          </li>
+          <li class="cr-feature">
+            <i class="fas fa-circle-check"></i>
+            Set your rates &amp; availability
+          </li>
+          <li class="cr-feature">
+            <i class="fas fa-circle-check"></i>
+            Build your reputation with verified reviews
+          </li>
+        </ul>
+
+        <span class="cr-cta cr-cta--worker">
+          <i class="fas fa-helmet-safety"></i>
+          Set Up Worker Profile
+          <i class="fas fa-arrow-right" style="margin-left:auto; font-size:0.78rem;"></i>
+        </span>
+      </a>
+
+      {# ── EMPLOYER CARD ── #}
+      <a href="{% url 'marketplace:employer_profile_edit' %}" class="cr-card cr-card--employer">
+        <div class="cr-icon cr-icon--employer">
+          <i class="fas fa-building"></i>
+        </div>
+
+        <div class="cr-card-label">I am an Employer</div>
+        <div class="cr-card-title">Hire Skilled Workers</div>
+        <p class="cr-card-desc">
+          Post jobs, browse verified tradespeople, and use AI to find the best
+          match for your project — from one-off gigs to full-time roles.
+        </p>
+
+        <ul class="cr-features">
+          <li class="cr-feature">
+            <i class="fas fa-circle-check"></i>
+            Post jobs in minutes
+          </li>
+          <li class="cr-feature">
+            <i class="fas fa-circle-check"></i>
+            AI-ranked worker recommendations
+          </li>
+          <li class="cr-feature">
+            <i class="fas fa-circle-check"></i>
+            Browse verified, reviewed tradespeople
+          </li>
+          <li class="cr-feature">
+            <i class="fas fa-circle-check"></i>
+            Manage applications from one dashboard
+          </li>
+          <li class="cr-feature">
+            <i class="fas fa-circle-check"></i>
+            Works for individuals &amp; businesses
+          </li>
+        </ul>
+
+        <span class="cr-cta cr-cta--employer">
+          <i class="fas fa-briefcase"></i>
+          Set Up Employer Profile
+          <i class="fas fa-arrow-right" style="margin-left:auto; font-size:0.78rem;"></i>
+        </span>
+      </a>
+
+    </div>{# /cr-cards #}
+
+    {# ── Divider ── #}
+    <div class="cr-divider fade-in d4">
+      <span>or explore first</span>
+    </div>
+
+    {# ── Browse without committing ── #}
+    <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap; margin-bottom:32px;" class="fade-in d4">
+      <a href="{% url 'marketplace:job_list' %}" class="btn btn-ghost btn-sm">
+        <i class="fas fa-briefcase"></i> Browse Jobs
+      </a>
+      <a href="{% url 'marketplace:trade_list' %}" class="btn btn-ghost btn-sm">
+        <i class="fas fa-hard-hat"></i> Explore Trades
+      </a>
+    </div>
+
+    {# ── Footer note ── #}
+    <p class="cr-note fade-in d5">
+      Not sure yet? You can browse jobs and trade categories without setting up a profile.<br>
+      Need help? <a href="mailto:support@tradelinkng.com">Contact our support team</a>.
+    </p>
+
+  </div>{# /cr-inner #}
+</div>{# /cr-page #}
+{% endblock %}

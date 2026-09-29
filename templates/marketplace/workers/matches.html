@@ -1,0 +1,1201 @@
+{% extends "base.html" %}
+{% block title %}My AI Job Matches — TradeLink NG{% endblock %}
+{% block nav_jobs %}active{% endblock %}
+
+       
+
+{% block extra_head %}
+<style>
+
+
+/* ── PAGE SHELL ── */
+.wm-page { padding-top: var(--nav-h); position: relative; z-index: 1; }
+
+/* ── BREADCRUMB ── */
+.wm-crumb {
+  padding: 20px 0; background: var(--bg-raised);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.wm-crumb-inner {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.82rem; color: var(--text-3);
+}
+.wm-crumb a { color: var(--text-3); text-decoration: none; transition: var(--t); }
+.wm-crumb a:hover { color: var(--amber); }
+.wm-crumb-sep { font-size: 0.62rem; }
+
+/* ── HERO ── */
+.wm-hero {
+  padding: 52px 0 48px;
+  background: linear-gradient(
+    160deg,
+    rgba(245,158,11,0.07) 0%,
+    rgba(249,115,22,0.04) 40%,
+    transparent 100%
+  );
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative; overflow: hidden;
+}
+.wm-hero::before {
+  content: '';
+  position: absolute; top: -80px; right: -100px;
+  width: 500px; height: 500px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,158,11,0.09), transparent 65%);
+  pointer-events: none;
+}
+.wm-hero::after {
+  content: '';
+  position: absolute; bottom: -60px; left: -60px;
+  width: 340px; height: 340px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(249,115,22,0.05), transparent 65%);
+  pointer-events: none;
+}
+
+.wm-hero-inner {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 32px; align-items: start;
+}
+
+/* Worker identity strip */
+.wm-worker-strip {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.wm-worker-avatar {
+  width: 56px; height: 56px; border-radius: 15px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--amber-dark), var(--orange));
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Fraunces', serif; font-weight: 900; font-size: 1.2rem;
+  color: #0C0A08;
+}
+.wm-worker-name { font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 700; }
+.wm-worker-meta { font-size: 0.83rem; color: var(--text-3); margin-top: 2px; }
+
+/* Profile completion ring (right side) */
+.wm-profile-ring {
+  text-align: center; padding: 20px 24px;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); position: relative; overflow: hidden;
+  min-width: 140px; flex-shrink: 0;
+}
+.wm-profile-ring::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(245,158,11,0.05), transparent 70%);
+  pointer-events: none;
+}
+.wm-profile-pct {
+  font-family: 'Fraunces', serif; font-size: 2.2rem; font-weight: 900; line-height: 1;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.wm-profile-lbl {
+  font-size: 0.68rem; font-weight: 700; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 1.5px; margin-top: 4px; display: block;
+}
+.wm-profile-bar {
+  margin-top: 8px; height: 5px;
+  background: var(--border-subtle); border-radius: 4px; overflow: hidden;
+}
+.wm-profile-bar-fill {
+  height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, var(--amber), var(--orange));
+  transition: width 1.2s var(--ease);
+}
+
+/* ── AI ENGINE STATUS PILL ── */
+.wm-ai-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 16px 6px 8px;
+  background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2);
+  border-radius: var(--r-pill); font-size: 0.8rem; font-weight: 600;
+  color: var(--amber); margin-bottom: 16px;
+}
+.wm-ai-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--amber); flex-shrink: 0;
+  animation: pulseDot 2s ease-in-out infinite;
+}
+.wm-ai-pill.offline {
+  background: rgba(250,245,235,0.04); border-color: var(--border-subtle);
+  color: var(--text-3);
+}
+.wm-ai-pill.offline .wm-ai-dot { background: var(--text-3); animation: none; }
+
+/* Score formula legend */
+.wm-formula {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-top: 18px; align-items: center;
+}
+.wm-formula-item {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.75rem; color: var(--text-3); font-weight: 600;
+}
+.wm-formula-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.wm-formula-sep { color: var(--text-3); font-size: 0.7rem; }
+
+/* ── MAIN LAYOUT ── */
+.wm-body { padding: 48px 0 80px; }
+.wm-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 36px; align-items: start;
+}
+
+/* ── MATCH CARD ── */
+.wm-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); overflow: hidden; transition: var(--t);
+  position: relative; margin-bottom: 14px;
+}
+.wm-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-3px);
+  box-shadow: 0 18px 48px rgba(0,0,0,0.38), 0 0 0 1px rgba(245,158,11,0.07);
+}
+.wm-card::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(245,158,11,0.03) 0%, transparent 60%);
+  opacity: 0; transition: opacity 0.3s var(--ease); pointer-events: none;
+}
+.wm-card:hover::before { opacity: 1; }
+
+/* Card header */
+.wm-card-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 16px; align-items: flex-start;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Employer logo */
+.wm-employer-logo {
+  width: 52px; height: 52px; border-radius: 13px; flex-shrink: 0;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.25rem; overflow: hidden;
+}
+.wm-employer-logo img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Title + meta */
+.wm-card-title-block { min-width: 0; }
+.wm-card-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1.05rem; font-weight: 800; line-height: 1.25;
+  color: var(--text-1); margin-bottom: 5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: var(--t);
+}
+.wm-card:hover .wm-card-title { color: var(--amber); }
+.wm-card-employer {
+  font-size: 0.82rem; color: var(--text-3);
+  margin-bottom: 9px; display: flex; align-items: center; gap: 5px;
+}
+.wm-card-meta {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+}
+.wm-card-meta-item {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 0.78rem; color: var(--text-3);
+}
+.wm-card-meta-item i { font-size: 0.67rem; }
+
+/* Score column */
+.wm-score-col {
+  text-align: center; flex-shrink: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.wm-score-num {
+  font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 900; line-height: 1;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.wm-score-pct {
+  font-family: 'Outfit', sans-serif; font-size: 0.7rem; font-weight: 700;
+  color: var(--text-3); text-transform: uppercase; letter-spacing: 1px;
+}
+.wm-score-tier {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 8px; border-radius: var(--r-pill);
+  font-size: 0.65rem; font-weight: 700; margin-top: 3px;
+}
+.wm-tier-excellent { background: rgba(16,185,129,0.12);  border: 1px solid rgba(16,185,129,0.22);  color: var(--emerald); }
+.wm-tier-strong    { background: rgba(245,158,11,0.12);  border: 1px solid rgba(245,158,11,0.22);  color: var(--amber); }
+.wm-tier-good      { background: rgba(56,189,248,0.10);  border: 1px solid rgba(56,189,248,0.2);   color: var(--sky); }
+.wm-tier-fair      { background: rgba(250,245,235,0.06); border: 1px solid var(--border-subtle);   color: var(--text-3); }
+
+/* Card body — component bars */
+.wm-card-bars {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.wm-bars-title {
+  font-size: 0.72rem; font-weight: 700; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 6px;
+}
+.wm-bars-title i { color: var(--amber); font-size: 0.65rem; }
+
+.wm-bar-row {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.wm-bar-row:last-child { margin-bottom: 0; }
+.wm-bar-label {
+  font-size: 0.73rem; font-weight: 600; color: var(--text-3);
+  width: 76px; flex-shrink: 0;
+}
+.wm-bar-track {
+  flex: 1; height: 6px; background: var(--border-subtle);
+  border-radius: 4px; overflow: hidden;
+}
+.wm-bar-fill {
+  height: 100%; border-radius: 4px;
+  width: 0%; /* animated by JS */
+  transition: width 0.85s cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* Colour per component */
+.wm-fill-text     { background: linear-gradient(90deg, var(--amber), var(--orange)); }
+.wm-fill-location { background: var(--emerald); }
+.wm-fill-exp      { background: var(--sky); }
+.wm-fill-image    { background: #A78BFA; }   /* violet — image component */
+.wm-fill-rating   { background: #F472B6; }   /* pink — rating */
+
+.wm-bar-pct {
+  font-size: 0.72rem; font-weight: 700;
+  color: var(--text-2); width: 34px; text-align: right; flex-shrink: 0;
+}
+
+/* Card footer — pay + CTA */
+.wm-card-footer {
+  padding: 14px 24px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.wm-pay {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 800;
+  color: var(--amber);
+}
+.wm-pay-unit {
+  font-family: 'Outfit', sans-serif; font-size: 0.72rem;
+  font-weight: 400; color: var(--text-3); margin-left: 2px;
+}
+.wm-tags { display: flex; flex-wrap: wrap; gap: 5px; flex: 1; }
+.wm-tag {
+  display: inline-flex; padding: 3px 10px;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-pill); font-size: 0.73rem;
+  font-weight: 500; color: var(--text-2); white-space: nowrap;
+}
+.wm-tag.remote {
+  background: rgba(56,189,248,0.08); border-color: rgba(56,189,248,0.2);
+  color: var(--sky);
+}
+.wm-cta {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 18px; border-radius: var(--r-md);
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  color: #0C0A08; font-family: 'Outfit', sans-serif;
+  font-size: 0.83rem; font-weight: 700; letter-spacing: 0.1px;
+  text-decoration: none; transition: var(--t);
+  box-shadow: 0 3px 12px rgba(245,158,11,0.25); flex-shrink: 0;
+}
+.wm-cta:hover {
+  box-shadow: 0 5px 20px rgba(245,158,11,0.4); transform: translateY(-1px);
+  filter: brightness(1.06);
+}
+
+/* Computed timestamp */
+.wm-computed {
+  font-size: 0.68rem; color: var(--text-3);
+  padding: 0 24px 12px; text-align: right;
+}
+
+/* ── SIDEBAR ── */
+.wm-sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+.wm-sidebar-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 22px; overflow: hidden;
+  position: relative;
+}
+.wm-sidebar-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(245,158,11,0.04), transparent 70%);
+  pointer-events: none;
+}
+.wm-sidebar-title {
+  font-family: 'Fraunces', serif; font-size: 0.97rem; font-weight: 800;
+  margin-bottom: 16px; padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; gap: 8px; color: var(--text-1);
+}
+.wm-sidebar-title i { color: var(--amber); font-size: 0.85rem; }
+
+/* Score legend bars in sidebar */
+.wm-legend-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 10px;
+}
+.wm-legend-row:last-child { margin-bottom: 0; }
+.wm-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.wm-legend-name { font-size: 0.78rem; color: var(--text-2); flex: 1; }
+.wm-legend-weight { font-size: 0.78rem; font-weight: 700; color: var(--text-3); }
+
+/* Profile tips */
+.wm-tip-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--border-subtle);
+}
+.wm-tip-row:last-child { border-bottom: none; }
+.wm-tip-icon {
+  width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 0.8rem;
+}
+.wm-tip-done .wm-tip-icon { background: rgba(16,185,129,0.12); color: var(--emerald); }
+.wm-tip-todo .wm-tip-icon { background: rgba(245,158,11,0.1); color: var(--amber); }
+.wm-tip-text { font-size: 0.8rem; color: var(--text-2); line-height: 1.5; }
+.wm-tip-done .wm-tip-text { color: var(--text-3); text-decoration: line-through; }
+
+/* Quick actions */
+.wm-action-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px; border-radius: var(--r-md);
+  text-decoration: none; color: var(--text-2);
+  font-size: 0.85rem; font-weight: 600; transition: var(--t);
+  border: 1px solid transparent;
+}
+.wm-action-link:hover {
+  background: var(--surface-1); border-color: var(--border-subtle);
+  color: var(--text-1);
+}
+.wm-action-link i { color: var(--amber); width: 16px; text-align: center; font-size: 0.82rem; }
+.wm-action-link-arrow { margin-left: auto; font-size: 0.65rem; color: var(--text-3); transition: var(--t); }
+.wm-action-link:hover .wm-action-link-arrow { color: var(--amber); transform: translateX(3px); }
+
+/* ── NOT-READY STATE ── */
+.wm-not-ready {
+  padding: 72px 32px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 20px;
+}
+.wm-not-ready-icon {
+  width: 80px; height: 80px; border-radius: 22px; flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(249,115,22,0.08));
+  border: 1px solid rgba(245,158,11,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; color: var(--amber); position: relative;
+}
+.wm-not-ready-spinner {
+  position: absolute; inset: -6px; border-radius: 28px;
+  border: 2px solid transparent;
+  border-top-color: rgba(245,158,11,0.4);
+  border-right-color: rgba(245,158,11,0.2);
+  animation: spin 1.5s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.wm-not-ready-title {
+  font-family: 'Fraunces', serif; font-size: 1.5rem; font-weight: 900;
+  letter-spacing: -0.5px; margin-bottom: 6px;
+}
+
+/* ── EMPTY RESULTS STATE ── */
+.wm-empty {
+  padding: 72px 32px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+.wm-empty-icon {
+  width: 72px; height: 72px; border-radius: 20px;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.8rem; color: var(--text-3);
+}
+
+/* ── PAGINATION ── */
+.wm-pager {
+  display: flex; gap: 6px; justify-content: center; margin-top: 40px;
+  align-items: center; flex-wrap: wrap;
+}
+.wm-pager a, .wm-pager span {
+  display: flex; align-items: center; justify-content: center;
+  min-width: 40px; height: 40px; padding: 0 12px;
+  border-radius: var(--r-md); font-size: 0.87rem; font-weight: 600;
+  text-decoration: none; border: 1px solid var(--border-subtle);
+  color: var(--text-2); transition: var(--t);
+}
+.wm-pager a:hover  { background: var(--surface-1); border-color: var(--border-strong); color: var(--amber); }
+.wm-pager .current { background: linear-gradient(135deg,var(--amber),var(--orange)); border-color: transparent; color: #0C0A08; }
+.wm-pager .disabled { opacity: 0.3; pointer-events: none; }
+
+/* ── MESSAGES ── */
+.wm-messages {
+  position: fixed; top: calc(var(--nav-h) + 16px); right: 20px;
+  z-index: 3000; display: flex; flex-direction: column; gap: 10px;
+  max-width: 380px; pointer-events: none;
+}
+.wm-msg {
+  padding: 12px 18px; border-radius: var(--r-lg);
+  font-size: 0.87rem; font-weight: 600;
+  display: flex; align-items: center; gap: 10px;
+  box-shadow: var(--shadow-md); pointer-events: all; cursor: pointer;
+  animation: msgSlide 0.35s var(--ease) both;
+}
+.wm-msg-success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #6EE7B7; }
+.wm-msg-error   { background: rgba(239,68,68,0.15);  border: 1px solid rgba(239,68,68,0.3);  color: #FCA5A5; }
+.wm-msg-info    { background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.25); color: var(--sky); }
+@keyframes msgSlide { from { opacity:0; transform: translateX(16px); } to { opacity:1; transform: translateX(0); } }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1024px) {
+  .wm-layout { grid-template-columns: 1fr; }
+  .wm-sidebar { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+}
+@media (max-width: 768px) {
+  .wm-hero-inner { grid-template-columns: 1fr; }
+  .wm-profile-ring { display: none; }
+  .wm-card-header { grid-template-columns: auto 1fr; }
+  .wm-score-col { display: none; }
+}
+@media (max-width: 560px) {
+  .wm-sidebar { grid-template-columns: 1fr; }
+  .wm-card-bars { display: none; }   /* show on desktop only */
+  .wm-card-footer { flex-direction: column; align-items: flex-start; }
+  .wm-cta { width: 100%; justify-content: center; }
+}
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+{# ── Floating messages ── #}
+{% if messages %}
+<div class="wm-messages">
+  {% for message in messages %}
+  <div class="wm-msg wm-msg-{{ message.tags }}" onclick="this.remove()">
+    {% if 'success' in message.tags %}<i class="fas fa-circle-check"></i>
+    {% elif 'error' in message.tags %}<i class="fas fa-circle-exclamation"></i>
+    {% else %}<i class="fas fa-circle-info"></i>{% endif %}
+    {{ message }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="wm-page">
+
+  {# ── Breadcrumb ── #}
+  <div class="wm-crumb">
+    <div class="container">
+      <div class="wm-crumb-inner">
+        <a href="{% url 'marketplace:worker_dashboard' %}">
+          <i class="fas fa-gauge" style="font-size:0.72rem;"></i> Dashboard
+        </a>
+        <span class="wm-crumb-sep"><i class="fas fa-chevron-right"></i></span>
+        <span style="color:var(--amber);font-weight:600;">AI Matches</span>
+      </div>
+    </div>
+  </div>
+
+  {# ── Hero ── #}
+  <div class="wm-hero">
+    <div class="container">
+      <div class="wm-hero-inner">
+
+        <div>
+          {# Worker identity strip #}
+          <div class="wm-worker-strip">
+            <div class="wm-worker-avatar">
+              {{ worker.user.get_full_name|default:worker.user.username|slice:":2"|upper }}
+            </div>
+            <div>
+              <div class="wm-worker-name">{{ worker.user.get_full_name|default:worker.user.username }}</div>
+              <div class="wm-worker-meta">
+                {% if worker.trade_category %}{{ worker.trade_category.name }}{% endif %}
+                {% if worker.state %} · {{ worker.get_state_display }}{% endif %}
+                {% if worker.experience_level %} · {{ worker.get_experience_level_display }}{% endif %}
+              </div>
+            </div>
+            {% if worker.is_verified %}
+            <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:var(--r-pill);background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.22);color:var(--emerald);font-size:0.72rem;font-weight:700;">
+              <i class="fas fa-circle-check"></i> Verified
+            </span>
+            {% endif %}
+          </div>
+
+          {# AI engine pill #}
+          <div class="wm-ai-pill {% if not clip_ready %}offline{% endif %}">
+            <span class="wm-ai-dot"></span>
+            {% if clip_ready %}
+              Hybrid AI Engine · Active
+            {% else %}
+              AI Engine · Setting up…
+            {% endif %}
+          </div>
+
+          <p class="eyebrow">Personalised for You</p>
+          <h1 style="font-family:'Fraunces',serif;font-size:clamp(1.7rem,3.5vw,2.6rem);font-weight:900;letter-spacing:-1px;line-height:1.1;margin-bottom:10px;">
+            Your <span class="amber-text">AI Job Matches</span>
+          </h1>
+          <p style="color:var(--text-2);font-size:0.96rem;max-width:540px;line-height:1.75;margin-bottom:20px;">
+            Jobs ranked by your hybrid AI score — combining semantic skills match,
+            location, experience level, portfolio images, and rating.
+          </p>
+
+          {# Formula legend #}
+          <div class="wm-formula">
+            <span style="font-size:0.73rem;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-right:2px;">Score =</span>
+            <div class="wm-formula-item">
+              <span class="wm-formula-dot" style="background:var(--amber);"></span> Skills 50%
+            </div>
+            <span class="wm-formula-sep">+</span>
+            <div class="wm-formula-item">
+              <span class="wm-formula-dot" style="background:var(--emerald);"></span> Location 15%
+            </div>
+            <span class="wm-formula-sep">+</span>
+            <div class="wm-formula-item">
+              <span class="wm-formula-dot" style="background:var(--sky);"></span> Experience 15%
+            </div>
+            <span class="wm-formula-sep">+</span>
+            <div class="wm-formula-item">
+              <span class="wm-formula-dot" style="background:#A78BFA;"></span> Portfolio 10%
+            </div>
+            <span class="wm-formula-sep">+</span>
+            <div class="wm-formula-item">
+              <span class="wm-formula-dot" style="background:#F472B6;"></span> Rating 5%
+            </div>
+            <span class="wm-formula-sep">+</span>
+            <div class="wm-formula-item">
+              <span class="wm-formula-dot" style="background:var(--emerald);opacity:0.6;"></span> Verified 5%
+            </div>
+          </div>
+        </div>
+
+        {# Profile completion mini-card #}
+        <div class="wm-profile-ring fade-in">
+          <div class="wm-profile-pct">{{ worker.profile_completion }}%</div>
+          <span class="wm-profile-lbl">Profile</span>
+          <div class="wm-profile-bar">
+            <div class="wm-profile-bar-fill"
+                 style="width:{{ worker.profile_completion }}%;"></div>
+          </div>
+          {% if worker.profile_completion < 80 %}
+          <a href="{% url 'marketplace:worker_profile_edit' %}"
+             style="display:block;margin-top:10px;font-size:0.72rem;color:var(--amber);text-decoration:none;font-weight:600;">
+            Improve profile →
+          </a>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+  </div>{# /hero #}
+
+
+  {# ── Body ── #}
+  <section class="wm-body">
+    <div class="container">
+
+      {# ── CASE 1: AI not ready yet ── #}
+      {% if not clip_ready %}
+
+      <div class="card" style="overflow:visible;">
+        <div class="wm-not-ready">
+          <div class="wm-not-ready-icon">
+            <i class="fas fa-brain"></i>
+            <div class="wm-not-ready-spinner"></div>
+          </div>
+          <div>
+            <div class="wm-not-ready-title">Your AI profile is being built</div>
+            <p style="color:var(--text-2);font-size:0.92rem;max-width:480px;margin:0 auto 24px;line-height:1.75;">
+              Our sentence-transformer model is encoding your bio and skills into a
+              768-dimensional vector. This usually completes within a few minutes
+              of saving your profile. Check back shortly.
+            </p>
+            <div style="display:flex;flex-direction:column;gap:12px;max-width:440px;margin:0 auto;text-align:left;">
+              <div style="display:flex;gap:12px;align-items:center;padding:14px 18px;border-radius:var(--r-lg);background:var(--surface-1);border:1px solid var(--border-subtle);">
+                <div style="width:36px;height:36px;border-radius:10px;background:{% if worker.bio %}rgba(16,185,129,0.12){% else %}rgba(245,158,11,0.1){% endif %};display:flex;align-items:center;justify-content:center;font-size:0.85rem;color:{% if worker.bio %}var(--emerald){% else %}var(--amber){% endif %};flex-shrink:0;">
+                  <i class="fas {% if worker.bio %}fa-check{% else %}fa-pen{% endif %}"></i>
+                </div>
+                <div>
+                  <div style="font-weight:700;font-size:0.88rem;margin-bottom:1px;">Add a Bio</div>
+                  <div style="font-size:0.78rem;color:var(--text-3);">Describe your skills and experience — this is what the AI reads</div>
+                </div>
+                {% if not worker.bio %}
+                <a href="{% url 'marketplace:worker_profile_edit' %}" style="margin-left:auto;color:var(--amber);font-size:0.8rem;font-weight:600;text-decoration:none;white-space:nowrap;">Add →</a>
+                {% endif %}
+              </div>
+              <div style="display:flex;gap:12px;align-items:center;padding:14px 18px;border-radius:var(--r-lg);background:var(--surface-1);border:1px solid var(--border-subtle);">
+                <div style="width:36px;height:36px;border-radius:10px;background:{% if worker.trade_category %}rgba(16,185,129,0.12){% else %}rgba(245,158,11,0.1){% endif %};display:flex;align-items:center;justify-content:center;font-size:0.85rem;color:{% if worker.trade_category %}var(--emerald){% else %}var(--amber){% endif %};flex-shrink:0;">
+                  <i class="fas {% if worker.trade_category %}fa-check{% else %}fa-hard-hat{% endif %}"></i>
+                </div>
+                <div>
+                  <div style="font-weight:700;font-size:0.88rem;margin-bottom:1px;">Select Your Trade</div>
+                  <div style="font-size:0.78rem;color:var(--text-3);">AI only matches you to jobs in your trade category</div>
+                </div>
+                {% if not worker.trade_category %}
+                <a href="{% url 'marketplace:worker_profile_edit' %}" style="margin-left:auto;color:var(--amber);font-size:0.8rem;font-weight:600;text-decoration:none;white-space:nowrap;">Set →</a>
+                {% endif %}
+              </div>
+              <div style="display:flex;gap:12px;align-items:center;padding:14px 18px;border-radius:var(--r-lg);background:var(--surface-1);border:1px solid var(--border-subtle);">
+                <div style="width:36px;height:36px;border-radius:10px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;font-size:0.85rem;color:var(--amber);flex-shrink:0;">
+                  <i class="fas fa-spinner fa-spin"></i>
+                </div>
+                <div>
+                  <div style="font-weight:700;font-size:0.88rem;margin-bottom:1px;">AI is processing</div>
+                  <div style="font-size:0.78rem;color:var(--text-3);">Celery worker is computing your embedding in the background</div>
+                </div>
+              </div>
+            </div>
+            <a href="{% url 'marketplace:worker_profile_edit' %}"
+               class="btn btn-primary btn-lg" style="margin-top:28px;">
+              <i class="fas fa-user-pen"></i> Complete My Profile
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {# ── CASE 2: AI ready, results available ── #}
+      {% elif matches.object_list %}
+
+      {# Results header #}
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px;">
+        <div style="font-size:0.88rem;color:var(--text-3);">
+          Showing
+          <strong style="color:var(--text-1);">{{ matches.start_index }}–{{ matches.end_index }}</strong>
+          of
+          <strong style="color:var(--text-1);">{{ matches.paginator.count }}</strong>
+          matches above 50%
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--text-3);">
+          <i class="fas fa-circle-info" style="color:var(--amber);"></i>
+          Refreshed when you update your profile or when new jobs are posted
+        </div>
+      </div>
+
+      <div class="wm-layout">
+
+        {# ── Match cards column ── #}
+        <div>
+          {% for match in matches %}
+
+          {# Determine score tier label and class #}
+          {% with score_pct=match.score|floatformat:0 %}
+
+          <div class="wm-card fade-up" data-bars-ready="false">
+
+            {# ── Card header ── #}
+            <div class="wm-card-header">
+
+              {# Employer logo #}
+              <div class="wm-employer-logo">
+                {% if match.job.employer.logo %}
+                  <img src="{{ match.job.employer.logo.url }}" alt="{{ match.job.employer }}">
+                {% else %}
+                  <i class="fas fa-building" style="color:var(--text-3);"></i>
+                {% endif %}
+              </div>
+
+              {# Title + meta #}
+              <div class="wm-card-title-block">
+                <div class="wm-card-title">{{ match.job.title }}</div>
+                <div class="wm-card-employer">
+                  <i class="fas fa-building" style="font-size:0.67rem;"></i>
+                  {{ match.job.employer.company_name|default:match.job.employer.user.username }}
+                  {% if match.job.employer.is_verified %}
+                  <i class="fas fa-circle-check" style="color:var(--emerald);font-size:0.67rem;margin-left:3px;"></i>
+                  {% endif %}
+                </div>
+                <div class="wm-card-meta">
+                  {% if match.job.trade_category %}
+                  <div class="wm-card-meta-item">
+                    <i class="fas fa-layer-group"></i>
+                    {{ match.job.trade_category.name }}
+                  </div>
+                  {% endif %}
+                  {% if match.job.state %}
+                  <div class="wm-card-meta-item">
+                    <i class="fas fa-map-pin"></i>
+                    {{ match.job.get_state_display }}
+                  </div>
+                  {% endif %}
+                  <div class="wm-card-meta-item">
+                    <i class="fas fa-clock"></i>
+                    {{ match.job.get_job_type_display }}
+                  </div>
+                  <div class="wm-card-meta-item">
+                    <i class="fas fa-users"></i>
+                    {{ match.job.applications_count }} applicant{{ match.job.applications_count|pluralize }}
+                  </div>
+                </div>
+              </div>
+
+              {# Score column #}
+              <div class="wm-score-col">
+                <div class="wm-score-num">{% widthratio match.score 1 100 %}</div>
+                <div class="wm-score-pct">% match</div>
+                {# Tier badge based on score #}
+                {% if match.score >= 0.85 %}
+                  <span class="wm-score-tier wm-tier-excellent"><i class="fas fa-fire" style="font-size:0.6rem;"></i> Excellent</span>
+                {% elif match.score >= 0.70 %}
+                  <span class="wm-score-tier wm-tier-strong"><i class="fas fa-star" style="font-size:0.6rem;"></i> Strong</span>
+                {% elif match.score >= 0.60 %}
+                  <span class="wm-score-tier wm-tier-good">Good</span>
+                {% else %}
+                  <span class="wm-score-tier wm-tier-fair">Fair</span>
+                {% endif %}
+              </div>
+
+            </div>{# /header #}
+
+            {# ── Component score bars ── #}
+            <div class="wm-card-bars">
+              <div class="wm-bars-title">
+                <i class="fas fa-chart-bar"></i> Score Breakdown
+              </div>
+
+              {# Text / Skills similarity #}
+              {% if match.text_score is not None %}
+              <div class="wm-bar-row">
+                <span class="wm-bar-label">Skills</span>
+                <div class="wm-bar-track">
+                  <div class="wm-bar-fill wm-fill-text"
+                       data-target="{% widthratio match.text_score 1 100 %}"></div>
+                </div>
+                <span class="wm-bar-pct">{% widthratio match.text_score 1 100 %}%</span>
+              </div>
+              {% endif %}
+
+              {# Location #}
+              {% if match.location_score is not None %}
+              <div class="wm-bar-row">
+                <span class="wm-bar-label">Location</span>
+                <div class="wm-bar-track">
+                  <div class="wm-bar-fill wm-fill-location"
+                       data-target="{% widthratio match.location_score 1 100 %}"></div>
+                </div>
+                <span class="wm-bar-pct">{% widthratio match.location_score 1 100 %}%</span>
+              </div>
+              {% endif %}
+
+              {# Experience #}
+              {% if match.experience_score is not None %}
+              <div class="wm-bar-row">
+                <span class="wm-bar-label">Experience</span>
+                <div class="wm-bar-track">
+                  <div class="wm-bar-fill wm-fill-exp"
+                       data-target="{% widthratio match.experience_score 1 100 %}"></div>
+                </div>
+                <span class="wm-bar-pct">{% widthratio match.experience_score 1 100 %}%</span>
+              </div>
+              {% endif %}
+
+              {# Portfolio images #}
+              {% if match.image_score is not None %}
+              <div class="wm-bar-row">
+                <span class="wm-bar-label">Portfolio</span>
+                <div class="wm-bar-track">
+                  <div class="wm-bar-fill wm-fill-image"
+                       data-target="{% widthratio match.image_score 1 100 %}"></div>
+                </div>
+                <span class="wm-bar-pct">{% widthratio match.image_score 1 100 %}%</span>
+              </div>
+              {% endif %}
+
+              {# Rating (only shown if score is not the neutral 0.5 default) #}
+              {% if match.rating_score is not None and match.rating_score != 0.5 %}
+              <div class="wm-bar-row">
+                <span class="wm-bar-label">Rating</span>
+                <div class="wm-bar-track">
+                  <div class="wm-bar-fill wm-fill-rating"
+                       data-target="{% widthratio match.rating_score 1 100 %}"></div>
+                </div>
+                <span class="wm-bar-pct">{% widthratio match.rating_score 1 100 %}%</span>
+              </div>
+              {% endif %}
+
+            </div>{# /bars #}
+
+            {# ── Card footer ── #}
+            <div class="wm-card-footer">
+
+              {# Pay #}
+              {% if match.job.pay_min %}
+              <div class="wm-pay">
+                ₦{{ match.job.pay_min|floatformat:0 }}
+                {% if match.job.pay_max %}
+                  – ₦{{ match.job.pay_max|floatformat:0 }}
+                {% endif %}
+                <span class="wm-pay-unit">/ {{ match.job.get_pay_type_display }}</span>
+              </div>
+              {% endif %}
+
+              {# Tags #}
+              <div class="wm-tags">
+                {% if match.job.is_remote %}
+                <span class="wm-tag remote"><i class="fas fa-globe" style="font-size:0.62rem;"></i> Remote</span>
+                {% endif %}
+                {% if match.job.deadline %}
+                <span class="wm-tag">
+                  <i class="fas fa-calendar-xmark" style="font-size:0.62rem;color:var(--amber);"></i>
+                  Due {{ match.job.deadline|date:"d M" }}
+                </span>
+                {% endif %}
+                {% if match.job.slots > 1 %}
+                <span class="wm-tag">{{ match.job.slots }} positions</span>
+                {% endif %}
+              </div>
+
+              {# CTA #}
+              <a href="{% url 'marketplace:job_detail' pk=match.job.pk %}"
+                 class="wm-cta">
+                View Job
+                <i class="fas fa-arrow-right" style="font-size:0.78rem;"></i>
+              </a>
+
+            </div>{# /footer #}
+
+            {# Computed timestamp #}
+            <div class="wm-computed">
+              <i class="fas fa-brain" style="font-size:0.6rem;color:var(--amber);margin-right:3px;"></i>
+              Score computed {{ match.computed_at|date:"d M Y, H:i" }}
+            </div>
+
+          </div>{# /wm-card #}
+
+          {% endwith %}
+          {% endfor %}
+
+          {# ── Pagination ── #}
+          {% if matches.has_other_pages %}
+          <div class="wm-pager">
+            {% if matches.has_previous %}
+              <a href="?page={{ matches.previous_page_number }}">
+                <i class="fas fa-chevron-left" style="font-size:0.75rem;"></i>
+              </a>
+            {% else %}
+              <span class="disabled"><i class="fas fa-chevron-left" style="font-size:0.75rem;"></i></span>
+            {% endif %}
+
+            {% for n in matches.paginator.page_range %}
+              {% if n == matches.number %}
+                <span class="current">{{ n }}</span>
+              {% elif n >= matches.number|add:"-2" and n <= matches.number|add:"2" %}
+                <a href="?page={{ n }}">{{ n }}</a>
+              {% elif n == 1 or n == matches.paginator.num_pages %}
+                <a href="?page={{ n }}">{{ n }}</a>
+              {% elif n == matches.number|add:"-3" or n == matches.number|add:"3" %}
+                <span style="color:var(--text-3);border-color:transparent;background:none;">…</span>
+              {% endif %}
+            {% endfor %}
+
+            {% if matches.has_next %}
+              <a href="?page={{ matches.next_page_number }}">
+                <i class="fas fa-chevron-right" style="font-size:0.75rem;"></i>
+              </a>
+            {% else %}
+              <span class="disabled"><i class="fas fa-chevron-right" style="font-size:0.75rem;"></i></span>
+            {% endif %}
+          </div>
+          {% endif %}
+
+        </div>{# /match cards column #}
+
+
+        {# ── Sidebar ── #}
+        <div class="wm-sidebar">
+
+          {# Score legend #}
+          <div class="wm-sidebar-card fade-in d1">
+            <div class="wm-sidebar-title">
+              <i class="fas fa-circle-question"></i> How is my score calculated?
+            </div>
+            <div class="wm-legend-row">
+              <span class="wm-legend-dot" style="background:var(--amber);"></span>
+              <span class="wm-legend-name">Skills &amp; Bio match</span>
+              <span class="wm-legend-weight">50%</span>
+            </div>
+            <div class="wm-legend-row">
+              <span class="wm-legend-dot" style="background:var(--emerald);"></span>
+              <span class="wm-legend-name">Location fit</span>
+              <span class="wm-legend-weight">15%</span>
+            </div>
+            <div class="wm-legend-row">
+              <span class="wm-legend-dot" style="background:var(--sky);"></span>
+              <span class="wm-legend-name">Experience level</span>
+              <span class="wm-legend-weight">15%</span>
+            </div>
+            <div class="wm-legend-row">
+              <span class="wm-legend-dot" style="background:#A78BFA;"></span>
+              <span class="wm-legend-name">Portfolio images</span>
+              <span class="wm-legend-weight">10%</span>
+            </div>
+            <div class="wm-legend-row">
+              <span class="wm-legend-dot" style="background:#F472B6;"></span>
+              <span class="wm-legend-name">Your avg. rating</span>
+              <span class="wm-legend-weight">5%</span>
+            </div>
+            <div class="wm-legend-row">
+              <span class="wm-legend-dot" style="background:var(--emerald);opacity:0.6;"></span>
+              <span class="wm-legend-name">Verified badge</span>
+              <span class="wm-legend-weight">5%</span>
+            </div>
+            <div style="margin-top:16px;padding:12px 14px;background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.15);border-radius:var(--r-md);">
+              <p style="font-size:0.78rem;color:var(--text-2);line-height:1.6;">
+                <strong style="color:var(--amber);">Tip:</strong> A richer bio and more skills give a higher Skills score — by far the biggest factor at 50%.
+              </p>
+            </div>
+          </div>
+
+          {# Profile tips #}
+          <div class="wm-sidebar-card fade-in d2">
+            <div class="wm-sidebar-title">
+              <i class="fas fa-bolt"></i> Improve Your Score
+            </div>
+
+            {# Bio tip #}
+            <div class="wm-tip-row {% if worker.bio %}wm-tip-done{% else %}wm-tip-todo{% endif %}">
+              <div class="wm-tip-icon">
+                <i class="fas {% if worker.bio %}fa-check{% else %}fa-pen{% endif %}"></i>
+              </div>
+              <div class="wm-tip-text">
+                Write a detailed bio describing your work, specialisations, and tools you use
+              </div>
+            </div>
+
+            {# Skills tip #}
+            <div class="wm-tip-row {% if worker.skills.all %}wm-tip-done{% else %}wm-tip-todo{% endif %}">
+              <div class="wm-tip-icon">
+                <i class="fas {% if worker.skills.all %}fa-check{% else %}fa-tags{% endif %}"></i>
+              </div>
+              <div class="wm-tip-text">Add specific skills to your profile</div>
+            </div>
+
+            {# Portfolio tip #}
+            <div class="wm-tip-row {% if worker.portfolio.all %}wm-tip-done{% else %}wm-tip-todo{% endif %}">
+              <div class="wm-tip-icon">
+                <i class="fas {% if worker.portfolio.all %}fa-check{% else %}fa-images{% endif %}"></i>
+              </div>
+              <div class="wm-tip-text">
+                Upload portfolio photos — CLIP AI matches images to job descriptions visually
+              </div>
+            </div>
+
+            {# Location tip #}
+            <div class="wm-tip-row {% if worker.state %}wm-tip-done{% else %}wm-tip-todo{% endif %}">
+              <div class="wm-tip-icon">
+                <i class="fas {% if worker.state %}fa-check{% else %}fa-map-pin{% endif %}"></i>
+              </div>
+              <div class="wm-tip-text">Set your state to boost local job scores</div>
+            </div>
+
+            {# Rate tip #}
+            <div class="wm-tip-row {% if worker.hourly_rate or worker.daily_rate %}wm-tip-done{% else %}wm-tip-todo{% endif %}">
+              <div class="wm-tip-icon">
+                <i class="fas {% if worker.hourly_rate or worker.daily_rate %}fa-check{% else %}fa-naira-sign{% endif %}"></i>
+              </div>
+              <div class="wm-tip-text">Add your hourly or daily rate</div>
+            </div>
+
+            <a href="{% url 'marketplace:worker_profile_edit' %}"
+               class="btn btn-primary btn-sm"
+               style="width:100%;justify-content:center;margin-top:16px;">
+              <i class="fas fa-user-pen"></i> Edit Profile
+            </a>
+          </div>
+
+          {# Quick actions #}
+          <div class="wm-sidebar-card fade-in d3">
+            <div class="wm-sidebar-title">
+              <i class="fas fa-compass"></i> Quick Links
+            </div>
+            <a href="{% url 'marketplace:job_list' %}" class="wm-action-link">
+              <i class="fas fa-search"></i> Browse All Jobs
+              <i class="fas fa-chevron-right wm-action-link-arrow"></i>
+            </a>
+            <a href="{% url 'marketplace:worker_applications' %}" class="wm-action-link">
+              <i class="fas fa-paper-plane"></i> My Applications
+              <i class="fas fa-chevron-right wm-action-link-arrow"></i>
+            </a>
+            <a href="{% url 'marketplace:portfolio_add' %}" class="wm-action-link">
+              <i class="fas fa-images"></i> Add Portfolio Item
+              <i class="fas fa-chevron-right wm-action-link-arrow"></i>
+            </a>
+            <a href="{% url 'marketplace:worker_dashboard' %}" class="wm-action-link">
+              <i class="fas fa-gauge"></i> Dashboard
+              <i class="fas fa-chevron-right wm-action-link-arrow"></i>
+            </a>
+          </div>
+
+        </div>{# /sidebar #}
+
+      </div>{# /wm-layout #}
+
+
+      {# ── CASE 3: AI ready but no matches yet ── #}
+      {% else %}
+
+      <div class="wm-layout" style="grid-template-columns:1fr 280px;">
+        <div>
+          <div class="card">
+            <div class="wm-empty">
+              <div class="wm-empty-icon"><i class="fas fa-magnifying-glass"></i></div>
+              <div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:800;margin-bottom:6px;">
+                No matches found yet
+              </div>
+              <p style="color:var(--text-2);font-size:0.9rem;max-width:400px;line-height:1.75;">
+                Your AI is ready but no jobs in the
+                <strong style="color:var(--text-1);">{{ worker.trade_category.name|default:"your trade" }}</strong>
+                category have been scored yet, or your score falls below the 50% threshold.
+                Jobs are re-scored continuously as they're posted.
+              </p>
+              <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
+                <a href="{% url 'marketplace:job_list' %}" class="btn btn-primary btn-lg">
+                  <i class="fas fa-search"></i> Browse All Jobs
+                </a>
+                <a href="{% url 'marketplace:worker_profile_edit' %}" class="btn btn-ghost btn-lg">
+                  <i class="fas fa-user-pen"></i> Improve Profile
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# Still show sidebar even when empty #}
+        <div class="wm-sidebar">
+          <div class="wm-sidebar-card fade-in">
+            <div class="wm-sidebar-title">
+              <i class="fas fa-bolt"></i> Improve Your Score
+            </div>
+            <div class="wm-tip-row {% if worker.bio %}wm-tip-done{% else %}wm-tip-todo{% endif %}">
+              <div class="wm-tip-icon">
+                <i class="fas {% if worker.bio %}fa-check{% else %}fa-pen{% endif %}"></i>
+              </div>
+              <div class="wm-tip-text">Write a detailed bio about your work</div>
+            </div>
+            <div class="wm-tip-row {% if worker.skills.all %}wm-tip-done{% else %}wm-tip-todo{% endif %}">
+              <div class="wm-tip-icon">
+                <i class="fas {% if worker.skills.all %}fa-check{% else %}fa-tags{% endif %}"></i>
+              </div>
+              <div class="wm-tip-text">Add skills to your profile</div>
+            </div>
+            <div class="wm-tip-row {% if worker.portfolio.all %}wm-tip-done{% else %}wm-tip-todo{% endif %}">
+              <div class="wm-tip-icon">
+                <i class="fas {% if worker.portfolio.all %}fa-check{% else %}fa-images{% endif %}"></i>
+              </div>
+              <div class="wm-tip-text">Upload portfolio photos</div>
+            </div>
+            <a href="{% url 'marketplace:worker_profile_edit' %}"
+               class="btn btn-primary btn-sm"
+               style="width:100%;justify-content:center;margin-top:14px;">
+              <i class="fas fa-user-pen"></i> Edit Profile
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {% endif %}{# end clip_ready branches #}
+
+    </div>{# /container #}
+  </section>
+
+</div>{# /wm-page #}
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+/* ─────────────────────────────────────────────────────────────
+   1.  SCROLL-TRIGGERED BAR ANIMATION
+   Each .wm-bar-fill has data-target="<integer 0-100>".
+   When its card enters the viewport we set width: <target>%
+   and let the CSS transition handle the rest.
+───────────────────────────────────────────────────────────── */
+const barObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (!entry.isIntersecting) return;
+    const card = entry.target;
+    if (card.dataset.barsReady === 'true') return;
+
+    card.querySelectorAll('.wm-bar-fill[data-target]').forEach(bar => {
+      const target = parseInt(bar.dataset.target, 10) || 0;
+      /* tiny delay so the card entrance animation finishes first */
+      requestAnimationFrame(() => {
+        setTimeout(() => { bar.style.width = target + '%'; }, 120);
+      });
+    });
+
+    card.dataset.barsReady = 'true';
+    barObserver.unobserve(card);
+  });
+}, { threshold: 0.18 });
+
+document.querySelectorAll('.wm-card').forEach(card => {
+  barObserver.observe(card);
+});
+
+
+/* ─────────────────────────────────────────────────────────────
+   2.  SCROLL-TRIGGERED FADE-UP
+   Staggered so cards don't all appear at once.
+───────────────────────────────────────────────────────────── */
+const fadeObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.style.animationPlayState = 'running';
+      fadeObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.06 });
+
+document.querySelectorAll('.fade-up').forEach((el, i) => {
+  el.style.animationPlayState = 'paused';
+  el.style.animationDelay    = el.style.animationDelay || (i * 0.07) + 's';
+  fadeObserver.observe(el);
+});
+
+document.querySelectorAll('.fade-in').forEach((el, i) => {
+  el.style.opacity   = '0';
+  el.style.transform = 'translateY(10px)';
+  el.style.transition = `opacity 0.45s ${0.1 + i * 0.08}s, transform 0.45s ${0.1 + i * 0.08}s`;
+  const o = new IntersectionObserver(([e]) => {
+    if (e.isIntersecting) {
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0)';
+      o.disconnect();
+    }
+  }, { threshold: 0.1 });
+  o.observe(el);
+});
+
+
+/* ─────────────────────────────────────────────────────────────
+   3.  AUTO-ANIMATE profile completion bar on load
+───────────────────────────────────────────────────────────── */
+const profileFill = document.querySelector('.wm-profile-bar-fill');
+if (profileFill) {
+  const target = profileFill.style.width;
+  profileFill.style.width = '0%';
+  profileFill.style.transition = 'width 1.2s cubic-bezier(0.4,0,0.2,1) 0.3s';
+  requestAnimationFrame(() => {
+    setTimeout(() => { profileFill.style.width = target; }, 100);
+  });
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   4.  AUTO-DISMISS messages after 4 s
+───────────────────────────────────────────────────────────── */
+document.querySelectorAll('.wm-msg').forEach(el => {
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.4s';
+    el.style.opacity = '0';
+    setTimeout(() => el.remove(), 440);
+  }, 4000);
+});
+</script>
+{% endblock %}

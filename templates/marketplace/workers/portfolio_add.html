@@ -1,0 +1,704 @@
+{% extends "base.html" %}
+{% block title %}Add Portfolio Item — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+/* =====================================================
+   PORTFOLIO ADD — TradeLink NG
+   Context: form (PortfolioItemForm), unread_count
+===================================================== */
+
+.we-page { padding-top: var(--nav-h); min-height: 100vh; }
+
+/* ── PAGE HEADER ── */
+.we-header {
+  background: linear-gradient(180deg, rgba(245,158,11,0.05) 0%, rgba(249,115,22,0.02) 60%, transparent 100%);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 40px 0 36px;
+  position: relative; overflow: hidden;
+}
+.we-header::before {
+  content: '';
+  position: absolute; top: -120px; right: -80px;
+  width: 440px; height: 440px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,158,11,0.07), transparent 65%);
+  pointer-events: none;
+}
+.we-header-inner {
+  max-width: 1100px; margin: 0 auto;
+  padding: 0 clamp(20px,5vw,64px);
+  display: flex; align-items: center; gap: 18px;
+}
+.we-avatar {
+  width: 62px; height: 62px; border-radius: 18px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Fraunces', serif; font-size: 1.6rem; font-weight: 900;
+  color: #0C0A08; box-shadow: 0 6px 24px rgba(245,158,11,0.3);
+}
+.we-header-title {
+  font-family: 'Fraunces', serif; font-size: 1.55rem;
+  font-weight: 900; letter-spacing: -0.5px; color: var(--text-1);
+  margin-bottom: 3px;
+}
+.we-header-sub { font-size: 0.85rem; color: var(--text-2); }
+.we-header-sub a {
+  color: var(--amber); text-decoration: none; transition: var(--t);
+}
+.we-header-sub a:hover { color: var(--amber-light); text-decoration: underline; }
+
+/* ── BODY LAYOUT ── */
+.we-body {
+  max-width: 1100px; margin: 0 auto;
+  padding: 44px clamp(20px,5vw,64px) 80px;
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 40px; align-items: start;
+}
+
+/* ── MESSAGES ── */
+.we-messages { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 10px; }
+.we-msg {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 18px; border-radius: var(--r-lg); font-size: 0.88rem;
+}
+.we-msg-success { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); color: #6ee7b7; }
+.we-msg-error   { background: rgba(239,68,68,0.08);  border: 1px solid rgba(239,68,68,0.2);  color: #fca5a5; }
+.we-msg i { font-size: 0.85rem; margin-top: 2px; flex-shrink: 0; }
+
+/* ── SECTION CARD ── */
+.we-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); overflow: hidden; margin-bottom: 24px;
+}
+.we-card:last-child { margin-bottom: 0; }
+.we-card-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+}
+.we-card-header::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--amber), var(--orange));
+}
+.we-card-title {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 800;
+  color: var(--text-1);
+}
+.we-card-icon {
+  width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; color: var(--amber);
+}
+.we-card-body { padding: 24px; }
+
+/* ── FORM FIELDS ── */
+.we-field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.we-field-grid .we-field-full { grid-column: 1 / -1; }
+
+.we-field { display: flex; flex-direction: column; gap: 7px; }
+.we-label { font-size: 0.82rem; font-weight: 600; color: var(--text-2); display: flex; align-items: center; gap: 6px; }
+.we-label-required { color: var(--amber); font-size: 0.75rem; }
+.we-help { font-size: 0.77rem; color: var(--text-3); margin-top: -2px; }
+
+.we-input,
+.we-select,
+.we-textarea {
+  width: 100%;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); color: var(--text-1);
+  font-family: 'Outfit', sans-serif; font-size: 0.92rem;
+  transition: var(--t); outline: none;
+}
+.we-input   { padding: 11px 14px; }
+.we-select  {
+  padding: 11px 14px; cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(250,245,235,0.3)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center;
+}
+.we-textarea { padding: 11px 14px; resize: vertical; min-height: 100px; }
+.we-input:focus, .we-select:focus, .we-textarea:focus {
+  border-color: var(--amber);
+  background: rgba(245,158,11,0.04);
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+}
+.we-input::placeholder, .we-textarea::placeholder { color: var(--text-3); }
+.we-select option { background: var(--bg-card); color: var(--text-1); }
+
+/* error state */
+.we-field.has-error .we-input,
+.we-field.has-error .we-select,
+.we-field.has-error .we-textarea { border-color: rgba(239,68,68,0.5); background: rgba(239,68,68,0.04); }
+.we-field-error {
+  font-size: 0.77rem; color: #fca5a5;
+  display: flex; align-items: center; gap: 5px; margin-top: 2px;
+}
+.we-field-error i { font-size: 0.7rem; }
+
+/* ── IMAGE UPLOAD ZONE ── */
+.upload-zone {
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--r-xl);
+  padding: 40px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--t);
+  background: rgba(245,158,11,0.02);
+  position: relative;
+  overflow: hidden;
+}
+.upload-zone:hover,
+.upload-zone.drag-over {
+  border-color: var(--amber);
+  background: rgba(245,158,11,0.05);
+}
+.upload-zone.has-file { border-style: solid; border-color: var(--amber); }
+.upload-zone input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.upload-icon {
+  width: 64px; height: 64px; border-radius: 18px; margin: 0 auto 16px;
+  background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(249,115,22,0.08));
+  border: 1px solid rgba(245,158,11,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem; color: var(--amber);
+  transition: var(--t);
+}
+.upload-zone:hover .upload-icon { transform: scale(1.05); }
+.upload-title {
+  font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 6px;
+}
+.upload-sub { font-size: 0.83rem; color: var(--text-3); margin-bottom: 12px; }
+.upload-formats {
+  display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+}
+.upload-fmt {
+  padding: 3px 10px; border-radius: var(--r-pill);
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  font-size: 0.72rem; font-weight: 700; color: var(--text-3);
+  letter-spacing: 0.5px; text-transform: uppercase;
+}
+
+/* Preview */
+.upload-preview {
+  display: none;
+  margin-top: 20px;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-raised);
+}
+.upload-preview.visible { display: block; }
+.upload-preview img {
+  width: 100%; max-height: 320px;
+  object-fit: cover; display: block;
+}
+.upload-preview-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.82rem;
+}
+.upload-preview-name { color: var(--text-2); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.upload-preview-clear {
+  background: none; border: none; color: #ef4444; cursor: pointer;
+  font-size: 0.78rem; font-family: 'Outfit', sans-serif; font-weight: 600;
+  display: flex; align-items: center; gap: 5px; flex-shrink: 0;
+  transition: var(--t); padding: 4px 8px; border-radius: var(--r-sm);
+}
+.upload-preview-clear:hover { background: rgba(239,68,68,0.08); }
+.upload-zone.has-file .upload-main-content { display: none; }
+
+/* ── SUBMIT BAR ── */
+.we-submit-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+  padding: 20px 24px;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl);
+  position: sticky; bottom: 20px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+  backdrop-filter: blur(12px);
+  z-index: 10;
+  opacity: 1 !important; transform: none !important;
+}
+.we-submit-hint { font-size: 0.8rem; color: var(--text-3); }
+.we-submit-hint i { color: var(--amber); margin-right: 5px; }
+.we-submit-actions { display: flex; gap: 12px; align-items: center; }
+.we-btn-cancel {
+  padding: 11px 22px;
+  background: transparent; border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md); color: var(--text-2);
+  font-family: 'Outfit', sans-serif; font-size: 0.9rem; font-weight: 600;
+  cursor: pointer; text-decoration: none; transition: var(--t);
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.we-btn-cancel:hover { background: var(--surface-1); color: var(--text-1); border-color: var(--border-strong); }
+.we-btn-save {
+  padding: 11px 28px;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  border: none; border-radius: var(--r-md);
+  color: #0C0A08; font-family: 'Outfit', sans-serif;
+  font-size: 0.92rem; font-weight: 700;
+  cursor: pointer; transition: var(--t);
+  display: inline-flex; align-items: center; gap: 8px;
+  box-shadow: 0 4px 20px rgba(245,158,11,0.3);
+}
+.we-btn-save:hover { filter: brightness(1.06); transform: translateY(-1px); box-shadow: 0 8px 28px rgba(245,158,11,0.4); }
+.we-btn-save:active { transform: translateY(0); }
+
+/* ── RIGHT SIDEBAR ── */
+.we-sidebar { display: flex; flex-direction: column; gap: 18px; }
+.we-tip-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 20px; overflow: hidden; position: relative;
+}
+.we-tip-card::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(245,158,11,0.04), transparent 70%);
+  pointer-events: none;
+}
+.we-tip-title {
+  font-family: 'Fraunces', serif; font-size: 0.92rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.we-tip-title i { color: var(--amber); font-size: 0.82rem; }
+.we-tip-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.we-tip-item {
+  display: flex; align-items: flex-start; gap: 9px;
+  font-size: 0.82rem; color: var(--text-2); line-height: 1.55;
+}
+.we-tip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); flex-shrink: 0; margin-top: 7px; }
+
+.we-quick-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--r-xl); padding: 20px; }
+.we-quick-title {
+  font-family: 'Fraunces', serif; font-size: 0.92rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.we-quick-title i { color: var(--amber); font-size: 0.82rem; }
+.we-quick-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--r-md);
+  text-decoration: none; color: var(--text-2);
+  font-size: 0.86rem; font-weight: 500;
+  transition: var(--t); margin-bottom: 4px;
+}
+.we-quick-link:last-child { margin-bottom: 0; }
+.we-quick-link:hover { background: var(--surface-1); color: var(--text-1); }
+.we-quick-link i { width: 16px; text-align: center; color: var(--text-3); font-size: 0.78rem; }
+.we-quick-link:hover i { color: var(--amber); }
+
+/* ── AI HINT BOX ── */
+.ai-hint {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 16px 18px;
+  background: rgba(56,189,248,0.05);
+  border: 1px solid rgba(56,189,248,0.15);
+  border-radius: var(--r-lg);
+  font-size: 0.83rem; color: var(--text-2); line-height: 1.6;
+  margin-bottom: 20px;
+}
+.ai-hint i { color: var(--sky); font-size: 0.9rem; margin-top: 2px; flex-shrink: 0; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .we-body { grid-template-columns: 1fr; }
+  .we-sidebar { order: -1; }
+  .we-field-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .we-header-inner { flex-wrap: wrap; }
+  .we-submit-bar { position: static; flex-direction: column; align-items: stretch; }
+  .we-submit-actions { flex-direction: column; }
+  .we-btn-cancel, .we-btn-save { justify-content: center; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="we-page">
+
+  {# ── PAGE HEADER ── #}
+  <div class="we-header">
+    <div class="we-header-inner">
+      <div class="we-avatar">
+        {{ request.user.username|slice:":1"|upper }}
+      </div>
+      <div>
+        <div class="we-header-title">Add Portfolio Item</div>
+        <div class="we-header-sub">
+          <a href="{% url 'marketplace:worker_profile_edit' %}">
+            <i class="fas fa-chevron-left" style="font-size:0.7rem;"></i> Back to Profile
+          </a>
+          &nbsp;·&nbsp; Upload a photo of your work to boost AI matching
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── BODY ── #}
+  <div class="we-body">
+
+    {# ── MESSAGES ── #}
+    {% if messages %}
+    <div class="we-messages">
+      {% for msg in messages %}
+      <div class="we-msg {% if msg.tags == 'success' %}we-msg-success{% else %}we-msg-error{% endif %}">
+        <i class="fas {% if msg.tags == 'success' %}fa-circle-check{% else %}fa-circle-exclamation{% endif %}"></i>
+        {{ msg }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {# ── LEFT — FORM ── #}
+    <div>
+      <form
+        method="POST"
+        action="{% url 'marketplace:portfolio_add' %}"
+        enctype="multipart/form-data"
+        id="portfolioForm"
+        novalidate
+      >
+        {% csrf_token %}
+
+        {# ─── 1. Photo Upload ─── #}
+        <div class="we-card fade-up">
+          <div class="we-card-header">
+            <div class="we-card-icon"><i class="fas fa-camera"></i></div>
+            <div class="we-card-title">Portfolio Photo</div>
+          </div>
+          <div class="we-card-body">
+
+            <div class="ai-hint">
+              <i class="fas fa-brain"></i>
+              Our AI visually analyses your photo and encodes it into a 512-dimension vector.
+              Employers searching for specific work (e.g. "solar panel rooftop install") will
+              automatically match against your portfolio images — even without reading your bio.
+            </div>
+
+            {# Upload zone — hides when a file is picked, shows preview instead #}
+            <div class="we-field {% if form.image.errors %}has-error{% endif %}">
+              <label class="we-label" for="{{ form.image.id_for_label }}">
+                Photo <span class="we-label-required">✱</span>
+              </label>
+
+              <div class="upload-zone {% if form.image.errors %}has-error{% endif %}" id="uploadZone">
+                <input
+                  type="file"
+                  name="{{ form.image.html_name }}"
+                  id="{{ form.image.id_for_label }}"
+                  accept="image/*"
+                  id="imageInput"
+                >
+                <div class="upload-main-content">
+                  <div class="upload-icon"><i class="fas fa-cloud-arrow-up"></i></div>
+                  <div class="upload-title">Drop your photo here</div>
+                  <div class="upload-sub">or click anywhere to browse your device</div>
+                  <div class="upload-formats">
+                    <span class="upload-fmt">JPG</span>
+                    <span class="upload-fmt">PNG</span>
+                    <span class="upload-fmt">WEBP</span>
+                    <span class="upload-fmt">max 10 MB</span>
+                  </div>
+                </div>
+              </div>
+
+              {# Preview shown after file selection #}
+              <div class="upload-preview" id="uploadPreview">
+                <img id="previewImg" src="" alt="Preview">
+                <div class="upload-preview-bar">
+                  <span class="upload-preview-name" id="previewName"></span>
+                  <button type="button" class="upload-preview-clear" id="clearBtn">
+                    <i class="fas fa-times"></i> Remove
+                  </button>
+                </div>
+              </div>
+
+              {% if form.image.errors %}
+                <span class="we-field-error">
+                  <i class="fas fa-circle-exclamation"></i> {{ form.image.errors.0 }}
+                </span>
+              {% endif %}
+            </div>
+
+          </div>
+        </div>
+
+        {# ─── 2. Details ─── #}
+        <div class="we-card fade-up d1">
+          <div class="we-card-header">
+            <div class="we-card-icon"><i class="fas fa-tag"></i></div>
+            <div class="we-card-title">Photo Details</div>
+          </div>
+          <div class="we-card-body">
+            <div class="we-field-grid">
+
+              {# Caption — full width #}
+              <div class="we-field we-field-full {% if form.caption.errors %}has-error{% endif %}">
+                <label class="we-label" for="{{ form.caption.id_for_label }}">Caption</label>
+                <input
+                  type="text"
+                  name="{{ form.caption.html_name }}"
+                  id="{{ form.caption.id_for_label }}"
+                  value="{{ form.caption.value|default:'' }}"
+                  class="we-input"
+                  placeholder="e.g. Installed a 5kW solar system in a residential compound — Lekki, Lagos"
+                  maxlength="280"
+                >
+                <span class="we-help">Describe the job briefly. This helps the AI understand the image content.</span>
+                {% if form.caption.errors %}
+                  <span class="we-field-error"><i class="fas fa-circle-exclamation"></i> {{ form.caption.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              {# YouTube Demo URL — full width #}
+              <div class="we-field we-field-full {% if form.youtube_url.errors %}has-error{% endif %}">
+                <label class="we-label" for="{{ form.youtube_url.id_for_label }}">
+                  <i class="fab fa-youtube" style="color:#ef4444;font-size:0.85rem;"></i>
+                  YouTube Demo Video
+                  <span style="font-size:0.72rem;color:var(--text-3);font-weight:400;margin-left:2px;">(optional)</span>
+                </label>
+                <input
+                  type="url"
+                  name="{{ form.youtube_url.html_name }}"
+                  id="{{ form.youtube_url.id_for_label }}"
+                  value="{{ form.youtube_url.value|default:'' }}"
+                  class="we-input"
+                  placeholder="https://www.youtube.com/watch?v=… or https://youtu.be/…"
+                >
+                <span class="we-help">
+                  Paste a YouTube link of you performing this work. It will be embedded on your public profile and dashboard.
+                </span>
+                {% if form.youtube_url.errors %}
+                  <span class="we-field-error">
+                    <i class="fas fa-circle-exclamation"></i> {{ form.youtube_url.errors.0 }}
+                  </span>
+                {% endif %}
+              </div>
+
+              <div class="we-field {% if form.trade_context.errors %}has-error{% endif %}">
+                <label class="we-label" for="{{ form.trade_context.id_for_label }}">
+                  Trade Category
+                </label>
+                <select
+                  name="{{ form.trade_context.html_name }}"
+                  id="{{ form.trade_context.id_for_label }}"
+                  class="we-select"
+                >
+                  <option value="">— Which trade does this show? —</option>
+                  {% for val, label in form.trade_context.field.choices %}
+                    {% if val %}
+                    <option value="{{ val }}"
+                      {% if form.trade_context.value|stringformat:"s" == val|stringformat:"s" %}selected{% endif %}>
+                      {{ label }}
+                    </option>
+                    {% endif %}
+                  {% endfor %}
+                </select>
+                <span class="we-help">Which trade discipline does this photo best demonstrate?</span>
+                {% if form.trade_context.errors %}
+                  <span class="we-field-error"><i class="fas fa-circle-exclamation"></i> {{ form.trade_context.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              {# Display Order #}
+              <div class="we-field {% if form.display_order.errors %}has-error{% endif %}">
+                <label class="we-label" for="{{ form.display_order.id_for_label }}">
+                  Display Order
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  name="{{ form.display_order.html_name }}"
+                  id="{{ form.display_order.id_for_label }}"
+                  value="{{ form.display_order.value|default:'0' }}"
+                  class="we-input"
+                >
+                <span class="we-help">Lower numbers appear first on your public profile (0 = first).</span>
+                {% if form.display_order.errors %}
+                  <span class="we-field-error"><i class="fas fa-circle-exclamation"></i> {{ form.display_order.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {# ─── SUBMIT BAR — no fade-up class (sticky + fade-up = invisible button bug) ─── #}
+        <div class="we-submit-bar">
+          <div class="we-submit-hint">
+            <i class="fas fa-bolt"></i>
+            Uploading will trigger AI image encoding in the background.
+          </div>
+          <div class="we-submit-actions">
+            <a href="{% url 'marketplace:worker_profile_edit' %}" class="we-btn-cancel">
+              <i class="fas fa-xmark"></i> Cancel
+            </a>
+            <button type="submit" class="we-btn-save">
+              <i class="fas fa-upload"></i> Upload Item
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>{# /left #}
+
+    {# ── RIGHT SIDEBAR ── #}
+    <div class="we-sidebar">
+
+      <div class="we-tip-card fade-up d1">
+        <div class="we-tip-title">
+          <i class="fas fa-lightbulb"></i> Photo Tips
+        </div>
+        <ul class="we-tip-list">
+          <li class="we-tip-item">
+            <span class="we-tip-dot"></span>
+            Use real photos of finished work — not stock images. Authenticity boosts your match score.
+          </li>
+          <li class="we-tip-item">
+            <span class="we-tip-dot"></span>
+            Good lighting matters. Well-lit photos give the AI more visual detail to encode.
+          </li>
+          <li class="we-tip-item">
+            <span class="we-tip-dot"></span>
+            Add a caption that describes the job context. This combines with the image for richer matching.
+          </li>
+          <li class="we-tip-item">
+            <span class="we-tip-dot"></span>
+            Upload at least 3–5 items. The more photos you have, the stronger your visual match profile.
+          </li>
+          <li class="we-tip-item">
+            <span class="we-tip-dot"></span>
+            Select the correct trade category — it's used to narrow which jobs your image is compared against.
+          </li>
+        </ul>
+      </div>
+
+      <div class="we-tip-card fade-up d2" style="border-color:rgba(56,189,248,0.15);">
+        <div class="we-tip-title">
+          <i class="fas fa-brain" style="color:var(--sky);"></i>
+          <span style="color:var(--sky);">How Image AI Works</span>
+        </div>
+        <div style="font-size:0.82rem;color:var(--text-2);line-height:1.65;">
+          Your photo is encoded by CLIP's visual encoder into a 512-dimension vector.
+          When an employer posts a job with a description like
+          <em style="color:var(--amber);">"install solar panels on Lagos rooftop"</em>,
+          that text is encoded into the same vector space — and your photo gets
+          automatically matched by visual similarity.
+        </div>
+      </div>
+
+      <div class="we-quick-card fade-up d3">
+        <div class="we-quick-title">
+          <i class="fas fa-link"></i> Quick Links
+        </div>
+        <a href="{% url 'marketplace:worker_profile_edit' %}" class="we-quick-link">
+          <i class="fas fa-user-pen"></i> Edit Profile
+        </a>
+        <a href="{% url 'marketplace:worker_dashboard' %}" class="we-quick-link">
+          <i class="fas fa-gauge-high"></i> Dashboard
+        </a>
+        <a href="{% url 'marketplace:worker_matches' %}" class="we-quick-link">
+          <i class="fas fa-bolt"></i> AI Job Matches
+        </a>
+        <a href="{% url 'marketplace:job_list' %}" class="we-quick-link">
+          <i class="fas fa-briefcase"></i> Browse All Jobs
+        </a>
+      </div>
+
+    </div>{# /sidebar #}
+
+  </div>{# /we-body #}
+</div>{# /we-page #}
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+const zone      = document.getElementById('uploadZone');
+const input     = document.getElementById('imageInput') || zone.querySelector('input[type="file"]');
+const preview   = document.getElementById('uploadPreview');
+const previewImg  = document.getElementById('previewImg');
+const previewName = document.getElementById('previewName');
+const clearBtn  = document.getElementById('clearBtn');
+
+function showPreview(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    previewImg.src    = e.target.result;
+    previewName.textContent = file.name;
+    preview.classList.add('visible');
+    zone.classList.add('has-file');
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearFile() {
+  input.value = '';
+  previewImg.src = '';
+  previewName.textContent = '';
+  preview.classList.remove('visible');
+  zone.classList.remove('has-file');
+}
+
+input.addEventListener('change', () => {
+  if (input.files.length) showPreview(input.files[0]);
+});
+
+clearBtn.addEventListener('click', clearFile);
+
+/* Drag-and-drop */
+zone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  zone.classList.add('drag-over');
+});
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  zone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    /* Transfer to the input so it gets submitted with the form */
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+    showPreview(file);
+  }
+});
+
+/* Auto-dismiss messages */
+document.querySelectorAll('.we-msg').forEach(el => {
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.4s';
+    el.style.opacity    = '0';
+    setTimeout(() => el.remove(), 420);
+  }, 5000);
+});
+
+/* Fade-up observer */
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.style.animationPlayState = 'running';
+      obs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.06 });
+
+document.querySelectorAll('.fade-up').forEach((el, i) => {
+  el.style.animationPlayState = 'paused';
+  el.style.animationDelay = el.style.animationDelay || (i * 0.07) + 's';
+  obs.observe(el);
+});
+</script>
+{% endblock %}

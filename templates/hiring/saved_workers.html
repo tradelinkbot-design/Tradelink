@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Saved Candidates — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  .saved-page {
+    min-height: 100vh;
+    padding: calc(var(--nav-h) + 40px) clamp(16px, 5vw, 64px) 80px;
+    max-width: 1100px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .saved-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .saved-title-box h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+  .saved-title-box p {
+    color: var(--text-2);
+    font-size: 0.95rem;
+  }
+
+  .saved-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 24px;
+  }
+  @media (max-width: 480px) {
+    .saved-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .saved-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: var(--t);
+  }
+  .saved-card:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .saved-card-header {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  .saved-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--surface-2), var(--surface-1));
+    border: 2px solid var(--amber);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--amber);
+    font-weight: 700;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+  }
+  .saved-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .saved-info h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-1);
+    margin-bottom: 2px;
+  }
+  .saved-trade {
+    color: var(--amber);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .saved-loc {
+    color: var(--text-3);
+    font-size: 0.8rem;
+    margin-top: 2px;
+  }
+
+  .note-box {
+    background: rgba(245, 158, 11, 0.04);
+    border-left: 2px solid var(--amber);
+    border-radius: 0 var(--r-md) var(--r-md) 0;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 0.84rem;
+    color: var(--text-2);
+  }
+
+  .saved-card-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  /* Empty state */
+  .saved-empty {
+    text-align: center;
+    padding: 64px 20px;
+    background: var(--bg-card);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--r-xl);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="saved-page">
+
+  <div class="saved-header">
+    <div class="saved-title-box">
+      <div class="eyebrow">My Shortlist</div>
+      <h1 class="section-title">Saved <span class="amber-text">Candidates</span></h1>
+      <p>Candidates bookmarked for future engagements and direct interviews.</p>
+    </div>
+    <div>
+      <a href="{% url 'hiring:talent_search' %}" class="btn btn-primary">
+        <i class="fas fa-search"></i> Search Talent
+      </a>
+    </div>
+  </div>
+
+  {% if saved_list %}
+    <div class="saved-grid">
+      {% for item in saved_list %}
+        <div class="saved-card">
+          <div>
+            <div class="saved-card-header">
+              <div class="saved-avatar">
+                {% if item.worker.user.image %}
+                  <img src="{{ item.worker.user.image.url }}" alt="{{ item.worker.user.username }}">
+                {% else %}
+                  {{ item.worker.user.username|first|upper }}
+                {% endif %}
+              </div>
+              <div class="saved-info">
+                <h3>{{ item.worker.user.get_full_name|default:item.worker.user.username }}</h3>
+                <div class="saved-trade">{{ item.worker.trade_category.name|default:"Skilled Trades" }}</div>
+                <div class="saved-loc">
+                  <i class="fas fa-map-marker-alt"></i>
+                  {{ item.worker.get_state_display|default:item.worker.state|title }}{% if item.worker.lga %}, {{ item.worker.lga }}{% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;">
+              {% if item.worker.open_to_employment %}
+                <span class="badge badge-green"><i class="fas fa-check"></i> Open to Work</span>
+              {% endif %}
+              {% if item.worker.is_verified %}
+                <span class="badge badge-sky"><i class="fas fa-shield-alt"></i> Verified</span>
+              {% endif %}
+              {% if item.worker.expected_monthly_salary %}
+                <span class="badge badge-amber">₦{{ item.worker.expected_monthly_salary|intcomma }}/mo</span>
+              {% endif %}
+            </div>
+
+            {% if item.note %}
+              <div class="note-box">
+                <i class="fas fa-sticky-note" style="color: var(--amber); margin-right: 4px;"></i>
+                {{ item.note }}
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="saved-card-actions">
+            <a href="{% url 'hiring:worker_detail' item.worker.pk %}" class="btn btn-ghost btn-sm" style="flex: 1;">
+              View Profile
+            </a>
+            <a href="{% url 'hiring:send_interest' item.worker.pk %}" class="btn btn-primary btn-sm" style="flex: 1;">
+              <i class="fas fa-paper-plane"></i> Contact
+            </a>
+            <form method="post" action="{% url 'hiring:save_worker' item.worker.pk %}" onsubmit="return confirm('Remove from saved shortlist?');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-ghost btn-sm" style="color: #EF4444;" title="Remove from shortlist">
+                <i class="fas fa-trash"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="saved-empty">
+      <div style="font-size: 3rem; color: var(--amber); margin-bottom: 16px;"><i class="far fa-bookmark"></i></div>
+      <h3 style="font-family: 'Fraunces', serif; margin-bottom: 8px;">Your shortlist is empty</h3>
+      <p style="color: var(--text-2); margin-bottom: 24px;">Click the bookmark icon on any worker profile in the Talent Search to save candidates here.</p>
+      <a href="{% url 'hiring:talent_search' %}" class="btn btn-primary">
+        <i class="fas fa-search"></i> Browse Talent Pool
+      </a>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

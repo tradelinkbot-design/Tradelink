@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Contact {{ worker.user.get_full_name|default:worker.user.username }} — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  .outreach-page {
+    min-height: 100vh;
+    padding: calc(var(--nav-h) + 40px) clamp(16px, 5vw, 64px) 80px;
+    max-width: 1060px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Breadcrumb */
+  .breadcrumb-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+    font-size: 0.85rem;
+    color: var(--text-3);
+  }
+  .breadcrumb-nav a {
+    color: var(--text-2);
+    text-decoration: none;
+    transition: var(--t);
+  }
+  .breadcrumb-nav a:hover {
+    color: var(--amber);
+  }
+
+  .outreach-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 32px;
+    align-items: flex-start;
+  }
+  @media (max-width: 860px) {
+    .outreach-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Worker Preview Card */
+  .preview-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 28px 20px;
+    text-align: center;
+  }
+  .preview-avatar {
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    margin: 0 auto 14px;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--surface-2), var(--surface-1));
+    border: 2px solid var(--amber);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--amber);
+  }
+  .preview-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .preview-name {
+    font-family: 'Fraunces', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-1);
+    margin-bottom: 2px;
+  }
+  .preview-trade {
+    color: var(--amber);
+    font-size: 0.88rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .preview-loc {
+    color: var(--text-3);
+    font-size: 0.82rem;
+    margin-bottom: 16px;
+  }
+  .preview-meta {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    padding: 12px;
+    font-size: 0.85rem;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* Form Card */
+  .form-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 36px;
+    box-shadow: var(--shadow-sm);
+  }
+  .form-card h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: var(--text-1);
+  }
+  .form-card-sub {
+    color: var(--text-2);
+    font-size: 0.92rem;
+    margin-bottom: 24px;
+  }
+
+  .form-field-group {
+    margin-bottom: 20px;
+  }
+  .field-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-2);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .notice-banner {
+    background: rgba(245, 158, 11, 0.06);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: var(--r-lg);
+    padding: 14px 18px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    color: var(--text-2);
+    font-size: 0.86rem;
+    line-height: 1.5;
+  }
+  .notice-banner i {
+    color: var(--amber);
+    margin-top: 2px;
+    font-size: 1rem;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 28px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="outreach-page">
+
+  {# ── Breadcrumb ── #}
+  <div class="breadcrumb-nav">
+    <a href="{% url 'home' %}">Home</a>
+    <span>/</span>
+    <a href="{% url 'hiring:talent_search' %}">Talent Search</a>
+    <span>/</span>
+    <a href="{% url 'hiring:worker_detail' worker.pk %}">{{ worker.user.get_full_name|default:worker.user.username }}</a>
+    <span>/</span>
+    <span style="color: var(--text-1);">Contact for Hire</span>
+  </div>
+
+  <div class="outreach-grid">
+
+    {# ── Left: Candidate Preview ── #}
+    <div class="preview-card">
+      <div class="preview-avatar">
+        {% if worker.user.image %}
+          <img src="{{ worker.user.image.url }}" alt="{{ worker.user.username }}">
+        {% else %}
+          {{ worker.user.username|first|upper }}
+        {% endif %}
+      </div>
+      <div class="preview-name">{{ worker.user.get_full_name|default:worker.user.username }}</div>
+      <div class="preview-trade">{{ worker.trade_category.name|default:"Skilled Trades" }}</div>
+      <div class="preview-loc">
+        <i class="fas fa-map-marker-alt"></i> {{ worker.get_state_display|default:worker.state|title }}
+      </div>
+
+      <div class="preview-meta">
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: var(--text-3);">Experience</span>
+          <span style="font-weight: 600;">{{ worker.years_experience }} Years</span>
+        </div>
+        {% if worker.expected_monthly_salary %}
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-3);">Target Salary</span>
+            <span style="font-weight: 600; color: var(--amber);">₦{{ worker.expected_monthly_salary|intcomma }}/mo</span>
+          </div>
+        {% endif %}
+        {% if worker.notice_period %}
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-3);">Notice Period</span>
+            <span style="font-weight: 600;">{{ worker.notice_period }}</span>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# ── Right: Form Card ── #}
+    <div class="form-card">
+      <h2>Direct Hiring <span class="amber-text">Outreach</span></h2>
+      <p class="form-card-sub">
+        Send a direct message to {{ worker.user.get_full_name|default:worker.user.username }}. They will be notified by SMS and in-app message.
+      </p>
+
+      <div class="notice-banner">
+        <i class="fas fa-shield-alt"></i>
+        <div>
+          <strong>No Escrow or Upfront Fee:</strong> This is a direct employment conversation. You negotiate terms, schedule interviews, and agree directly with the candidate.
+        </div>
+      </div>
+
+      <form method="post">
+        {% csrf_token %}
+
+        {% for field in form %}
+          <div class="form-field-group">
+            <label class="field-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}
+              <div style="font-size: 0.78rem; color: var(--text-3); margin-top: 4px;">{{ field.help_text }}</div>
+            {% endif %}
+            {% for error in field.errors %}
+              <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endfor %}
+
+        {% if form.non_field_errors %}
+          <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--r-md); padding: 12px; color: #EF4444; margin-bottom: 20px;">
+            {{ form.non_field_errors }}
+          </div>
+        {% endif %}
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-paper-plane"></i> Send Hiring Message
+          </button>
+          <a href="{% url 'hiring:worker_detail' worker.pk %}" class="btn btn-ghost">
+            Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

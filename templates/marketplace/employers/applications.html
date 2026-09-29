@@ -1,0 +1,754 @@
+{% extends "base.html" %}
+{% block title %}Applications — {{ job.title }} — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+/* =====================================================
+   EMPLOYER JOB APPLICATIONS — TradeLink NG
+   Context: job (Job), applications (QuerySet[JobApplication]),
+            status_choices, unread_count
+===================================================== */
+
+.ja-page { padding-top: var(--nav-h); min-height: 100vh; }
+
+/* ── PAGE HEADER ── */
+.ja-header {
+  background: linear-gradient(180deg, rgba(56,189,248,0.05) 0%, rgba(16,185,129,0.02) 60%, transparent 100%);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 36px 0 32px;
+  position: relative; overflow: hidden;
+}
+.ja-header::before {
+  content: '';
+  position: absolute; top: -100px; right: -80px;
+  width: 400px; height: 400px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(56,189,248,0.06), transparent 65%);
+  pointer-events: none;
+}
+.ja-header-inner {
+  max-width: 1200px; margin: 0 auto;
+  padding: 0 clamp(20px,5vw,64px);
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 20px; flex-wrap: wrap;
+}
+.ja-header-left { display: flex; align-items: flex-start; gap: 16px; }
+.ja-header-icon {
+  width: 52px; height: 52px; border-radius: 14px; flex-shrink: 0;
+  background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; color: var(--sky);
+}
+.ja-back {
+  font-size: 0.82rem; color: var(--sky); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-bottom: 6px; transition: var(--t);
+}
+.ja-back:hover { color: #7dd3fc; }
+.ja-header-title {
+  font-family: 'Fraunces', serif; font-size: 1.45rem;
+  font-weight: 900; letter-spacing: -0.5px; color: var(--text-1);
+  margin-bottom: 6px; line-height: 1.2;
+}
+.ja-header-meta {
+  display: flex; flex-wrap: wrap; gap: 8px 18px;
+  font-size: 0.83rem; color: var(--text-3);
+}
+.ja-header-meta span { display: flex; align-items: center; gap: 5px; }
+.ja-header-meta i  { font-size: 0.75rem; }
+
+/* Header action buttons */
+.ja-header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* ── BODY ── */
+.ja-body {
+  max-width: 1200px; margin: 0 auto;
+  padding: 36px clamp(20px,5vw,64px) 80px;
+}
+
+/* ── MESSAGES ── */
+.ja-messages { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+.ja-msg {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 18px; border-radius: var(--r-lg); font-size: 0.88rem;
+}
+.ja-msg-success { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); color: #6ee7b7; }
+.ja-msg-error   { background: rgba(239,68,68,0.08);  border: 1px solid rgba(239,68,68,0.2);  color: #fca5a5; }
+.ja-msg i { font-size: 0.85rem; margin-top: 2px; flex-shrink: 0; }
+
+/* ── SUMMARY STATS ── */
+.ja-stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 32px;
+}
+.ja-stat {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 18px 16px;
+  text-align: center; cursor: pointer; transition: var(--t);
+  text-decoration: none;
+}
+.ja-stat:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+.ja-stat.active { border-color: var(--sky); background: rgba(56,189,248,0.06); }
+.ja-stat-num {
+  font-family: 'Fraunces', serif; font-size: 1.6rem; font-weight: 900; line-height: 1;
+  color: var(--text-1); margin-bottom: 5px;
+}
+.ja-stat.active .ja-stat-num { color: var(--sky); }
+.ja-stat-lbl { font-size: 0.75rem; font-weight: 600; color: var(--text-3); }
+.ja-stat-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  display: inline-block; margin-right: 5px;
+}
+
+/* ── FILTER / SORT BAR ── */
+.ja-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.ja-toolbar-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ja-filter-btn {
+  padding: 8px 16px;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-pill); color: var(--text-2);
+  font-family: 'Outfit', sans-serif; font-size: 0.83rem; font-weight: 600;
+  cursor: pointer; transition: var(--t); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.ja-filter-btn:hover { background: var(--surface-2); border-color: var(--border-strong); color: var(--text-1); }
+.ja-filter-btn.active {
+  background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.3);
+  color: var(--sky);
+}
+.ja-count-label { font-size: 0.85rem; color: var(--text-3); }
+
+/* ── APPLICATION CARD ── */
+.ja-list { display: flex; flex-direction: column; gap: 14px; }
+
+.ja-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); overflow: hidden; transition: var(--t);
+}
+.ja-card:hover { border-color: var(--border-strong); }
+.ja-card.status-shortlisted { border-left: 3px solid var(--amber); }
+.ja-card.status-accepted    { border-left: 3px solid var(--emerald); }
+.ja-card.status-rejected    { border-left: 3px solid rgba(239,68,68,0.5); }
+.ja-card.status-withdrawn   { opacity: 0.65; }
+
+.ja-card-top {
+  padding: 20px 24px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 16px; align-items: start;
+}
+
+/* Worker avatar */
+.ja-avatar {
+  width: 52px; height: 52px; border-radius: 14px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--amber-dark), var(--orange));
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Fraunces', serif; font-weight: 900; font-size: 1.1rem;
+  color: #0C0A08;
+}
+
+/* Worker info */
+.ja-worker-name {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 4px;
+  display: flex; align-items: center; gap: 8px;
+}
+.ja-worker-name a { color: inherit; text-decoration: none; transition: var(--t); }
+.ja-worker-name a:hover { color: var(--sky); }
+.ja-worker-meta {
+  display: flex; flex-wrap: wrap; gap: 6px 14px;
+  font-size: 0.82rem; color: var(--text-3); margin-bottom: 8px;
+}
+.ja-worker-meta span { display: flex; align-items: center; gap: 4px; }
+.ja-worker-meta i { font-size: 0.72rem; }
+
+/* Skills row */
+.ja-skills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.ja-skill-tag {
+  padding: 3px 10px; border-radius: var(--r-pill);
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  font-size: 0.72rem; font-weight: 600; color: var(--text-3);
+}
+
+/* Right column — score + status + date */
+.ja-card-right {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+  flex-shrink: 0;
+}
+.ja-match-score {
+  display: flex; flex-direction: column; align-items: center;
+  background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2);
+  border-radius: var(--r-lg); padding: 8px 14px;
+  min-width: 70px;
+}
+.ja-match-score.score-high   { background: rgba(16,185,129,0.1);  border-color: rgba(16,185,129,0.25); }
+.ja-match-score.score-mid    { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.2); }
+.ja-match-score.score-low    { background: rgba(250,245,235,0.04); border-color: var(--border-subtle); }
+.ja-score-num {
+  font-family: 'Fraunces', serif; font-size: 1.2rem; font-weight: 900; line-height: 1;
+}
+.score-high .ja-score-num { color: var(--emerald); }
+.score-mid  .ja-score-num { color: var(--amber); }
+.score-low  .ja-score-num { color: var(--text-3); }
+.ja-score-lbl { font-size: 0.67rem; color: var(--text-3); font-weight: 600; margin-top: 2px; }
+
+.ja-status-badge {
+  padding: 4px 12px; border-radius: var(--r-pill);
+  font-size: 0.74rem; font-weight: 700; letter-spacing: 0.3px;
+  display: flex; align-items: center; gap: 5px; white-space: nowrap;
+}
+.status-pending     { background: rgba(250,245,235,0.06); border: 1px solid var(--border-subtle); color: var(--text-3); }
+.status-shortlisted { background: rgba(245,158,11,0.1);   border: 1px solid rgba(245,158,11,0.25); color: var(--amber-light); }
+.status-accepted    { background: rgba(16,185,129,0.1);   border: 1px solid rgba(16,185,129,0.25); color: #6ee7b7; }
+.status-rejected    { background: rgba(239,68,68,0.08);   border: 1px solid rgba(239,68,68,0.2);  color: #fca5a5; }
+.status-withdrawn   { background: rgba(250,245,235,0.04); border: 1px solid var(--border-subtle); color: var(--text-3); }
+
+.ja-applied-date { font-size: 0.76rem; color: var(--text-3); }
+
+/* ── COVER NOTE ── */
+.ja-cover {
+  margin: 0 24px;
+  padding: 14px 18px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  font-size: 0.87rem; color: var(--text-2); line-height: 1.7;
+  font-style: italic; position: relative;
+}
+.ja-cover::before {
+  content: '"';
+  position: absolute; top: -2px; left: 12px;
+  font-family: 'Fraunces', serif; font-size: 2.5rem;
+  color: var(--border-strong); line-height: 1; pointer-events: none;
+}
+.ja-cover-text { padding-left: 18px; }
+
+/* ── ACTION STRIP ── */
+.ja-card-actions {
+  padding: 14px 24px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  background: rgba(255,255,255,0.01);
+}
+.ja-action-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* Status update form */
+.ja-status-form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ja-status-select {
+  padding: 8px 32px 8px 12px; appearance: none;
+  background: var(--bg-raised);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(250,245,235,0.3)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+  border: 1px solid var(--border-subtle); border-radius: var(--r-md);
+  color: var(--text-1); font-family: 'Outfit', sans-serif; font-size: 0.83rem;
+  cursor: pointer; transition: var(--t); outline: none;
+}
+.ja-status-select:focus { border-color: var(--sky); box-shadow: 0 0 0 3px rgba(56,189,248,0.1); }
+.ja-status-select option { background: var(--bg-card); }
+
+.ja-note-input {
+  padding: 8px 12px; min-width: 200px; flex: 1;
+  background: var(--bg-raised); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md); color: var(--text-1);
+  font-family: 'Outfit', sans-serif; font-size: 0.83rem;
+  transition: var(--t); outline: none;
+}
+.ja-note-input:focus { border-color: var(--sky); box-shadow: 0 0 0 3px rgba(56,189,248,0.1); }
+.ja-note-input::placeholder { color: var(--text-3); }
+
+.ja-btn-update {
+  padding: 8px 20px;
+  background: linear-gradient(135deg, var(--sky), var(--emerald));
+  border: none; border-radius: var(--r-md);
+  color: #0C0A08; font-family: 'Outfit', sans-serif;
+  font-size: 0.83rem; font-weight: 700;
+  cursor: pointer; transition: var(--t);
+  display: inline-flex; align-items: center; gap: 6px;
+  box-shadow: 0 3px 12px rgba(56,189,248,0.2);
+  white-space: nowrap;
+}
+.ja-btn-update:hover { filter: brightness(1.07); transform: translateY(-1px); }
+.ja-btn-update:active { transform: translateY(0); }
+
+.ja-btn-view {
+  padding: 8px 16px;
+  background: transparent; border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md); color: var(--text-2);
+  font-family: 'Outfit', sans-serif; font-size: 0.83rem; font-weight: 600;
+  cursor: pointer; text-decoration: none; transition: var(--t);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.ja-btn-view:hover { background: var(--surface-1); color: var(--text-1); border-color: var(--border-strong); }
+
+/* Employer note (shown after save if exists) */
+.ja-employer-note {
+  margin: 0 24px 14px;
+  padding: 10px 14px;
+  background: rgba(56,189,248,0.04);
+  border: 1px solid rgba(56,189,248,0.12);
+  border-radius: var(--r-md);
+  font-size: 0.81rem; color: var(--text-2);
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.ja-employer-note i { color: var(--sky); font-size: 0.78rem; margin-top: 2px; flex-shrink: 0; }
+
+/* ── EMPTY STATE ── */
+.ja-empty {
+  text-align: center; padding: 80px 32px;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl);
+}
+.ja-empty-icon {
+  width: 72px; height: 72px; border-radius: 20px; margin: 0 auto 20px;
+  background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.8rem; color: var(--sky);
+}
+.ja-empty h3 {
+  font-family: 'Fraunces', serif; font-size: 1.25rem; font-weight: 800;
+  color: var(--text-1); margin-bottom: 10px;
+}
+.ja-empty p { font-size: 0.9rem; color: var(--text-2); max-width: 380px; margin: 0 auto 28px; line-height: 1.7; }
+
+/* ── PROFILE COMPLETION PILL ── */
+.ja-completion-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 2px 10px; border-radius: var(--r-pill);
+  font-size: 0.7rem; font-weight: 700;
+  background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2);
+  color: var(--amber);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .ja-stats { grid-template-columns: repeat(3, 1fr); }
+  .ja-card-top { grid-template-columns: auto 1fr; }
+  .ja-card-right { flex-direction: row; align-items: center; grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+  .ja-stats { grid-template-columns: repeat(2, 1fr); }
+  .ja-card-top { padding: 16px; gap: 12px; }
+  .ja-cover { margin: 0 16px; }
+  .ja-employer-note { margin: 0 16px 12px; }
+  .ja-card-actions { padding: 12px 16px; }
+  .ja-status-form { flex-direction: column; align-items: stretch; }
+  .ja-note-input { min-width: unset; }
+}
+@media (max-width: 480px) {
+  .ja-stats { grid-template-columns: 1fr 1fr; }
+  .ja-header-actions { width: 100%; }
+  .ja-header-actions .btn { flex: 1; justify-content: center; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ja-page">
+
+  {# ── PAGE HEADER ── #}
+  <div class="ja-header">
+    <div class="ja-header-inner">
+      <div class="ja-header-left">
+        <div class="ja-header-icon"><i class="fas fa-file-lines"></i></div>
+        <div>
+          <a href="{% url 'marketplace:employer_dashboard' %}" class="ja-back">
+            <i class="fas fa-chevron-left" style="font-size:0.7rem;"></i> Dashboard
+          </a>
+          <div class="ja-header-title">{{ job.title }}</div>
+          <div class="ja-header-meta">
+            <span><i class="fas fa-map-pin"></i> {{ job.get_state_display|default:"Location not set" }}{% if job.lga %}, {{ job.lga }}{% endif %}</span>
+            <span><i class="fas fa-briefcase"></i> {{ job.get_job_type_display }}</span>
+            <span><i class="fas fa-users"></i> {{ applications.count }} applicant{{ applications.count|pluralize }}</span>
+            <span><i class="fas fa-calendar"></i> Posted {{ job.created|timesince }} ago</span>
+            {% if job.deadline %}
+            <span><i class="fas fa-hourglass-half"></i> Deadline {{ job.deadline|date:"d M Y" }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="ja-header-actions">
+        <a href="{% url 'marketplace:job_detail' pk=job.pk %}" class="btn btn-ghost btn-sm">
+          <i class="fas fa-eye"></i> View Listing
+        </a>
+        <a href="{% url 'marketplace:job_matches' pk=job.pk %}" class="btn btn-sm" style="background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.25);color:var(--sky);">
+          <i class="fas fa-bolt"></i> AI Matches
+        </a>
+        <a href="{% url 'marketplace:job_edit' pk=job.pk %}" class="btn btn-ghost btn-sm">
+          <i class="fas fa-pen"></i> Edit Job
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="ja-body">
+
+    {# ── MESSAGES ── #}
+    {% if messages %}
+    <div class="ja-messages">
+      {% for msg in messages %}
+      <div class="ja-msg {% if msg.tags == 'success' %}ja-msg-success{% else %}ja-msg-error{% endif %}">
+        <i class="fas {% if msg.tags == 'success' %}fa-circle-check{% else %}fa-circle-exclamation{% endif %}"></i>
+        {{ msg }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {# ── SUMMARY STATS ── #}
+    {% with total=applications.count %}
+    <div class="ja-stats">
+
+      <div class="ja-stat active" data-filter="all">
+        <div class="ja-stat-num">{{ total }}</div>
+        <div class="ja-stat-lbl">All</div>
+      </div>
+
+      <div class="ja-stat" data-filter="pending">
+        <div class="ja-stat-num">{{ applications|dictsort:"status"|length }}</div>
+        <div class="ja-stat-lbl"><span class="ja-stat-dot" style="background:var(--text-3);"></span>Pending</div>
+      </div>
+
+      <div class="ja-stat" data-filter="shortlisted">
+        <div class="ja-stat-num">
+          {% with count=0 %}
+            {% for app in applications %}{% if app.status == 'shortlisted' %}{% with count=count|add:1 %}{% endwith %}{% endif %}{% endfor %}
+            {# Django template doesn't support counter in for-loop cleanly; use a custom filter or annotate in view. Showing a placeholder that always works: #}
+          {% endwith %}
+          {{ applications|length }}
+        </div>
+        <div class="ja-stat-lbl"><span class="ja-stat-dot" style="background:var(--amber);"></span>Shortlisted</div>
+      </div>
+
+      <div class="ja-stat" data-filter="accepted">
+        <div class="ja-stat-num">—</div>
+        <div class="ja-stat-lbl"><span class="ja-stat-dot" style="background:var(--emerald);"></span>Accepted</div>
+      </div>
+
+      <div class="ja-stat" data-filter="rejected">
+        <div class="ja-stat-num">—</div>
+        <div class="ja-stat-lbl"><span class="ja-stat-dot" style="background:#ef4444;"></span>Rejected</div>
+      </div>
+
+    </div>
+    {% endwith %}
+
+    {# ── TOOLBAR ── #}
+    <div class="ja-toolbar">
+      <div class="ja-toolbar-left">
+        <button class="ja-filter-btn active" data-filter="all">All</button>
+        <button class="ja-filter-btn" data-filter="pending">Pending</button>
+        <button class="ja-filter-btn" data-filter="shortlisted">Shortlisted</button>
+        <button class="ja-filter-btn" data-filter="accepted">Accepted</button>
+        <button class="ja-filter-btn" data-filter="rejected">Rejected</button>
+        <button class="ja-filter-btn" data-filter="withdrawn">Withdrawn</button>
+      </div>
+      <span class="ja-count-label" id="visibleCount">
+        Showing <strong>{{ applications.count }}</strong> application{{ applications.count|pluralize }}
+      </span>
+    </div>
+
+    {# ── APPLICATIONS LIST ── #}
+    {% if applications %}
+    <div class="ja-list" id="applicationList">
+      {% for app in applications %}
+      <div
+        class="ja-card status-{{ app.status }} fade-up"
+        data-status="{{ app.status }}"
+        style="animation-delay:{{ forloop.counter0 }}00ms;"
+      >
+
+        {# ── TOP ROW ── #}
+        <div class="ja-card-top">
+
+          {# Avatar #}
+          <div class="ja-avatar"
+            style="{% cycle 'background:linear-gradient(135deg,#F59E0B,#F97316)' 'background:linear-gradient(135deg,#38BDF8,#0EA5E9)' 'background:linear-gradient(135deg,#10B981,#059669)' 'background:linear-gradient(135deg,#A78BFA,#7C3AED)' 'background:linear-gradient(135deg,#F472B6,#EC4899)' %}">
+            {{ app.worker.user.get_full_name|slice:":1"|upper|default:app.worker.user.username|slice:":1"|upper }}
+          </div>
+
+          {# Worker Info #}
+          <div>
+            <div class="ja-worker-name">
+              <a href="{% url 'marketplace:worker_profile_public' pk=app.worker.pk %}">
+                {{ app.worker.user.get_full_name|default:app.worker.user.username }}
+              </a>
+              {% if app.worker.is_verified %}
+                <span style="font-size:0.72rem;color:var(--emerald);display:flex;align-items:center;gap:3px;">
+                  <i class="fas fa-circle-check"></i> Verified
+                </span>
+              {% endif %}
+              {% if app.worker.is_featured %}
+                <span style="font-size:0.7rem;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);color:var(--amber);padding:1px 8px;border-radius:var(--r-pill);font-weight:700;">
+                  Featured
+                </span>
+              {% endif %}
+            </div>
+
+            <div class="ja-worker-meta">
+              {% if app.worker.trade_category %}
+              <span><i class="fas fa-hammer"></i> {{ app.worker.trade_category.name }}</span>
+              {% endif %}
+              {% if app.worker.years_experience %}
+              <span><i class="fas fa-clock"></i> {{ app.worker.years_experience }} yr{{ app.worker.years_experience|pluralize }} exp.</span>
+              {% endif %}
+              {% if app.worker.state %}
+              <span><i class="fas fa-map-pin"></i> {{ app.worker.get_state_display }}</span>
+              {% endif %}
+              <span><i class="fas fa-chart-bar"></i> {{ app.worker.profile_completion }}% profile</span>
+              {% if app.worker.hourly_rate %}
+              <span><i class="fas fa-naira-sign"></i> ₦{{ app.worker.hourly_rate|floatformat:0 }}/hr</span>
+              {% elif app.worker.daily_rate %}
+              <span><i class="fas fa-naira-sign"></i> ₦{{ app.worker.daily_rate|floatformat:0 }}/day</span>
+              {% endif %}
+            </div>
+
+            {# Skills #}
+            {% with skills=app.worker.skills.all|slice:":5" %}
+            {% if skills %}
+            <div class="ja-skills">
+              {% for skill in skills %}
+              <span class="ja-skill-tag">{{ skill.name }}</span>
+              {% endfor %}
+              {% if app.worker.skills.count > 5 %}
+              <span class="ja-skill-tag" style="color:var(--text-2);">+{{ app.worker.skills.count|add:"-5" }} more</span>
+              {% endif %}
+            </div>
+            {% endif %}
+            {% endwith %}
+          </div>
+
+          {# Right — Score + Status + Date #}
+          <div class="ja-card-right">
+            {# CLIP match score #}
+            {% if app.clip_match_score is not None %}
+              {% with score_pct=app.clip_match_score|floatformat:0 %}
+              <div class="ja-match-score {% if app.clip_match_score >= 0.75 %}score-high{% elif app.clip_match_score >= 0.50 %}score-mid{% else %}score-low{% endif %}">
+                <span class="ja-score-num">{{ app.clip_match_score|floatformat:"0" }}%</span>
+                <span class="ja-score-lbl">AI Match</span>
+              </div>
+              {% endwith %}
+            {% else %}
+              <div class="ja-match-score score-low">
+                <span class="ja-score-num" style="font-size:0.85rem;">N/A</span>
+                <span class="ja-score-lbl">AI Match</span>
+              </div>
+            {% endif %}
+
+            {# Status badge #}
+            <span class="ja-status-badge status-{{ app.status }}">
+              {% if app.status == 'pending' %}<i class="fas fa-circle" style="font-size:6px;"></i> Pending
+              {% elif app.status == 'shortlisted' %}<i class="fas fa-star" style="font-size:9px;"></i> Shortlisted
+              {% elif app.status == 'accepted' %}<i class="fas fa-circle-check" style="font-size:9px;"></i> Accepted
+              {% elif app.status == 'rejected' %}<i class="fas fa-circle-xmark" style="font-size:9px;"></i> Rejected
+              {% elif app.status == 'withdrawn' %}<i class="fas fa-rotate-left" style="font-size:9px;"></i> Withdrawn
+              {% endif %}
+            </span>
+
+            <span class="ja-applied-date">{{ app.applied_at|date:"d M Y" }}</span>
+          </div>
+
+        </div>{# /ja-card-top #}
+
+        {# ── COVER NOTE ── #}
+        {% if app.cover_note %}
+        <div class="ja-cover" style="margin-bottom:14px;">
+          <div class="ja-cover-text">{{ app.cover_note|truncatechars:320 }}</div>
+        </div>
+        {% endif %}
+
+        {# ── EMPLOYER NOTE (if previously saved) ── #}
+        {% if app.employer_note %}
+        <div class="ja-employer-note">
+          <i class="fas fa-note-sticky"></i>
+          <span><strong>Your note:</strong> {{ app.employer_note }}</span>
+        </div>
+        {% endif %}
+
+        {# ── ACTION STRIP ── #}
+        {% if app.status != 'withdrawn' %}
+        <div class="ja-card-actions">
+          <div class="ja-action-left">
+            <form
+              method="POST"
+              action="{% url 'marketplace:application_update' pk=app.pk %}"
+              class="ja-status-form"
+            >
+              {% csrf_token %}
+
+              <select name="status" class="ja-status-select">
+                {% for val, label in status_choices %}
+                  {# Only allow actionable statuses for employer — exclude withdrawn #}
+                  {% if val != 'withdrawn' %}
+                  <option value="{{ val }}"
+                    {% if app.status == val %}selected{% endif %}>
+                    {{ label }}
+                  </option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+
+              <input
+                type="text"
+                name="employer_note"
+                class="ja-note-input"
+                placeholder="Add a private note (optional)…"
+                value="{{ app.employer_note }}"
+              >
+
+              <button type="submit" class="ja-btn-update">
+                <i class="fas fa-floppy-disk"></i> Save
+              </button>
+            </form>
+          </div>
+
+          <div style="display:flex; gap:8px;">
+            {% if app.status == 'accepted' %}
+            <a
+              href="{% url 'marketplace:review_submit' pk=app.job.pk %}"
+              class="ja-btn-view"
+              style="background:rgba(245,158,11,0.1); color:var(--amber); border-color:rgba(245,158,11,0.2);"
+            >
+              <i class="fas fa-star"></i> Leave a Review
+            </a>
+            {% endif %}
+            <a
+              href="{% url 'marketplace:worker_profile_public' pk=app.worker.pk %}"
+              class="ja-btn-view"
+              target="_blank"
+              rel="noopener"
+            >
+              <i class="fas fa-arrow-up-right-from-square"></i> Full Profile
+            </a>
+          </div>
+        </div>
+        {% else %}
+        {# Withdrawn — show read-only strip #}
+        <div class="ja-card-actions" style="justify-content:flex-end;">
+          <a
+            href="{% url 'marketplace:worker_profile_public' pk=app.worker.pk %}"
+            class="ja-btn-view"
+            target="_blank"
+            rel="noopener"
+          >
+            <i class="fas fa-arrow-up-right-from-square"></i> View Profile
+          </a>
+        </div>
+        {% endif %}
+
+      </div>{# /ja-card #}
+      {% endfor %}
+    </div>
+
+    {% else %}
+    {# ── EMPTY STATE ── #}
+    <div class="ja-empty fade-up">
+      <div class="ja-empty-icon"><i class="fas fa-inbox"></i></div>
+      <h3>No applications yet</h3>
+      <p>
+        Your job listing is live but no one has applied yet.
+        Make sure the description is detailed and the pay range is competitive.
+      </p>
+      <a href="{% url 'marketplace:job_matches' pk=job.pk %}" class="btn btn-primary">
+        <i class="fas fa-bolt"></i> See AI-Matched Workers
+      </a>
+    </div>
+    {% endif %}
+
+  </div>{# /ja-body #}
+</div>{# /ja-page #}
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+/* ── Status filter ── */
+const filterBtns  = document.querySelectorAll('.ja-filter-btn');
+const statBtns    = document.querySelectorAll('.ja-stat');
+const cards       = document.querySelectorAll('.ja-card');
+const countLabel  = document.getElementById('visibleCount');
+
+function applyFilter(status) {
+  let visible = 0;
+  cards.forEach(card => {
+    const match = status === 'all' || card.dataset.status === status;
+    card.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  const noun = visible === 1 ? 'application' : 'applications';
+  countLabel.innerHTML = `Showing <strong>${visible}</strong> ${noun}`;
+}
+
+filterBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    filterBtns.forEach(b => b.classList.remove('active'));
+    statBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    /* Sync the matching stat card */
+    document.querySelector(`.ja-stat[data-filter="${btn.dataset.filter}"]`)
+      ?.classList.add('active');
+    applyFilter(btn.dataset.filter);
+  });
+});
+
+statBtns.forEach(stat => {
+  stat.addEventListener('click', () => {
+    statBtns.forEach(b => b.classList.remove('active'));
+    filterBtns.forEach(b => b.classList.remove('active'));
+    stat.classList.add('active');
+    const filter = stat.dataset.filter;
+    document.querySelector(`.ja-filter-btn[data-filter="${filter}"]`)
+      ?.classList.add('active');
+    applyFilter(filter);
+  });
+});
+
+/* ── Recompute live stat counts from DOM ── */
+function recomputeStatCounts() {
+  const counts = { pending: 0, shortlisted: 0, accepted: 0, rejected: 0, withdrawn: 0, all: 0 };
+  cards.forEach(card => {
+    const s = card.dataset.status;
+    if (counts[s] !== undefined) counts[s]++;
+    counts.all++;
+  });
+  statBtns.forEach(btn => {
+    const key = btn.dataset.filter;
+    const numEl = btn.querySelector('.ja-stat-num');
+    if (numEl && key !== undefined && counts[key] !== undefined) {
+      numEl.textContent = counts[key];
+    }
+  });
+}
+recomputeStatCounts();
+
+/* ── Auto-dismiss messages ── */
+document.querySelectorAll('.ja-msg').forEach(el => {
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.4s';
+    el.style.opacity    = '0';
+    setTimeout(() => el.remove(), 420);
+  }, 5000);
+});
+
+/* ── Fade-up scroll observer ── */
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.style.animationPlayState = 'running';
+      obs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.04 });
+
+document.querySelectorAll('.fade-up').forEach(el => {
+  el.style.animationPlayState = 'paused';
+  obs.observe(el);
+});
+</script>
+{% endblock %}

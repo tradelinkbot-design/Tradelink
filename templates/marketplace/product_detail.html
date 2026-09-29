@@ -1,0 +1,1085 @@
+{% extends "base.html" %}
+{% block title %}{{ product.title }} — Marketplace | TradeLink NG{% endblock %}
+{% block nav_marketplace %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* =====================================================
+     MARKETPLACE — PRODUCT DETAIL
+  ===================================================== */
+
+  .pd-page {
+    padding-top: calc(var(--nav-h) + clamp(32px, 5vw, 56px));
+    padding-bottom: clamp(56px, 8vw, 96px);
+    position: relative; z-index: 1;
+  }
+  .pd-container {
+    max-width: 1200px; margin: 0 auto;
+    padding: 0 clamp(16px, 4vw, 48px);
+  }
+
+  /* ── Breadcrumb ── */
+  .breadcrumb {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.82rem; color: var(--text-3);
+    margin-bottom: 28px; flex-wrap: wrap;
+  }
+  .breadcrumb a { color: var(--text-3); text-decoration: none; transition: var(--t); }
+  .breadcrumb a:hover { color: var(--amber); }
+  .breadcrumb i { font-size: 0.65rem; }
+
+  /* ═══════════════════════════════════════════════
+     MAIN GRID — image | details
+  ═══════════════════════════════════════════════ */
+  .pd-grid {
+    display: grid;
+    grid-template-columns: 1fr minmax(0, 420px);
+    gap: 36px;
+    align-items: start;
+    min-width: 0;
+  }
+
+  /* ── LEFT: images ── */
+  .pd-gallery { min-width: 0; }
+  .pd-left { min-width: 0; }
+  .pd-cover {
+    width: 100%; aspect-ratio: 4/3;
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    position: relative;
+  }
+  .pd-cover img {
+    width: 100%; height: 100%; object-fit: cover;
+  }
+  .pd-cover-empty {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 12px;
+    color: var(--text-3);
+  }
+  .pd-cover-empty i { font-size: 3rem; }
+  .pd-cover-empty span { font-size: 0.9rem; }
+
+  /* status ribbon */
+  .pd-status-ribbon {
+    position: absolute; top: 14px; left: 14px;
+    padding: 5px 14px; border-radius: var(--r-pill);
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 0.3px;
+    backdrop-filter: blur(10px);
+  }
+  .ribbon-sold     { background: rgba(239,68,68,0.18); color: #FCA5A5; border: 1px solid rgba(239,68,68,0.25); }
+  .ribbon-reserved { background: rgba(249,115,22,0.15); color: #FDA975; border: 1px solid rgba(249,115,22,0.22); }
+
+  .pd-thumbs {
+    display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap;
+  }
+  .pd-thumb {
+    width: 72px; height: 72px; border-radius: var(--r-md);
+    overflow: hidden; cursor: pointer;
+    border: 2px solid transparent; transition: var(--t);
+    flex-shrink: 0;
+  }
+  .pd-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .pd-thumb:hover,
+  .pd-thumb.active { border-color: var(--amber); }
+
+  /* ── LEFT: description card ── */
+  .pd-desc-card {
+    margin-top: 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 24px 28px;
+  }
+  .pd-desc-card h3 {
+    font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 700;
+    margin-bottom: 14px; color: var(--text-1);
+  }
+  .pd-desc-card p {
+    color: var(--text-2); font-size: 0.92rem; line-height: 1.8;
+    white-space: pre-line;
+    overflow-wrap: break-word; word-break: break-word;
+  }
+
+  /* ── LEFT: specs table ── */
+  .pd-specs {
+    margin-top: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 24px 28px;
+  }
+  .pd-specs h3 {
+    font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 700;
+    margin-bottom: 18px; color: var(--text-1);
+  }
+  .spec-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    gap: 16px;
+  }
+  .spec-row:last-child { border-bottom: none; }
+  .spec-label { font-size: 0.82rem; color: var(--text-3); font-weight: 500; flex-shrink: 0; }
+  .spec-value { font-size: 0.88rem; color: var(--text-1); text-align: right; overflow-wrap: break-word; word-break: break-word; }
+  .spec-value .badge { display: inline-flex; }
+
+  /* ═══════════════════════════════════════════════
+     RIGHT: purchase panel
+  ═══════════════════════════════════════════════ */
+  .pd-panel {
+    position: sticky; top: calc(var(--nav-h) + 16px);
+    display: flex; flex-direction: column; gap: 16px;
+    min-width: 0;
+  }
+
+  /* price card */
+  .price-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 28px;
+  }
+
+  .pd-category-tag {
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--amber);
+    margin-bottom: 8px; display: block;
+  }
+  .pd-title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.2rem, 3vw, 1.7rem);
+    font-weight: 800; line-height: 1.25; letter-spacing: -0.5px;
+    margin-bottom: 16px; color: var(--text-1);
+    overflow-wrap: break-word; word-break: break-word;
+  }
+
+  .pd-price-wrap {
+    display: flex; align-items: baseline; gap: 10px;
+    margin-bottom: 6px;
+  }
+  .pd-price {
+    font-family: 'Fraunces', serif; font-size: 2.2rem; font-weight: 900;
+    letter-spacing: -1px;
+    background: linear-gradient(120deg, var(--amber), var(--orange));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .pd-offers-ok {
+    font-size: 0.78rem; color: var(--emerald); font-weight: 600;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .pd-no-offers {
+    font-size: 0.78rem; color: var(--text-3);
+  }
+
+  .pd-condition-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .pd-location {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.85rem; color: var(--text-3);
+    margin-bottom: 20px;
+  }
+  .pd-location i { color: var(--amber); font-size: 0.8rem; }
+
+  .pd-divider {
+    border: none; border-top: 1px solid var(--border-subtle);
+    margin: 20px 0;
+  }
+
+  /* CTA buttons */
+  .pd-cta { display: flex; flex-direction: column; gap: 10px; }
+  .pd-cta .btn { width: 100%; justify-content: center; }
+
+  /* already ordered state */
+  .pd-ordered-state {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px;
+    background: rgba(16,185,129,0.08);
+    border: 1px solid rgba(16,185,129,0.2);
+    border-radius: var(--r-md);
+    font-size: 0.88rem; color: #6EE7B7;
+  }
+
+  /* offer form */
+  .offer-form-wrap {
+    margin-top: 4px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 20px 22px;
+  }
+  .offer-form-wrap h4 {
+    font-family: 'Fraunces', serif; font-size: 0.95rem; font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .offer-input-row {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .offer-input-row .offer-input { min-width: 0; }
+  .offer-input-row .btn[type="submit"] { flex-shrink: 0; }
+  @media (max-width: 400px) {
+    .offer-input-row .btn[type="submit"] { width: 100%; justify-content: center; }
+  }
+  .offer-prefix {
+    font-weight: 700; color: var(--amber); font-size: 1rem; flex-shrink: 0;
+  }
+  .offer-input {
+    flex: 1; padding: 11px 14px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    color: var(--text-1); font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem; outline: none; transition: var(--t);
+  }
+  .offer-input:focus {
+    border-color: var(--amber);
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+  }
+  .offer-hint { font-size: 0.77rem; color: var(--text-3); margin-top: 6px; }
+
+  /* counter offer state */
+  .counter-offer-banner {
+    padding: 14px 16px;
+    background: rgba(249,115,22,0.08);
+    border: 1px solid rgba(249,115,22,0.2);
+    border-radius: var(--r-md);
+    font-size: 0.88rem;
+  }
+  .counter-offer-banner strong { color: var(--orange); }
+
+  /* pending offer state */
+  .pending-offer-banner {
+    padding: 14px 16px;
+    background: rgba(245,158,11,0.06);
+    border: 1px solid rgba(245,158,11,0.16);
+    border-radius: var(--r-md);
+    font-size: 0.88rem;
+    display: flex; align-items: center; gap: 8px; color: var(--text-2);
+  }
+  .pending-offer-banner i { color: var(--amber); }
+
+  /* ── Seller card ── */
+  .seller-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 22px 24px;
+  }
+  .seller-card h4 {
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--text-3);
+    margin-bottom: 14px;
+  }
+  .seller-row {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 16px;
+  }
+  .seller-avatar {
+    width: 46px; height: 46px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; font-weight: 800; color: #0C0A08;
+    flex-shrink: 0;
+  }
+  .seller-info { flex: 1; min-width: 0; }
+  .seller-name {
+    font-weight: 700; font-size: 0.95rem; color: var(--text-1);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .seller-meta {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.78rem; color: var(--text-3); margin-top: 2px; flex-wrap: wrap;
+  }
+  .seller-meta i { font-size: 0.7rem; }
+  .seller-rating { color: var(--amber); font-weight: 600; }
+  .verified-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.72rem; color: var(--emerald); font-weight: 600;
+  }
+  .verified-badge i { font-size: 0.65rem; }
+
+  .seller-stats {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px; margin-bottom: 14px;
+  }
+  .stat-box {
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md); padding: 10px 12px; text-align: center;
+  }
+  .stat-num {
+    font-family: 'Fraunces', serif; font-size: 1.2rem; font-weight: 800;
+    color: var(--text-1); display: block;
+  }
+  .stat-lbl { font-size: 0.72rem; color: var(--text-3); }
+
+  /* ── Escrow trust ── */
+  .escrow-card {
+    background: rgba(16,185,129,0.04);
+    border: 1px solid rgba(16,185,129,0.15);
+    border-radius: var(--r-xl);
+    padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .escrow-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.82rem; font-weight: 700; color: #6EE7B7;
+  }
+  .escrow-title i { font-size: 0.85rem; }
+  .escrow-item {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 0.78rem; color: var(--text-2);
+  }
+  .escrow-item i { color: #6EE7B7; font-size: 0.7rem; margin-top: 3px; flex-shrink: 0; }
+
+  /* ── Save button ── */
+  .save-btn {
+    width: 100%; display: flex; align-items: center; justify-content: center;
+    gap: 8px; padding: 9px; border-radius: var(--r-md);
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    color: var(--text-2); font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: var(--t);
+  }
+  .save-btn:hover { border-color: var(--border-strong); color: var(--text-1); background: var(--surface-2); }
+  .save-btn.saved { color: var(--amber); border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.06); }
+  .save-btn i { font-size: 0.88rem; }
+
+  /* ── Message Seller button ── */
+  .btn-chat {
+    background: rgba(14,165,233,0.07);
+    border: 1px solid rgba(14,165,233,0.22);
+    color: #7DD3FC;
+  }
+  .btn-chat:hover {
+    background: rgba(14,165,233,0.13);
+    border-color: rgba(14,165,233,0.38);
+    color: #BAE6FD;
+  }
+
+  /* ═══════════════════════════════════════════════
+     SELLER VIEW — pending offers table
+  ═══════════════════════════════════════════════ */
+  .pending-offers-section {
+    margin-top: 40px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 28px 32px;
+    overflow: hidden;
+  }
+  /* Scroll wrapper so the table never breaks the page width */
+  .offer-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .pending-offers-section h3 {
+    font-family: 'Fraunces', serif; font-size: 1.1rem;
+    font-weight: 700; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .offers-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--amber); color: #0C0A08;
+    font-size: 0.75rem; font-weight: 800;
+  }
+  .offer-table { width: 100%; border-collapse: collapse; }
+  .offer-table th {
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text-3);
+    text-align: left; padding: 0 12px 12px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .offer-table td {
+    padding: 14px 12px; font-size: 0.88rem; color: var(--text-2);
+    border-bottom: 1px solid var(--border-subtle); vertical-align: middle;
+  }
+  .offer-table tr:last-child td { border-bottom: none; }
+  .offer-table td.offer-price { font-weight: 700; color: var(--amber); font-size: 1rem; }
+  .offer-actions { display: flex; gap: 6px; }
+  .offer-actions .btn { padding: 6px 14px; font-size: 0.8rem; border-radius: var(--r-md); }
+
+  /* ═══════════════════════════════════════════════
+     REVIEWS
+  ═══════════════════════════════════════════════ */
+  .reviews-section {
+    margin-top: 40px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 28px 32px;
+    overflow: hidden;
+  }
+  .reviews-section h3 {
+    font-family: 'Fraunces', serif; font-size: 1.1rem; font-weight: 700;
+    margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
+  }
+  .reviews-avg {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 1.1rem; font-weight: 800; color: var(--amber);
+  }
+  .reviews-avg i { font-size: 0.9rem; }
+  .review-card {
+    padding: 18px 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .review-card:last-child { border-bottom: none; }
+  .review-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px; gap: 12px;
+  }
+  .review-author {
+    font-weight: 600; font-size: 0.88rem; color: var(--text-1);
+  }
+  .review-stars { color: var(--amber); font-size: 0.85rem; letter-spacing: 1px; }
+  .review-date { font-size: 0.75rem; color: var(--text-3); }
+  .review-comment { font-size: 0.88rem; color: var(--text-2); line-height: 1.7; }
+  .no-reviews { text-align: center; padding: 24px 0; color: var(--text-3); font-size: 0.9rem; }
+
+  /* ── Flash messages ── */
+  .msg-bar {
+    max-width: 1200px; margin: 0 auto 20px;
+    padding: 0 clamp(16px, 4vw, 48px);
+  }
+  .msg-inner {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 18px; border-radius: var(--r-md);
+    font-size: 0.88rem; font-weight: 500; margin-bottom: 8px;
+  }
+  .msg-success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: #6EE7B7; }
+  .msg-error   { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: #FCA5A5; }
+  .msg-warning { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); color: #FCD34D; }
+  .msg-info    { background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.2); color: #7DD3FC; }
+
+  /* =====================================================
+     RESPONSIVE
+  ===================================================== */
+  @media (max-width: 900px) {
+    /* Stack image gallery above purchase panel */
+    .pd-grid {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+    .pd-panel { position: static; }
+  }
+
+  @media (max-width: 640px) {
+    /* Page padding */
+    .pd-container { padding: 0 16px; }
+
+    /* Thumbnails: scrollable row */
+    .pd-thumbs {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding-bottom: 4px;
+    }
+    .pd-thumbs::-webkit-scrollbar { display: none; }
+    .pd-thumb { flex-shrink: 0; width: 60px; height: 60px; }
+
+    /* Description & specs cards */
+    .pd-desc-card,
+    .pd-specs { padding: 18px 16px; }
+
+    /* Price card */
+    .price-card { padding: 20px 16px; }
+    .pd-price { font-size: 1.8rem; }
+    .pd-title { font-size: clamp(1.1rem, 5vw, 1.4rem); }
+
+    /* Offer input row: stack on very small screens */
+    .offer-input-row { gap: 6px; }
+    .offer-input-row .btn[type="submit"] { width: 100%; justify-content: center; }
+    .offer-form-wrap { padding: 16px; }
+
+    /* CTA buttons already full-width; ensure min touch target */
+    .pd-cta .btn { min-height: 44px; }
+
+    /* Seller card */
+    .seller-card { padding: 18px 16px; }
+
+    /* Pending offers table: hide Message + Date columns, keep essentials */
+    .offer-table th:nth-child(3),
+    .offer-table td:nth-child(3),
+    .offer-table th:nth-child(4),
+    .offer-table td:nth-child(4) { display: none; }
+
+    /* Offer action buttons: stack vertically */
+    .offer-actions { flex-direction: column; gap: 6px; }
+    .offer-actions .btn { width: 100%; justify-content: center; text-align: center; }
+
+    /* Pending offers & reviews sections */
+    .pending-offers-section,
+    .reviews-section { padding: 18px 16px; }
+
+    /* Spec rows: let value wrap below label on tiny screens */
+    .spec-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    .spec-value { text-align: left; }
+
+    /* Breadcrumb: tighten */
+    .breadcrumb { margin-bottom: 16px; font-size: 0.78rem; gap: 6px; }
+
+    /* Review header: stack on very small screens */
+    .review-header { flex-direction: column; align-items: flex-start; gap: 4px; }
+  }
+
+  @media (max-width: 380px) {
+    /* Single-column offer table: only Buyer + Price + Action */
+    .offer-table th:nth-child(3),
+    .offer-table td:nth-child(3),
+    .offer-table th:nth-child(4),
+    .offer-table td:nth-child(4) { display: none; }
+    .price-card { padding: 16px 12px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pd-page">
+  <div class="pd-container">
+
+    <!-- Flash messages -->
+    {% if messages %}
+    <div class="msg-bar">
+      {% for message in messages %}
+      <div class="msg-inner msg-{{ message.tags }}">
+        <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}times-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="{% url 'home' %}">Home</a>
+      <i class="fas fa-chevron-right"></i>
+      <a href="{% url 'mktplace:product_list' %}">Marketplace</a>
+      {% if product.category %}
+      <i class="fas fa-chevron-right"></i>
+      <a href="{% url 'mktplace:category_detail' slug=product.category.slug %}">{{ product.category.name }}</a>
+      {% endif %}
+      <i class="fas fa-chevron-right"></i>
+      <span style="color:var(--text-2);">{{ product.title|truncatechars:40 }}</span>
+    </nav>
+
+    <!-- ═══════════════════════════════════════════════
+         MAIN GRID
+    ═══════════════════════════════════════════════ -->
+    <div class="pd-grid fade-in">
+
+      <!-- ── LEFT: Gallery + Description ── -->
+      <div class="pd-left">
+
+        <!-- Cover image -->
+        <div class="pd-cover" id="pdCover">
+          {% with cover=product.images.all|first %}
+          {% if cover %}
+            <img src="{{ cover.image.url }}" alt="{{ product.title }}" id="coverImg">
+          {% else %}
+            <div class="pd-cover-empty">
+              <i class="fas fa-tools"></i>
+              <span>No images uploaded</span>
+            </div>
+          {% endif %}
+          {% endwith %}
+
+          {% if product.status == 'sold' %}
+          <span class="pd-status-ribbon ribbon-sold"><i class="fas fa-times-circle"></i> Sold</span>
+          {% elif product.status == 'reserved' %}
+          <span class="pd-status-ribbon ribbon-reserved"><i class="fas fa-clock"></i> Reserved</span>
+          {% endif %}
+        </div>
+
+        <!-- Thumbnails -->
+        {% if product.images.all|length > 1 %}
+        <div class="pd-thumbs" id="pdThumbs">
+          {% for img in product.images.all %}
+          <div class="pd-thumb {% if forloop.first %}active{% endif %}"
+               data-src="{{ img.image.url }}"
+               onclick="switchImage(this)">
+            <img src="{{ img.image.url }}" alt="{{ img.caption|default:product.title }}" loading="lazy">
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Description -->
+        <div class="pd-desc-card">
+          <h3><i class="fas fa-align-left" style="color:var(--amber);margin-right:8px;font-size:0.85rem;"></i>Description</h3>
+          <p>{{ product.description }}</p>
+        </div>
+
+        <!-- Specs -->
+        <div class="pd-specs">
+          <h3><i class="fas fa-list" style="color:var(--amber);margin-right:8px;font-size:0.85rem;"></i>Item Details</h3>
+
+          {% if product.brand %}
+          <div class="spec-row">
+            <span class="spec-label">Brand</span>
+            <span class="spec-value">{{ product.brand }}</span>
+          </div>
+          {% endif %}
+
+          {% if product.model_number %}
+          <div class="spec-row">
+            <span class="spec-label">Model</span>
+            <span class="spec-value">{{ product.model_number }}</span>
+          </div>
+          {% endif %}
+
+          <div class="spec-row">
+            <span class="spec-label">Condition</span>
+            <span class="spec-value">
+              <span class="badge {% if product.condition == 'new' %}badge-green{% elif product.condition == 'used_good' %}badge-amber{% elif product.condition == 'used_fair' %}badge-orange{% else %}badge-sky{% endif %}">
+                {{ product.get_condition_display }}
+              </span>
+            </span>
+          </div>
+
+          {% if product.category %}
+          <div class="spec-row">
+            <span class="spec-label">Category</span>
+            <span class="spec-value">{{ product.category.name }}</span>
+          </div>
+          {% endif %}
+
+          {% if product.trade %}
+          <div class="spec-row">
+            <span class="spec-label">Trade</span>
+            <span class="spec-value">{{ product.trade }}</span>
+          </div>
+          {% endif %}
+
+          <div class="spec-row">
+            <span class="spec-label">Quantity available</span>
+            <span class="spec-value">{{ product.slots }}</span>
+          </div>
+
+          {% if product.state %}
+          <div class="spec-row">
+            <span class="spec-label">Location</span>
+            <span class="spec-value">{{ product.state }}{% if product.lga %}, {{ product.lga }}{% endif %}</span>
+          </div>
+          {% endif %}
+
+          <div class="spec-row">
+            <span class="spec-label">Pickup arrangement</span>
+            <span class="spec-value">
+              {% if product.pickup_only %}Pickup / meetup only{% else %}Flexible{% endif %}
+            </span>
+          </div>
+
+          {% if product.pickup_notes %}
+          <div class="spec-row">
+            <span class="spec-label">Pickup notes</span>
+            <span class="spec-value" style="max-width:200px;text-align:right;">{{ product.pickup_notes }}</span>
+          </div>
+          {% endif %}
+
+          <div class="spec-row">
+            <span class="spec-label">Views</span>
+            <span class="spec-value" style="color:var(--text-3);">{{ product.views_count }}</span>
+          </div>
+        </div>
+
+      </div><!-- /pd-left -->
+
+      <!-- ── RIGHT: Panel ── -->
+      <aside class="pd-panel">
+
+        <!-- Price card -->
+        <div class="price-card">
+          {% if product.category %}
+          <span class="pd-category-tag">{{ product.category.name }}</span>
+          {% endif %}
+
+          <h1 class="pd-title">{{ product.title }}</h1>
+
+          <div class="pd-price-wrap">
+            <span class="pd-price">₦{{ product.price|floatformat:0 }}</span>
+          </div>
+
+          {# Engine 4: Price badge #}
+          {% include "marketplace/includes/_price_badge.html" %}
+
+          {% if product.offers_allowed %}
+          <p class="pd-offers-ok"><i class="fas fa-handshake"></i> Offers welcome</p>
+          {% else %}
+          <p class="pd-no-offers"><i class="fas fa-tag"></i> Fixed price</p>
+          {% endif %}
+
+          <div class="pd-condition-row" style="margin-top:10px;">
+            <span class="badge {% if product.condition == 'new' %}badge-green{% elif product.condition == 'used_good' %}badge-amber{% elif product.condition == 'used_fair' %}badge-orange{% else %}badge-sky{% endif %}">
+              {{ product.get_condition_display }}
+            </span>
+          </div>
+
+          {% if product.state %}
+          <p class="pd-location">
+            <i class="fas fa-map-marker-alt"></i>
+            {{ product.state }}{% if product.lga %}, {{ product.lga }}{% endif %}
+          </p>
+          {% endif %}
+
+          <hr class="pd-divider">
+
+          <!-- ── CTA ZONE ── -->
+          <div class="pd-cta">
+
+            {% if product.status == 'sold' %}
+              <div class="pd-ordered-state">
+                <i class="fas fa-box-open"></i>
+                This item has been sold.
+              </div>
+              <a href="{% url 'mktplace:product_list' %}{% if product.category %}?category={{ product.category.slug }}{% endif %}"
+                 class="btn btn-ghost">
+                <i class="fas fa-search"></i> Browse similar items
+              </a>
+
+            {% elif product.status == 'reserved' %}
+              <div class="pd-ordered-state" style="background:rgba(249,115,22,0.08);border-color:rgba(249,115,22,0.2);color:#FDA975;">
+                <i class="fas fa-clock"></i>
+                This item is reserved.
+              </div>
+
+            {% elif is_seller %}
+              <!-- Seller view -->
+              <a href="{% url 'mktplace:product_edit' pk=product.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Edit Listing
+              </a>
+              <a href="{% url 'mktplace:seller_dashboard' %}" class="btn btn-ghost">
+                <i class="fas fa-tachometer-alt"></i> Go to Dashboard
+              </a>
+
+            {% elif not user.is_authenticated %}
+              <a href="{% url 'signin' %}?next={{ request.path }}" class="btn btn-primary btn-lg">
+                <i class="fas fa-sign-in-alt"></i> Sign In to Buy
+              </a>
+              <a href="{% url 'register' %}" class="btn btn-ghost">
+                Create Account
+              </a>
+
+            {% elif active_order %}
+              <div class="pd-ordered-state">
+                <i class="fas fa-check-circle"></i>
+                You have an active order for this item.
+              </div>
+              <a href="{% url 'mktplace:order_detail' pk=active_order.pk %}" class="btn btn-ghost">
+                <i class="fas fa-box"></i> View Order
+              </a>
+              <!-- Message Seller — active order -->
+              <form method="post" action="{% url 'chats:start_conversation' %}">
+                {% csrf_token %}
+                <input type="hidden" name="seller_user_id" value="{{ product.seller.user.pk }}">
+                <input type="hidden" name="product_id"     value="{{ product.pk }}">
+                <button type="submit" class="btn btn-chat" style="width:100%;">
+                  <i class="fas fa-comment-dots"></i> Message Seller
+                </button>
+              </form>
+
+            {% else %}
+              <!-- Buy Now -->
+              <form method="post" action="{% url 'mktplace:buy_now' pk=product.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary btn-lg" style="width:100%;">
+                  <i class="fas fa-bolt"></i> Buy Now — ₦{{ product.price|floatformat:0 }}
+                </button>
+              </form>
+
+              <!-- Message Seller -->
+              <form method="post" action="{% url 'chats:start_conversation' %}">
+                {% csrf_token %}
+                <input type="hidden" name="seller_user_id" value="{{ product.seller.user.pk }}">
+                <input type="hidden" name="product_id"     value="{{ product.pk }}">
+                <button type="submit" class="btn btn-chat" style="width:100%;">
+                  <i class="fas fa-comment-dots"></i> Message Seller
+                </button>
+              </form>
+
+              <!-- Offer flow -->
+              {% if product.offers_allowed %}
+                {% if buyer_offer %}
+                  {% if buyer_offer.status == 'countered' %}
+                  <!-- Counter offer received -->
+                  <div class="counter-offer-banner">
+                    <i class="fas fa-exchange-alt" style="color:var(--orange);margin-right:6px;"></i>
+                    Seller countered with <strong>₦{{ buyer_offer.counter_price|floatformat:0 }}</strong>
+                    {% if buyer_offer.counter_message %}<br><small style="color:var(--text-3);">{{ buyer_offer.counter_message }}</small>{% endif %}
+                  </div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <form method="post" action="{% url 'mktplace:offer_accept_counter' pk=buyer_offer.pk %}" style="flex:1;">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-primary" style="width:100%;font-size:0.85rem;">
+                        <i class="fas fa-check"></i> Accept ₦{{ buyer_offer.counter_price|floatformat:0 }}
+                      </button>
+                    </form>
+                    <form method="post" action="{% url 'mktplace:offer_withdraw' pk=buyer_offer.pk %}" style="flex:1;">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-ghost" style="width:100%;font-size:0.85rem;">
+                        Decline
+                      </button>
+                    </form>
+                  </div>
+                  {% else %}
+                  <!-- Pending offer -->
+                  <div class="pending-offer-banner">
+                    <i class="fas fa-clock"></i>
+                    Your offer of <strong>₦{{ buyer_offer.offered_price|floatformat:0 }}</strong> is pending.
+                  </div>
+                  <form method="post" action="{% url 'mktplace:offer_withdraw' pk=buyer_offer.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-ghost" style="width:100%;font-size:0.85rem;">
+                      <i class="fas fa-times"></i> Withdraw Offer
+                    </button>
+                  </form>
+                  {% endif %}
+
+                {% else %}
+                <!-- Make offer form -->
+                <div class="offer-form-wrap">
+                  <h4><i class="fas fa-handshake" style="color:var(--amber);margin-right:6px;"></i>Make an Offer</h4>
+                  <form method="post" action="{% url 'mktplace:make_offer' pk=product.pk %}">
+                    {% csrf_token %}
+                    <div class="offer-input-row">
+                      <span class="offer-prefix">₦</span>
+                      <input
+                        type="number"
+                        name="offered_price"
+                        class="offer-input"
+                        placeholder="Your offer"
+                        min="1"
+                        step="100"
+                        required
+                      >
+                      <button type="submit" class="btn btn-outline" style="padding:11px 18px;">
+                        Send
+                      </button>
+                    </div>
+                    <p class="offer-hint">
+                      Listed at ₦{{ product.price|floatformat:0 }}.
+                      The seller will accept, decline, or counter.
+                    </p>
+                    <textarea
+                      name="message"
+                      rows="2"
+                      placeholder="Optional note to seller…"
+                      style="width:100%;margin-top:10px;padding:10px 14px;
+                             background:rgba(255,255,255,0.03);border:1px solid var(--border-subtle);
+                             border-radius:var(--r-md);color:var(--text-1);
+                             font-family:'Outfit',sans-serif;font-size:0.85rem;
+                             resize:none;outline:none;transition:var(--t);"
+                    ></textarea>
+                  </form>
+                </div>
+                {% endif %}
+              {% endif %}{# /offers_allowed #}
+            {% endif %}{# /status checks #}
+
+          </div>{# /pd-cta #}
+
+          <!-- Save button (authenticated non-seller) -->
+          {% if user.is_authenticated and not is_seller %}
+          <hr class="pd-divider">
+          <form method="post" action="{% url 'mktplace:product_save_toggle' pk=product.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="save-btn {% if is_saved %}saved{% endif %}">
+              <i class="fas {% if is_saved %}fa-bookmark{% else %}fa-bookmark{% endif %}"></i>
+              {% if is_saved %}Saved{% else %}Save for Later{% endif %}
+            </button>
+          </form>
+          {% endif %}
+        </div>{# /price-card #}
+
+        <!-- Seller card -->
+        <div class="seller-card">
+          <h4>Seller</h4>
+          <div class="seller-row">
+            <div class="seller-avatar">
+              {{ product.seller.user.get_full_name|default:product.seller.user.username|slice:":1"|upper }}
+            </div>
+            <div class="seller-info">
+              <p class="seller-name">
+                {{ product.seller.user.get_full_name|default:product.seller.user.username }}
+              </p>
+              <div class="seller-meta">
+                {% if avg_rating %}
+                <span class="seller-rating"><i class="fas fa-star"></i> {{ avg_rating }}</span>
+                <span>·</span>
+                {% endif %}
+                {% if product.seller.is_verified %}
+                <span class="verified-badge"><i class="fas fa-check-circle"></i> Verified</span>
+                <span>·</span>
+                {% endif %}
+                {% if product.seller.trade_category %}
+                <span>{{ product.seller.trade_category }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="seller-stats">
+            <div class="stat-box">
+              <span class="stat-num">{{ product.seller.listings.count }}</span>
+              <span class="stat-lbl">Listings</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-num">{{ product.seller.marketplace_reviews_received.count }}</span>
+              <span class="stat-lbl">Reviews</span>
+            </div>
+          </div>
+
+          <a href="{% url 'mktplace:seller_public' pk=product.seller.pk %}" class="btn btn-ghost" style="width:100%;justify-content:center;font-size:0.85rem;">
+            <i class="fas fa-user"></i> View Seller Profile
+          </a>
+        </div>
+
+        <!-- Escrow trust card -->
+        <div class="escrow-card">
+          <p class="escrow-title"><i class="fas fa-shield-alt"></i> Buyer Protection</p>
+          <div class="escrow-item">
+            <i class="fas fa-check"></i>
+            Payment held in Paystack escrow until you confirm receipt.
+          </div>
+          <div class="escrow-item">
+            <i class="fas fa-check"></i>
+            Seller only paid after you confirm the item is as described.
+          </div>
+          <div class="escrow-item">
+            <i class="fas fa-check"></i>
+            Raise a dispute if anything is wrong — we review within 24 hours.
+          </div>
+        </div>
+
+      </aside>{# /pd-panel #}
+    </div>{# /pd-grid #}
+
+    {# Engine 1: Similar Items #}
+    {% include "marketplace/includes/_similar_products.html" %}
+
+    {# Engine 5: Cross-Sell #}
+    {% include "marketplace/includes/_cross_sell.html" %}
+
+    <!-- ═══════════════════════════════════════════════
+         SELLER — PENDING OFFERS TABLE
+    ═══════════════════════════════════════════════ -->
+    {% if is_seller and pending_offers %}
+    <div class="pending-offers-section fade-up d2">
+      <h3>
+        <i class="fas fa-handshake" style="color:var(--amber);"></i>
+        Pending Offers
+        <span class="offers-count">{{ pending_offers|length }}</span>
+      </h3>
+      <div class="offer-table-wrap">
+      <table class="offer-table">
+        <thead>
+          <tr>
+            <th>Buyer</th>
+            <th>Offered Price</th>
+            <th>Message</th>
+            <th>Date</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for offer in pending_offers %}
+          <tr>
+            <td>
+              <strong style="color:var(--text-1);">{{ offer.buyer.get_full_name|default:offer.buyer.username }}</strong>
+            </td>
+            <td class="offer-price">₦{{ offer.offered_price|floatformat:0 }}</td>
+            <td style="max-width:200px;">
+              {{ offer.message|default:"—"|truncatechars:60 }}
+            </td>
+            <td style="color:var(--text-3);">{{ offer.created_at|date:"d M Y" }}</td>
+            <td>
+              <div class="offer-actions">
+                <form method="post" action="{% url 'mktplace:offer_respond' pk=offer.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="accept">
+                  <button type="submit" class="btn btn-primary">Accept</button>
+                </form>
+                <form method="post" action="{% url 'mktplace:offer_respond' pk=offer.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="decline">
+                  <button type="submit" class="btn btn-ghost">Decline</button>
+                </form>
+                <a href="{% url 'mktplace:offer_respond' pk=offer.pk %}" class="btn btn-outline">Counter</a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>{# /offer-table-wrap #}
+    </div>
+    {% endif %}
+
+    <!-- ═══════════════════════════════════════════════
+         REVIEWS
+    ═══════════════════════════════════════════════ -->
+    <div class="reviews-section fade-up d3">
+      <h3>
+        <i class="fas fa-star" style="color:var(--amber);"></i>
+        Seller Reviews
+        {% if avg_rating %}
+        <span class="reviews-avg">
+          <i class="fas fa-star"></i> {{ avg_rating }}
+        </span>
+        {% endif %}
+      </h3>
+
+      {% if reviews %}
+        {% for review in reviews %}
+        <div class="review-card">
+          <div class="review-header">
+            <div>
+              <span class="review-author">{{ review.reviewer.get_full_name|default:review.reviewer.username }}</span>
+              <br>
+              <span class="review-date">{{ review.created_at|date:"d M Y" }} · {{ review.product.title|truncatechars:30 }}</span>
+            </div>
+            <span class="review-stars">
+              {% for i in "12345" %}
+                {% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}
+              {% endfor %}
+            </span>
+          </div>
+          {% if review.comment %}
+          <p class="review-comment">{{ review.comment }}</p>
+          {% endif %}
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="no-reviews">
+          <i class="fas fa-comment-slash" style="margin-right:6px;"></i>
+          No reviews yet for this seller.
+        </p>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Image gallery switcher
+  function switchImage(thumb) {
+    const cover = document.getElementById('coverImg');
+    if (!cover) return;
+    cover.src = thumb.dataset.src;
+    document.querySelectorAll('.pd-thumb').forEach(t => t.classList.remove('active'));
+    thumb.classList.add('active');
+  }
+</script>
+{% endblock %}

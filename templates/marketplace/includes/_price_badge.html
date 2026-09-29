@@ -1,0 +1,103 @@
+{% comment %}
+marketplace/templates/marketplace/includes/_price_badge.html
+Engine 4 — Price Intelligence badge.
+
+Context variables:
+  price_label        (str or None) — from get_price_label(product)
+  product            (Product)
+
+Usage on product_detail.html:
+  {% include "marketplace/includes/_price_badge.html" %}
+{% endcomment %}
+{% load humanize %}
+
+{% if price_label and product.market_median_price %}
+<style>
+/* ── Price Intelligence widget ─────────────────────────────────── */
+.pi                  { display: flex; align-items: flex-start; gap: 14px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--r-xl); padding: 18px 20px; margin: 20px 0; transition: var(--t); }
+.pi:hover            { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.pi__icon            { width: 40px; height: 40px; border-radius: var(--r-md); flex-shrink: 0; background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.2); display: flex; align-items: center; justify-content: center; color: var(--amber); font-size: .95rem; }
+.pi__body            { flex: 1; min-width: 0; }
+.pi__label           { font-weight: 700; font-size: .92rem; margin-bottom: 3px; }
+.pi__label--deal     { color: #6EE7B7; }
+.pi__label--fair     { color: var(--amber-light); }
+.pi__label--high     { color: #FDA975; }
+.pi__detail          { font-size: .83rem; color: var(--text-2); line-height: 1.6; }
+.pi__detail strong   { color: var(--text-1); }
+
+/* Meter */
+.pi__meter           { margin-top: 12px; width: 100%; }
+.pi__track           { position: relative; height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+.pi__fill            { height: 100%; border-radius: 3px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+.pi__fill--deal      { background: linear-gradient(90deg, #10B981, #34D399); }
+.pi__fill--fair      { background: linear-gradient(90deg, var(--amber-dark), var(--amber)); }
+.pi__fill--high      { background: linear-gradient(90deg, var(--amber-dark), var(--orange)); }
+.pi__marker          { position: absolute; top: -3px; width: 2px; height: 12px; background: var(--text-1); border-radius: 1px; transform: translateX(-50%); opacity: .5; left: 50%; }
+.pi__labels          { display: flex; justify-content: space-between; font-size: .67rem; color: var(--text-3); margin-top: 5px; }
+.pi__percentile      { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.pi__pct-num         { font-family: 'Fraunces', serif; font-weight: 800; font-size: 1.15rem; letter-spacing: -.5px; }
+.pi__pct-lbl         { font-size: .67rem; color: var(--text-3); }
+</style>
+
+<div class="pi" role="complementary" aria-label="Price intelligence">
+
+  <div class="pi__icon" aria-hidden="true">
+    <i class="fas fa-lightbulb"></i>
+  </div>
+
+  <div class="pi__body">
+    <p class="pi__label
+      {% if product.price_percentile is not None and product.price_percentile <= 35 %}pi__label--deal
+      {% elif product.price_percentile is not None and product.price_percentile <= 65 %}pi__label--fair
+      {% else %}pi__label--high{% endif %}
+    ">{{ price_label }}</p>
+
+    <p class="pi__detail">
+      Similar items average
+      <strong>₦{{ product.market_median_price|floatformat:0|intcomma }}</strong>
+      {% if product.price_percentile is not None %}
+        — this listing is in the
+        <strong>
+          {% if product.price_percentile <= 20 %}bottom 20%
+          {% elif product.price_percentile <= 35 %}bottom 35%
+          {% elif product.price_percentile <= 55 %}mid-range
+          {% elif product.price_percentile <= 75 %}upper 35%
+          {% else %}top 20%{% endif %}
+        </strong>
+        of prices
+      {% endif %}
+    </p>
+
+    {% if product.price_percentile is not None %}
+    <div class="pi__meter" aria-hidden="true" title="Price position vs similar items">
+      <div class="pi__track">
+        <div class="pi__fill
+          {% if product.price_percentile <= 35 %}pi__fill--deal
+          {% elif product.price_percentile <= 65 %}pi__fill--fair
+          {% else %}pi__fill--high{% endif %}"
+          style="width: {% widthratio product.price_percentile 100 100 %}%">
+        </div>
+        <span class="pi__marker" title="Median price"></span>
+      </div>
+      <div class="pi__labels">
+        <span>Cheapest</span>
+        <span>Median</span>
+        <span>Most Expensive</span>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if product.price_percentile is not None %}
+  <div class="pi__percentile" aria-hidden="true">
+    <span class="pi__pct-num
+      {% if product.price_percentile <= 35 %}pi__label--deal
+      {% elif product.price_percentile <= 65 %}pi__label--fair
+      {% else %}pi__label--high{% endif %}
+    ">{{ product.price_percentile }}<small style="font-size:.55rem;font-family:'Outfit',sans-serif;font-weight:400;">%</small></span>
+    <span class="pi__pct-lbl">percentile</span>
+  </div>
+  {% endif %}
+
+</div>
+{% endif %}

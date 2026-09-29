@@ -1,0 +1,732 @@
+{% extends "base.html" %}
+{% load socialaccount %}
+{% block title %}Sign In — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ===================================================
+     LOGIN PAGE — TradeLink NG
+  =================================================== */
+
+  body { display: flex; flex-direction: column; }
+
+  .auth-wrap {
+    flex: 1;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding-top: var(--nav-h);
+    position: relative; z-index: 1;
+  }
+
+  /* ===== LEFT PANEL — Form ===== */
+  .auth-form-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px clamp(20px,6vw,80px);
+    background: var(--bg-base);
+    position: relative; overflow: hidden;
+  }
+  .auth-form-panel::before {
+    content: '';
+    position: absolute; bottom: -80px; left: -80px;
+    width: 320px; height: 320px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(245,158,11,0.06), transparent 70%);
+    pointer-events: none;
+  }
+
+  .auth-form-wrap {
+    width: 100%;
+    max-width: 420px;
+    animation: slideUp 0.6s cubic-bezier(0.4,0,0.2,1) both;
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .auth-logo {
+    display: flex; align-items: center; gap: 10px;
+    text-decoration: none; margin-bottom: 48px;
+    font-family: 'Fraunces', serif; font-weight: 800; font-size: 1.3rem;
+    color: var(--text-1);
+  }
+  .auth-logo .logo-mark {
+    width: 30px; height: 30px; font-size: 0.78rem;
+  }
+  .auth-logo .logo-ng { color: var(--amber); }
+
+  .auth-heading {
+    font-family: 'Fraunces', serif;
+    /* FIX: clamp prevents the heading from being too large at 360px */
+    font-size: clamp(1.7rem, 5vw, 2.1rem);
+    font-weight: 800;
+    letter-spacing: -1px; margin-bottom: 8px;
+    line-height: 1.15;
+  }
+  .auth-sub {
+    color: var(--text-2); font-size: 0.93rem; margin-bottom: 36px;
+    line-height: 1.6;
+  }
+
+  /* Social buttons */
+  .social-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 10px; margin-bottom: 28px;
+  }
+  .social-login-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 13px 10px; /* 44px min touch target height */
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    color: var(--text-2); font-family: 'Outfit', sans-serif;
+    font-size: 0.86rem; font-weight: 600; cursor: pointer;
+    transition: var(--t);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .social-login-btn:hover {
+    background: var(--surface-1);
+    border-color: var(--border-strong);
+    color: var(--text-1);
+  }
+  .social-login-btn i { font-size: 1rem; flex-shrink: 0; }
+
+  /* Divider */
+  .or-divider {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 28px;
+  }
+  .or-divider::before, .or-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border-subtle);
+  }
+  .or-divider span { font-size: 0.78rem; color: var(--text-3); white-space: nowrap; }
+
+  /* Form fields */
+  .form-stack { display: flex; flex-direction: column; gap: 18px; }
+
+  .pw-wrap { position: relative; }
+  .pw-toggle {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--text-3);
+    cursor: pointer; font-size: 0.88rem; transition: var(--t);
+    padding: 4px;
+  }
+  .pw-toggle:hover { color: var(--text-2); }
+
+  .form-row {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; flex-wrap: wrap; /* FIX: allow wrapping on narrow screens */
+  }
+
+  /* Remember me */
+  .remember-label {
+    display: flex; align-items: center; gap: 9px;
+    cursor: pointer; user-select: none;
+    font-size: 0.87rem; color: var(--text-2);
+  }
+  .remember-label input { display: none; }
+  .checkbox-box {
+    width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0;
+    border: 1.5px solid var(--border-subtle);
+    background: transparent; transition: var(--t);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; color: transparent;
+  }
+  .remember-label input:checked + .checkbox-box {
+    background: var(--amber); border-color: var(--amber); color: #0C0A08;
+  }
+  .forgot-link {
+    font-size: 0.87rem; color: var(--amber); text-decoration: none;
+    transition: var(--t); white-space: nowrap;
+  }
+  .forgot-link:hover { color: var(--amber-light); text-decoration: underline; }
+
+  /* Submit button */
+  .submit-btn {
+    width: 100%; padding: 15px;
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    border: none; border-radius: var(--r-lg);
+    color: #0C0A08; font-family: 'Outfit', sans-serif;
+    font-size: 1rem; font-weight: 800; letter-spacing: 0.3px;
+    cursor: pointer; transition: var(--t);
+    box-shadow: 0 4px 20px rgba(245,158,11,0.3);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .submit-btn:hover:not(:disabled) {
+    box-shadow: var(--shadow-amber); filter: brightness(1.06); transform: translateY(-1px);
+  }
+  .submit-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+  .auth-footer-note {
+    text-align: center; margin-top: 24px;
+    font-size: 0.87rem; color: var(--text-3);
+  }
+  .auth-footer-note a {
+    color: var(--amber); text-decoration: none; font-weight: 600; transition: var(--t);
+  }
+  .auth-footer-note a:hover { color: var(--amber-light); }
+
+  /* Error state */
+  .field-error {
+    font-size: 0.8rem; color: #FCA5A5; margin-top: 4px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .form-control.error { border-color: rgba(239,68,68,0.5); }
+  .form-control.error:focus { box-shadow: 0 0 0 3px rgba(239,68,68,0.12); border-color: #EF4444; }
+
+  /* ===== RIGHT PANEL — Visual ===== */
+  .auth-visual-panel {
+    background: var(--bg-raised);
+    border-left: 1px solid var(--border-subtle);
+    position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 60px clamp(20px,5vw,72px);
+  }
+  .auth-visual-panel::before {
+    content: '';
+    position: absolute; top: -100px; right: -100px;
+    width: 500px; height: 500px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(245,158,11,0.07), transparent 65%);
+    pointer-events: none;
+  }
+  .auth-visual-panel::after {
+    content: '';
+    position: absolute; bottom: -80px; left: -80px;
+    width: 350px; height: 350px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(249,115,22,0.05), transparent 65%);
+    pointer-events: none;
+  }
+
+  .visual-inner { position: relative; z-index: 1; max-width: 380px; width: 100%; }
+
+  .visual-promo-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 6px 14px; border-radius: var(--r-pill);
+    background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.22);
+    font-size: 0.78rem; font-weight: 700; color: var(--amber);
+    margin-bottom: 28px; letter-spacing: 0.5px;
+  }
+
+  .visual-headline {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+    font-weight: 800; line-height: 1.2;
+    letter-spacing: -0.5px; margin-bottom: 14px;
+  }
+  .visual-headline em { font-style: italic; color: var(--amber); }
+
+  .visual-sub {
+    color: var(--text-2); font-size: 0.93rem; line-height: 1.7; margin-bottom: 40px;
+  }
+
+  /* Stats row */
+  .visual-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    margin-bottom: 36px;
+  }
+  .visual-stat {
+    text-align: center; padding: 20px 12px;
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+  }
+  .visual-stat-num {
+    font-family: 'Fraunces', serif; font-size: 1.5rem; font-weight: 800;
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: 4px;
+  }
+  .visual-stat-lbl { font-size: 0.75rem; color: var(--text-3); font-weight: 500; line-height: 1.3; }
+
+  /* Testimonial in panel */
+  .visual-testi {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl); padding: 24px;
+  }
+  .visual-testi-quote {
+    font-size: 0.9rem; color: var(--text-2); line-height: 1.75;
+    font-style: italic; margin-bottom: 18px;
+  }
+  .visual-testi-author { display: flex; align-items: center; gap: 12px; }
+  .testi-av {
+    width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif; font-weight: 800; font-size: 0.85rem; color: #0C0A08;
+  }
+  .testi-av-name { font-weight: 700; font-size: 0.88rem; margin-bottom: 2px; }
+  .testi-av-role { font-size: 0.78rem; color: var(--text-3); }
+  .testi-stars-sm { font-size: 0.7rem; color: var(--amber); margin-bottom: 10px; }
+
+  /* Floating job pill */
+  .floating-pill {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; border-radius: 100px;
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    margin-bottom: 8px; animation: float 4s ease-in-out infinite;
+    box-shadow: var(--shadow-md);
+    /* FIX: prevent pill from overflowing its container */
+    overflow: hidden;
+  }
+  .floating-pill:nth-child(2) { animation-delay: 1.3s; }
+  .floating-pill:nth-child(3) { animation-delay: 2.6s; }
+  .fp-ico {
+    width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+  }
+  .fp-text { font-size: 0.86rem; min-width: 0; flex: 1; }
+  .fp-title { font-weight: 700; margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fp-loc { font-size: 0.76rem; color: var(--text-3); }
+  .fp-badge { margin-left: auto; flex-shrink: 0; }
+
+  /* ===== RESPONSIVE ===== */
+
+  /* ── 960px: hide visual panel, go single-column ── */
+  @media (max-width: 960px) {
+    .auth-wrap {
+      grid-template-columns: 1fr;
+      min-height: auto; /* let content dictate height, don't force 100vh */
+    }
+    .auth-visual-panel { display: none; }
+    .auth-form-panel {
+      /* switch from vertical-center to top-aligned so content isn't clipped
+         on short viewports and is naturally scrollable */
+      justify-content: flex-start;
+      align-items: center;
+      padding: 48px clamp(20px,6vw,64px) 56px;
+      min-height: calc(100vh - var(--nav-h));
+    }
+    /* cap width so the form doesn't stretch edge-to-edge on tablets */
+    .auth-form-wrap { width: 100%; max-width: min(100%, 520px); }
+  }
+
+  /* ── 640px: mid-range phones — 2-col social grid, tighter spacing ── */
+  @media (max-width: 640px) {
+    .auth-form-panel {
+      padding: 40px clamp(16px,5vw,40px) 48px;
+      min-height: auto; /* don't force tall whitespace on short phones */
+    }
+    .social-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    /* hide button label text; icon alone is readable at 2-col */
+    .social-login-btn .btn-label { display: none; }
+    .social-login-btn { font-size: 0.84rem; gap: 6px; }
+    .auth-logo { margin-bottom: 36px; }
+    .auth-heading { margin-bottom: 6px; }
+    .auth-sub { margin-bottom: 28px; }
+  }
+
+  /* ── 480px: small phones — full-width social buttons, stacked form-row ── */
+  @media (max-width: 480px) {
+    .social-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+    /* restore labels at full 1fr width — enough room again */
+    .social-login-btn .btn-label { display: inline; }
+    .form-row { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .auth-logo { margin-bottom: 28px; }
+    .auth-sub  { margin-bottom: 24px; }
+  }
+
+  /* ── 380px: very small phones (360px class) ── */
+  @media (max-width: 380px) {
+    .auth-form-panel { padding: 28px 16px 40px; }
+    .auth-heading { font-size: 1.6rem; }
+    .social-grid { grid-template-columns: 1fr; }
+    .social-login-btn {
+      font-size: 0.88rem;
+      padding: 13px 12px;
+      justify-content: flex-start;
+    }
+    /* restore labels since buttons are now full-width */
+    .social-login-btn .btn-label { display: inline; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="auth-wrap">
+
+  <!-- LEFT: FORM -->
+  <div class="auth-form-panel">
+    <div class="auth-form-wrap">
+
+      <a href="/" class="auth-logo">
+        <div class="logo-mark">T</div>
+        TradeLink<span class="logo-ng">NG</span>
+      </a>
+
+      <h1 class="auth-heading">Welcome back 👋</h1>
+      <p class="auth-sub">Sign in to find work, track applications, and connect with employers.</p>
+
+      <!-- Social login -->
+      <div class="social-grid">
+        <a href="{% provider_login_url 'google' process='login' %}" class="social-login-btn">
+          <i class="fab fa-google" style="color:#4285F4;"></i> <span class="btn-label">Google</span>
+        </a>
+        <a href="{% provider_login_url 'linkedin_oauth2' process='login' %}" class="social-login-btn">
+          <i class="fab fa-linkedin" style="color:#0A66C2;"></i> <span class="btn-label">LinkedIn</span>
+        </a>
+        <a href="{% provider_login_url 'facebook' process='login' %}" class="social-login-btn">
+          <i class="fab fa-facebook-f" style="color:#1877F2;"></i> <span class="btn-label">Facebook</span>
+        </a>
+      </div>
+
+      <div class="or-divider"><span>or continue with email</span></div>
+
+      <form class="form-stack" method="POST" action="{% url 'signin' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}" id="loginForm" novalidate>
+        {% csrf_token %}
+        {% if request.GET.next %}
+          <input type="hidden" name="next" value="{{ request.GET.next }}">
+        {% elif request.POST.next %}
+          <input type="hidden" name="next" value="{{ request.POST.next }}">
+        {% endif %}
+
+        {% if form.non_field_errors %}
+        <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);
+                    border-radius:var(--r-lg);padding:12px 16px;font-size:0.87rem;color:#fca5a5;">
+          {{ form.non_field_errors.0 }}
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label class="form-label" for="id_email">Email address</label>
+          <div class="input-wrap">
+            <i class="fas fa-envelope input-icon"></i>
+            <input
+              type="email"
+              id="id_email"
+              name="email"
+              class="form-control has-icon {% if form.email.errors %}error{% endif %}"
+              placeholder="yourname@email.com"
+              autocomplete="email"
+              value="{{ form.email.value|default:'' }}"
+              required
+            >
+          </div>
+          {% if form.email.errors %}
+          <span class="field-error"><i class="fas fa-circle-exclamation"></i> {{ form.email.errors.0 }}</span>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="id_password">Password</label>
+          <div class="input-wrap pw-wrap">
+            <i class="fas fa-lock input-icon"></i>
+            <input
+              type="password"
+              id="id_password"
+              name="password"
+              class="form-control has-icon {% if form.password.errors %}error{% endif %}"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              style="padding-right: 44px;"
+              required
+            >
+            <button type="button" class="pw-toggle" onclick="togglePassword(this)" aria-label="Toggle password">
+              <i class="far fa-eye"></i>
+            </button>
+          </div>
+          {% if form.password.errors %}
+          <span class="field-error"><i class="fas fa-circle-exclamation"></i> {{ form.password.errors.0 }}</span>
+          {% endif %}
+        </div>
+
+        <div class="form-row">
+          <label class="remember-label">
+            <input type="checkbox" id="remember" name="remember">
+            <div class="checkbox-box"><i class="fas fa-check"></i></div>
+            <span>Remember me</span>
+          </label>
+          <a href="{% url 'password_reset' %}" class="forgot-link">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">
+          <i class="fas fa-sign-in-alt"></i> Sign In
+        </button>
+      </form>
+
+      <p class="auth-footer-note">
+        Don't have an account? <a href="{% url 'register' %}">Create one free</a>
+      </p>
+      <p class="auth-footer-note" style="margin-top:8px;">
+        Looking to hire? <a href="/employers/register/">Register as Employer</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- RIGHT: VISUAL PANEL -->
+  <div class="auth-visual-panel">
+    <div class="visual-inner">
+
+      <div class="visual-promo-badge">
+        <i class="fas fa-star" style="font-size:0.7rem;"></i>
+        Nigeria's #1 Skilled Trades Platform
+      </div>
+
+      <h2 class="visual-headline">
+        Your <em>craft</em><br>is your career.
+      </h2>
+      <p class="visual-sub">
+        Thousands of skilled workers sign in every day to find better work, connect with employers, and grow their earnings across Nigeria.
+      </p>
+
+      <div class="visual-stats">
+        <div class="visual-stat">
+          <div class="visual-stat-num">48K+</div>
+          <div class="visual-stat-lbl">Active Workers</div>
+        </div>
+        <div class="visual-stat">
+          <div class="visual-stat-num">91%</div>
+          <div class="visual-stat-lbl">Placement Rate</div>
+        </div>
+        <div class="visual-stat">
+          <div class="visual-stat-num">3,800+</div>
+          <div class="visual-stat-lbl">Employers</div>
+        </div>
+      </div>
+
+      <!-- Floating recent job pills -->
+      <div style="margin-bottom:28px;">
+        <div class="floating-pill">
+          <div class="fp-ico" style="background:rgba(245,158,11,0.12);color:var(--amber);">
+            <i class="fas fa-bolt"></i>
+          </div>
+          <div class="fp-text">
+            <div class="fp-title">Senior Electrician</div>
+            <div class="fp-loc">Victoria Island, Lagos</div>
+          </div>
+          <span class="badge badge-green fp-badge">New</span>
+        </div>
+        <div class="floating-pill" style="animation-delay:1s;">
+          <div class="fp-ico" style="background:rgba(249,115,22,0.12);color:var(--orange);">
+            <i class="fas fa-sun"></i>
+          </div>
+          <div class="fp-text">
+            <div class="fp-title">Solar Installer</div>
+            <div class="fp-loc">Gwarinpa, Abuja</div>
+          </div>
+          <span class="badge badge-amber fp-badge">Hot</span>
+        </div>
+        <div class="floating-pill" style="animation-delay:2s;">
+          <div class="fp-ico" style="background:rgba(244,114,182,0.12);color:#F472B6;">
+            <i class="fas fa-cut"></i>
+          </div>
+          <div class="fp-text">
+            <div class="fp-title">Hair Stylist</div>
+            <div class="fp-loc">Lekki, Lagos</div>
+          </div>
+          <span class="badge badge-sky fp-badge">Hiring</span>
+        </div>
+      </div>
+
+      <!-- Testimonial -->
+      <div class="visual-testi">
+        <div class="testi-stars-sm">★★★★★</div>
+        <p class="visual-testi-quote">
+          "TradeLink NG changed everything for me. I went from looking for small gigs to having a full-time job as an electrician with one of the biggest companies in Lagos."
+        </p>
+        <div class="visual-testi-author">
+          <div class="testi-av">TI</div>
+          <div>
+            <div class="testi-av-name">Taiwo Idowu</div>
+            <div class="testi-av-role">Electrician · Lagos State</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /auth-wrap -->
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+/* ─────────────────────────────────────────────────────────────
+   PASSWORD TOGGLE
+───────────────────────────────────────────────────────────────*/
+function togglePassword(btn) {
+  const input = btn.closest('.pw-wrap').querySelector('input');
+  const icon  = btn.querySelector('i');
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  icon.className = isHidden ? 'far fa-eye-slash' : 'far fa-eye';
+}
+
+/* ─────────────────────────────────────────────────────────────
+   AJAX LOGIN — no page reload
+───────────────────────────────────────────────────────────────*/
+(function () {
+  const form      = document.getElementById('loginForm');
+  const submitBtn = document.getElementById('submitBtn');
+  if (!form) return;
+
+  /* ── helpers ── */
+  function getCSRF() {
+    const el = form.querySelector('[name=csrfmiddlewaretoken]');
+    return el ? el.value : '';
+  }
+
+  function setFieldError(fieldName, message) {
+    const input = form.querySelector('[name="' + fieldName + '"]');
+    if (!input) return;
+    input.classList.add('error');
+    // Remove any previous error for this field
+    const existing = input.closest('.form-group').querySelector('.field-error[data-ajax]');
+    if (existing) existing.remove();
+    if (message) {
+      const span = document.createElement('span');
+      span.className = 'field-error';
+      span.setAttribute('data-ajax', '1');
+      span.innerHTML = '<i class="fas fa-circle-exclamation"></i> ' + message;
+      input.closest('.form-group').appendChild(span);
+    }
+  }
+
+  function clearFieldErrors() {
+    form.querySelectorAll('.form-control.error').forEach(el => el.classList.remove('error'));
+    form.querySelectorAll('.field-error[data-ajax]').forEach(el => el.remove());
+    const banner = document.getElementById('ajaxErrorBanner');
+    if (banner) banner.remove();
+  }
+
+  function showBanner(message) {
+    let banner = document.getElementById('ajaxErrorBanner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'ajaxErrorBanner';
+      banner.style.cssText = [
+        'background:rgba(239,68,68,0.08)',
+        'border:1px solid rgba(239,68,68,0.2)',
+        'border-radius:var(--r-lg)',
+        'padding:12px 16px',
+        'font-size:0.87rem',
+        'color:#fca5a5',
+        'display:flex',
+        'align-items:center',
+        'gap:8px',
+        'margin-bottom:4px',
+      ].join(';');
+      // Insert before the first .form-group inside .form-stack
+      const stack = form.querySelector('.form-stack');
+      if (stack) stack.prepend(banner);
+      else form.prepend(banner);
+    }
+    banner.innerHTML = '<i class="fas fa-circle-exclamation"></i> ' + message;
+  }
+
+  function setBtnLoading(loading) {
+    submitBtn.disabled = loading;
+    submitBtn.innerHTML = loading
+      ? '<i class="fas fa-spinner fa-spin"></i> Signing in…'
+      : '<i class="fas fa-sign-in-alt"></i> Sign In';
+  }
+
+  /* ── parse errors from the Django-rendered HTML response ── */
+  function parseErrors(html) {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const errors = {};
+
+    // Non-field errors
+    const nonField = doc.querySelector('.errorlist.nonfield li, ul.errorlist:not([class*="field"]) li');
+    if (nonField) errors.__all__ = nonField.textContent.trim();
+
+    // Field-level: Django renders <ul class="errorlist"><li>…</li></ul>
+    // after each input. Walk the form fields.
+    ['email', 'password'].forEach(name => {
+      const field = doc.querySelector('[name="' + name + '"]');
+      if (!field) return;
+      // Look for sibling errorlist or nearest errorlist in parent
+      let el = field.nextElementSibling;
+      while (el) {
+        if (el.classList.contains('errorlist') || el.classList.contains('field-error')) {
+          errors[name] = el.textContent.trim();
+          break;
+        }
+        el = el.nextElementSibling;
+      }
+      // Also check parent container
+      if (!errors[name]) {
+        const parent = field.closest('.form-group');
+        if (parent) {
+          const errEl = parent.querySelector('.errorlist li, .field-error');
+          if (errEl) errors[name] = errEl.textContent.trim();
+        }
+      }
+    });
+
+    return errors;
+  }
+
+  /* ── submit handler ── */
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    clearFieldErrors();
+    setBtnLoading(true);
+
+    const data = new FormData(form);
+
+    try {
+      const response = await fetch(form.action, {
+        method: 'POST',
+        body: data,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': getCSRF(),
+        },
+        redirect: 'manual',   // catch redirects without following
+        credentials: 'same-origin',
+      });
+
+      // Django redirects to dashboard/home on successful login
+      if (response.type === 'opaqueredirect' || response.status === 302 || response.redirected) {
+        // Follow the redirect properly
+        const dest = response.url || response.headers.get('Location') || '/';
+        window.location.href = dest;
+        return;
+      }
+
+      // 200 means the form was re-rendered with errors
+      if (response.status === 200) {
+        const html = await response.text();
+
+        // Try to extract a redirect from a meta-refresh or inline script
+        const redirectMatch = html.match(/window\.location(?:\.href)?\s*=\s*['"]([^'"]+)['"]/);
+        if (redirectMatch) {
+          window.location.href = redirectMatch[1];
+          return;
+        }
+
+        // Parse and show field errors
+        const errors = parseErrors(html);
+
+        if (errors.__all__) {
+          showBanner(errors.__all__);
+        } else if (errors.email || errors.password) {
+          if (errors.email)    setFieldError('email', errors.email);
+          if (errors.password) setFieldError('password', errors.password);
+        } else {
+          // Fallback: generic error
+          showBanner('Invalid email or password. Please try again.');
+        }
+
+        setBtnLoading(false);
+        return;
+      }
+
+      // Any other status
+      showBanner('Something went wrong. Please try again.');
+      setBtnLoading(false);
+
+    } catch (err) {
+      console.error('Login fetch error:', err);
+      showBanner('Network error — please check your connection and try again.');
+      setBtnLoading(false);
+    }
+  });
+}());
+</script>
+{% endblock %}

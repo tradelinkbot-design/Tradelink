@@ -1,0 +1,2586 @@
+{% extends "base.html" %}
+{% block title %}TradeLink NG — Find Skilled Trade Work in Nigeria{% endblock %}
+{% block nav_home %}active{% endblock %}
+
+{% block extra_head %}
+
+<!-- ── Libraries: CSS ── -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
+<link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css"/>
+<!-- Typed.js —— hero typewriter effect -->
+<script src="https://cdn.jsdelivr.net/npm/typed.js@2.1.0/dist/typed.umd.js"></script>
+
+<style>
+  /* =====================================================
+     INDEX PAGE — TradeLink NG Homepage
+     ENHANCED: GSAP · Three.js · Swiper · AOS · Typed.js
+     3D TIER: Tilt cards · Glow rings · Floating icons
+  ===================================================== */
+
+  /* ── Import Google Font for extra flair ── */
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700;1,900&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+  /* ===== 3D HERO EXTRAS ===== */
+
+  /* Typed cursor */
+  .typed-cursor {
+    color: var(--amber);
+    font-weight: 300;
+    font-size: inherit;
+    animation: typedBlink 0.7s step-start infinite;
+  }
+  @keyframes typedBlink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
+  }
+
+  /* Hero h1 typed wrapper */
+  #heroTypedLine {
+    display: block;
+    min-height: 1.1em;
+  }
+  .hero h1 .typed-line-wrap {
+    display: block;
+  }
+
+  /* Neon glow on h1 em */
+  .hero h1 em {
+    position: relative;
+    display: inline-block;
+  }
+  .hero h1 em::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    color: var(--amber);
+    filter: blur(18px);
+    opacity: 0.4;
+    z-index: -1;
+    pointer-events: none;
+    animation: glowPulse 3s ease-in-out infinite;
+  }
+  @keyframes glowPulse {
+    0%, 100% { opacity: 0.3; filter: blur(16px); }
+    50%       { opacity: 0.6; filter: blur(24px); }
+  }
+
+  /* Floating 3D tool icons ring */
+  .hero-tool-ring {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+  }
+  .tool-float {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    background: rgba(245,158,11,0.07);
+    border: 1px solid rgba(245,158,11,0.18);
+    color: var(--amber);
+    font-size: 1.05rem;
+    box-shadow:
+      0 8px 32px rgba(0,0,0,0.35),
+      0 0 0 1px rgba(245,158,11,0.06),
+      inset 0 1px 0 rgba(255,255,255,0.05);
+    animation: floatOrbit var(--dur, 7s) ease-in-out infinite;
+    animation-delay: var(--delay, 0s);
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .tool-float.show { opacity: 1; }
+  @keyframes floatOrbit {
+    0%   { transform: translateY(0)    rotate(0deg)   scale(1); }
+    30%  { transform: translateY(-14px) rotate(4deg)  scale(1.04); }
+    65%  { transform: translateY(8px)  rotate(-3deg) scale(0.97); }
+    100% { transform: translateY(0)    rotate(0deg)   scale(1); }
+  }
+
+  /* Shimmer gradient sweep on section headings */
+  .shimmer-text {
+    background: linear-gradient(
+      90deg,
+      var(--amber) 0%,
+      #FBBF24 30%,
+      #FDE68A 50%,
+      #FBBF24 70%,
+      var(--orange) 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 4s linear infinite;
+  }
+  @keyframes shimmer {
+    0%   { background-position: 0%   center; }
+    100% { background-position: 200% center; }
+  }
+
+  /* ===== 3D TILT CARDS ===== */
+  .tilt-card {
+    transform-style: preserve-3d;
+    transition: box-shadow 0.3s ease, transform 0.05s linear;
+    will-change: transform;
+  }
+  .tilt-card .card-3d-inner {
+    transform: translateZ(0);
+    transform-style: preserve-3d;
+  }
+  /* glare overlay */
+  .tilt-card .tilt-glare {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(
+      circle at var(--gx, 50%) var(--gy, 50%),
+      rgba(255,255,255,0.12) 0%,
+      transparent 60%
+    );
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 5;
+  }
+  .tilt-card:hover .tilt-glare { opacity: 1; }
+
+  /* Depth shadow upgrade on hover for job & trade cards */
+  .trade-card.tilt-card:hover,
+  .job-card.tilt-card:hover {
+    box-shadow:
+      0 24px 64px rgba(0,0,0,0.55),
+      0 0 0 1px rgba(245,158,11,0.15),
+      var(--shadow-amber);
+  }
+  .step-card.tilt-card:hover {
+    box-shadow:
+      0 20px 50px rgba(0,0,0,0.45),
+      0 0 0 1px rgba(245,158,11,0.12);
+  }
+
+  /* ===== GLOWING ORB BACKGROUND ===== */
+  .hero-orb-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .hero-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    animation: orbFloat var(--od, 8s) ease-in-out infinite;
+    animation-delay: var(--odel, 0s);
+  }
+  @keyframes orbFloat {
+    0%,100% { transform: translate(0,0) scale(1); }
+    33%      { transform: translate(var(--ox,20px), var(--oy,-20px)) scale(1.08); }
+    66%      { transform: translate(calc(var(--ox,20px) * -0.5), calc(var(--oy,-20px) * 0.7)) scale(0.95); }
+  }
+
+  /* ===== HERO BADGE PULSE RING ===== */
+  .hero-badge {
+    position: relative;
+    isolation: isolate;
+  }
+  .hero-badge::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: var(--r-pill);
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    z-index: -1;
+    opacity: 0;
+    animation: badgePulseRing 2.5s ease-in-out infinite;
+  }
+  @keyframes badgePulseRing {
+    0%, 100% { opacity: 0; transform: scale(1); }
+    50%       { opacity: 0.15; transform: scale(1.05); }
+  }
+
+  /* ===== TRUST BAR GLOW ===== */
+  .trust-num {
+    position: relative;
+  }
+  .trust-num::after {
+    content: '';
+    position: absolute;
+    bottom: -6px; left: 50%; transform: translateX(-50%);
+    width: 60%; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--amber), transparent);
+    border-radius: 2px;
+    opacity: 0.5;
+  }
+
+  /* ===== 3D STEP CONNECTOR ===== */
+  .steps-grid::before {
+    background: linear-gradient(90deg, transparent, rgba(245,158,11,0.4), transparent);
+    height: 2px;
+    animation: connectorPulse 3s ease-in-out infinite;
+  }
+  @keyframes connectorPulse {
+    0%, 100% { opacity: 0.4; }
+    50%       { opacity: 1; }
+  }
+
+  /* ===== NEON BORDER ON FOCUS SEARCH ===== */
+  .hero-search:focus-within {
+    border-color: var(--amber);
+    box-shadow:
+      0 8px 40px rgba(0,0,0,0.5),
+      0 0 0 3px rgba(245,158,11,0.12),
+      0 0 20px rgba(245,158,11,0.08);
+  }
+
+  /* ===== COUNTER ODOMETER EFFECT ===== */
+  .trust-num {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -1px;
+  }
+
+  /* ===== HERO ===== */
+  .hero {
+    padding-top:    calc(var(--nav-h) + clamp(48px, 7vw, 96px));
+    padding-bottom: clamp(64px, 9vw, 112px);
+    position: relative; z-index: 1;
+    text-align: left;
+    overflow: hidden;
+    /* Deep navy/dark premium background */
+    background: linear-gradient(160deg,
+      #080d1a 0%,
+      #0b1220 30%,
+      #0d0f18 60%,
+      #0a0c16 100%
+    );
+    min-height: clamp(520px, 80vh, 820px);
+    display: flex;
+    align-items: center;
+  }
+
+  /* ── NESTOVA-style perspective grid overlay ── */
+  .hero-grid-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+  }
+  /* Horizontal + Vertical grid lines via CSS background */
+  .hero-grid-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.038) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.038) 1px, transparent 1px);
+    background-size: clamp(48px,6vw,80px) clamp(48px,6vw,80px);
+    mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.7) 25%, rgba(0,0,0,0.5) 70%, transparent 100%);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.7) 25%, rgba(0,0,0,0.5) 70%, transparent 100%);
+  }
+  /* Amber accent grid — sparse larger cells for depth */
+  .hero-grid-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(245,158,11,0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245,158,11,0.045) 1px, transparent 1px);
+    background-size: clamp(144px,18vw,240px) clamp(144px,18vw,240px);
+    mask-image: linear-gradient(160deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 60%, transparent 100%);
+    -webkit-mask-image: linear-gradient(160deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 60%, transparent 100%);
+  }
+
+  /* Corner glow accent (bottom-right amber bloom) */
+  .hero-grid-corner-glow {
+    position: absolute;
+    bottom: -80px; right: -80px;
+    width: clamp(280px, 40vw, 560px);
+    height: clamp(280px, 40vw, 560px);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(245,158,11,0.13) 0%, transparent 65%);
+    pointer-events: none;
+    z-index: 1;
+    animation: cornerGlowPulse 6s ease-in-out infinite;
+  }
+  @keyframes cornerGlowPulse {
+    0%, 100% { opacity: 0.7; transform: scale(1); }
+    50%       { opacity: 1;   transform: scale(1.08); }
+  }
+
+  /* Top-left blue-ish grid accent */
+  .hero-grid-accent-tl {
+    position: absolute;
+    top: -60px; left: -60px;
+    width: clamp(200px, 30vw, 400px);
+    height: clamp(200px, 30vw, 400px);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(56,189,248,0.06) 0%, transparent 65%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ── Three.js canvas ── */
+  #heroCanvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+    opacity: 0.35;
+  }
+
+  /* ── hero inner must sit above canvas & grid ── */
+  .hero .container { position: relative; z-index: 3; }
+
+  /* Hero inner layout — two-column on desktop */
+  .hero-inner {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 48px;
+    align-items: center;
+  }
+  @media (min-width: 1024px) {
+    .hero-inner {
+      grid-template-columns: 1fr 0.85fr;
+      gap: 64px;
+      text-align: left;
+    }
+  }
+  .hero-content { width: 100%; }
+  .hero-visual {
+    display: none;
+  }
+  @media (min-width: 1024px) {
+    .hero-visual {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      align-items: flex-end;
+    }
+  }
+
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 20px 6px 8px;
+    background: rgba(245,158,11,0.09);
+    border: 1px solid rgba(245,158,11,0.28);
+    border-radius: var(--r-pill);
+    font-size: 0.78rem; font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--amber); margin-bottom: 28px;
+    max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .hero-badge-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--amber); flex-shrink: 0;
+    animation: pulseDot 2s ease-in-out infinite;
+  }
+
+  .hero h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(2.6rem, 7.5vw, 5.5rem);
+    font-weight: 900; line-height: 1.04;
+    letter-spacing: clamp(-1px, -0.4vw, -2.5px);
+    margin-bottom: 16px;
+    word-break: break-word; overflow-wrap: break-word;
+    color: #fff;
+  }
+  .hero h1 em {
+    font-style: italic; color: var(--amber);
+    -webkit-text-fill-color: unset;
+    background: none;
+  }
+
+  .hero-sub {
+    font-size: clamp(0.93rem, 1.8vw, 1.1rem);
+    color: rgba(255,255,255,0.55); max-width: 520px;
+    margin: 0 0 44px; line-height: 1.8;
+  }
+  @media (max-width: 1023px) {
+    .hero-sub { margin: 0 auto 44px; text-align: center; }
+  }
+
+  /* ── Hero search + autocomplete wrapper ── */
+  .hero-search-wrap {
+    max-width: 720px; margin: 0 auto 20px;
+    position: relative;
+  }
+  .hero-search {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 20px;
+    padding: 8px 8px 8px 12px;
+    display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(245,158,11,0.06);
+    transition: var(--t);
+    width: 100%;
+  }
+  .hero-search:focus-within {
+    border-color: var(--border-strong);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 3px rgba(245,158,11,0.1);
+  }
+  .search-field {
+    flex: 1; display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    border-right: 1px solid var(--border-subtle);
+    min-width: 0;
+  }
+  .search-field i { color: var(--text-3); font-size: 0.95rem; flex-shrink: 0; }
+  .search-field input {
+    flex: 1; background: none; border: none; outline: none;
+    font-family: 'Outfit', sans-serif; font-size: 0.95rem;
+    color: var(--text-1);
+    min-width: 0; width: 100%;
+  }
+  .search-field input::placeholder { color: var(--text-3); }
+
+  .search-clear-hero {
+    background: none; border: none; cursor: pointer; padding: 0 4px;
+    color: var(--text-3); font-size: 0.8rem; flex-shrink: 0;
+    display: none; transition: var(--t); line-height: 1;
+  }
+  .search-clear-hero:hover { color: var(--text-1); }
+  .search-clear-hero.visible { display: block; }
+
+  .search-loc {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    min-width: 0; flex-shrink: 1;
+  }
+  .search-loc i { color: var(--text-3); font-size: 0.9rem; flex-shrink: 0; }
+  .search-loc select {
+    background: none; border: none; outline: none; cursor: pointer;
+    font-family: 'Outfit', sans-serif; font-size: 0.92rem;
+    color: var(--text-2); flex: 1;
+    min-width: 0; max-width: 100%;
+  }
+  .search-loc select option { background: var(--bg-card); color: var(--text-1); }
+  .hero-search .btn-primary { padding: 13px 28px; border-radius: 13px; white-space: nowrap; flex-shrink: 0; }
+
+  /* ── Autocomplete dropdown ── */
+  .ac-dropdown {
+    position: absolute; top: calc(100% + 8px); left: 0; right: 0;
+    background: var(--bg-card); border: 1px solid var(--border-strong);
+    border-radius: var(--r-lg);
+    box-shadow: 0 20px 48px rgba(0,0,0,0.55), 0 0 0 1px rgba(245,158,11,0.06);
+    z-index: 500;
+    display: none;
+    max-height: 300px; overflow-y: auto;
+  }
+  .ac-dropdown.open { display: block; }
+  .ac-dropdown::-webkit-scrollbar { width: 4px; }
+  .ac-dropdown::-webkit-scrollbar-track { background: transparent; }
+  .ac-dropdown::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+  .ac-section-label {
+    font-size: 0.65rem; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--text-3);
+    padding: 10px 14px 6px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .ac-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; cursor: pointer;
+    font-size: 0.88rem; color: var(--text-2);
+    transition: background 0.15s ease;
+  }
+  .ac-item:hover, .ac-item.highlighted {
+    background: var(--surface-1); color: var(--text-1);
+  }
+  .ac-item i {
+    width: 18px; text-align: center; font-size: 0.78rem;
+    color: var(--text-3); flex-shrink: 0;
+  }
+  .ac-item:hover i, .ac-item.highlighted i { color: var(--amber); }
+  .ac-item em { font-style: normal; color: var(--amber); font-weight: 600; }
+  .ac-item-sub { margin-left: auto; font-size: 0.72rem; color: var(--text-3); flex-shrink: 0; }
+  .ac-empty { padding: 20px 14px; font-size: 0.85rem; color: var(--text-3); text-align: center; }
+
+  .hero-tags {
+    display: flex; align-items: center; justify-content: flex-start;
+    flex-wrap: wrap; gap: 8px;
+    max-width: 100%;
+    font-size: 0.82rem; color: var(--text-3);
+  }
+  @media (max-width: 1023px) {
+    .hero-tags { justify-content: center; }
+  }
+  .hero-tags span { color: rgba(255,255,255,0.35); font-size: 0.78rem; }
+  .hero-tag {
+    padding: 5px 16px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: var(--r-pill); color: rgba(255,255,255,0.55); font-size: 0.8rem;
+    cursor: pointer; transition: var(--t); text-decoration: none;
+    backdrop-filter: blur(4px);
+  }
+  .hero-tag:hover {
+    background: rgba(245,158,11,0.12);
+    border-color: rgba(245,158,11,0.35);
+    color: var(--amber);
+    transform: translateY(-1px);
+  }
+
+  /* ── Floating worker cards (desktop deco) ── */
+  .hero-workers {
+    position: absolute; top: 50%; transform: translateY(-40%);
+    flex-direction: column; gap: 14px;
+    z-index: 3; display: none;
+  }
+  .hero-workers-left  { left: clamp(8px, 1.5vw, 20px); }
+  .hero-workers-right { right: clamp(8px, 1.5vw, 20px); align-items: flex-end; }
+  @media (min-width: 1480px) { .hero-workers { display: flex; } }
+
+  .wf-card {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: rgba(18, 14, 9, 0.84);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--border-strong);
+    border-radius: 16px;
+    width: 205px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(245,158,11,0.05);
+    transition: var(--t);
+  }
+  .wf-card:hover { border-color: var(--amber); transform: translateY(-2px); box-shadow: 0 20px 48px rgba(0,0,0,0.55), var(--shadow-amber); }
+  .wf-card:nth-child(even) { margin-left: 16px; }
+  .wf-avatar {
+    width: 40px; height: 40px; border-radius: 11px;
+    object-fit: cover; flex-shrink: 0;
+    border: 1px solid var(--border-subtle);
+  }
+  .wf-info { flex: 1; min-width: 0; }
+  .wf-name { font-size: 0.82rem; font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wf-trade { font-size: 0.72rem; color: var(--text-3); margin-top: 2px; }
+  .wf-badge { font-size: 0.72rem; font-weight: 800; color: var(--emerald); white-space: nowrap; flex-shrink: 0; }
+
+  /* ── Scroll indicator ── */
+  .hero-scroll {
+    display: inline-flex; flex-direction: column; align-items: center;
+    gap: 8px; margin-top: 52px; opacity: 0;
+    color: rgba(255,255,255,0.3); font-size: 0.68rem; font-weight: 600;
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+  .hero-scroll-mouse {
+    width: 22px; height: 34px; border: 2px solid rgba(255,255,255,0.18);
+    border-radius: 12px; position: relative;
+  }
+  .hero-scroll-mouse::after {
+    content: '';
+    position: absolute; top: 5px; left: 50%; transform: translateX(-50%);
+    width: 3px; height: 8px; border-radius: 3px; background: var(--amber);
+    animation: scrollPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes scrollPulse {
+    0%   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    80%  { opacity: 0; transform: translateX(-50%) translateY(12px); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  }
+
+  /* ── Hero search left-aligned on desktop ── */
+  @media (min-width: 1024px) {
+    .hero-search-wrap { margin: 0 0 20px; }
+    .hero-tags        { margin: 0; }
+    .hero-scroll      { align-items: flex-start; }
+  }
+
+  /* Trust bar */
+  .trust-bar {
+    padding: 32px 0;
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(19,16,8,0.5);
+    position: relative; z-index: 1;
+    overflow: hidden;
+  }
+  .trust-bar-inner {
+    max-width: 1200px; margin: 0 auto;
+    padding: 0 clamp(16px,4vw,48px);
+    display: flex; align-items: center; justify-content: center;
+    flex-wrap: wrap; gap: 24px;
+  }
+  .trust-stat { text-align: center; min-width: 80px; }
+  .trust-num {
+    font-family: 'Fraunces', serif;
+    font-size: 1.8rem; font-weight: 800; line-height: 1;
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .trust-lbl { font-size: 0.82rem; color: var(--text-3); font-weight: 500; }
+  .trust-divider {
+    width: 1px; height: 40px; background: var(--border-subtle);
+    flex-shrink: 0;
+  }
+
+  /* ===== SECTIONS ===== */
+  .section { padding: clamp(56px,8vw,96px) 0; position: relative; z-index: 1; }
+  .section-header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    flex-wrap: wrap; gap: 20px; margin-bottom: 48px;
+  }
+
+  /* ===== TRADE GRID ===== */
+  .trade-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .trade-card {
+    padding: 28px 24px;
+    cursor: pointer; text-decoration: none;
+    display: flex; flex-direction: column; gap: 16px;
+    position: relative; overflow: hidden;
+  }
+  .trade-card::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 25% 25%, rgba(245,158,11,0.06), transparent 65%);
+    opacity: 0; transition: opacity 0.45s ease; pointer-events: none;
+  }
+  .trade-card:hover::after { opacity: 1; }
+  .trade-icon {
+    width: 52px; height: 52px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; flex-shrink: 0;
+    transition: var(--t);
+  }
+  .trade-card:hover .trade-icon { transform: scale(1.1) rotate(-3deg); }
+  .trade-name {
+    font-family: 'Fraunces', serif;
+    font-size: 1.05rem; font-weight: 700; margin-bottom: 4px;
+    color: var(--text-1);
+  }
+  .trade-count { font-size: 0.83rem; color: var(--text-3); }
+  .trade-arrow {
+    margin-top: auto;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-3); font-size: 0.8rem;
+    transition: var(--t);
+  }
+  .trade-card:hover .trade-arrow {
+    background: var(--surface-2); color: var(--amber); border-color: var(--border-strong);
+    transform: translateX(4px);
+  }
+
+  /* ===== FEATURED JOBS ===== */
+  .jobs-section { background: var(--bg-raised); }
+  .job-list { display: flex; flex-direction: column; gap: 12px; }
+
+  .job-card {
+    padding: 24px 28px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center; gap: 20px;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .job-logo {
+    width: 52px; height: 52px; border-radius: 14px;
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; flex-shrink: 0;
+    overflow: hidden;
+  }
+  .job-info { min-width: 0; overflow: hidden; }
+  .job-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.05rem; font-weight: 700;
+    color: var(--text-1); margin-bottom: 6px;
+    transition: var(--t);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .job-card:hover .job-title { color: var(--amber); }
+  .job-meta {
+    display: flex; flex-wrap: wrap; gap: 8px 12px;
+    font-size: 0.83rem; color: var(--text-3); align-items: center;
+    min-width: 0;
+  }
+  .job-meta-item {
+    display: flex; align-items: center; gap: 5px;
+    min-width: 0; white-space: nowrap;
+  }
+  .job-meta-item i { font-size: 0.78rem; color: var(--text-3); }
+  .job-right {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+    flex-shrink: 0;
+  }
+  .job-pay {
+    font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 700;
+    color: var(--amber); white-space: nowrap;
+  }
+  .job-pay small { font-family: 'Outfit', serif; font-size: 0.75rem; color: var(--text-3); font-weight: 400; }
+  .job-tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .btn-save {
+    background: none; border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md); width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-3); cursor: pointer; transition: var(--t);
+    flex-shrink: 0;
+  }
+  .btn-save:hover, .btn-save.saved { border-color: var(--amber); color: var(--amber); background: var(--surface-1); }
+
+  /* ===== HOW IT WORKS ===== */
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    position: relative;
+  }
+  .steps-grid::before {
+    content: '';
+    position: absolute; top: 48px; left: calc(50% / 3 + 12px); right: calc(50% / 3 + 12px);
+    height: 1px; background: linear-gradient(90deg, transparent, var(--border-strong), transparent);
+  }
+  .step-card {
+    padding: 36px 28px;
+    display: flex; flex-direction: column; gap: 16px;
+    transition: var(--t);
+  }
+  .step-num {
+    font-family: 'Fraunces', serif; font-style: italic;
+    font-size: 3.5rem; font-weight: 900; line-height: 1;
+    color: var(--border-strong);
+  }
+  .step-icon {
+    width: 56px; height: 56px; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
+    background: linear-gradient(135deg, var(--surface-1), var(--surface-2));
+    border: 1px solid var(--border-subtle);
+    color: var(--amber); margin-bottom: 4px;
+    transition: var(--t);
+  }
+  .step-card:hover .step-icon { transform: scale(1.12) rotate(-4deg); box-shadow: 0 8px 24px rgba(245,158,11,0.18); }
+  .step-card h3 { font-family: 'Fraunces', serif; font-size: 1.15rem; font-weight: 700; color: var(--text-1); }
+  .step-card p  { font-size: 0.9rem; color: var(--text-2); line-height: 1.7; }
+
+  /* ===== AI SECTION ===== */
+  .ai-section {
+    padding: clamp(56px,8vw,96px) 0;
+    background: linear-gradient(135deg, rgba(245,158,11,0.04) 0%, rgba(249,115,22,0.02) 100%);
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+    position: relative; z-index: 1; overflow: hidden;
+  }
+  .ai-section::before {
+    content: '';
+    position: absolute; width: 500px; height: 500px;
+    border-radius: 50%; filter: blur(80px); opacity: 0.08;
+    background: var(--amber);
+    top: 50%; right: -100px; transform: translateY(-50%);
+    pointer-events: none;
+  }
+  .ai-inner {
+    max-width: 1200px; margin: 0 auto; padding: 0 clamp(16px,4vw,48px);
+    display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center;
+  }
+  .ai-features { display: flex; flex-direction: column; gap: 24px; margin-top: 40px; }
+  .ai-feature {
+    display: flex; gap: 16px; align-items: flex-start; padding: 20px;
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg); transition: var(--t);
+  }
+  .ai-feature:hover { border-color: var(--border-strong); transform: translateX(4px); }
+  .ai-feature-icon {
+    width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.05rem;
+    background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(249,115,22,0.1));
+    border: 1px solid rgba(245,158,11,0.2); color: var(--amber);
+  }
+  .ai-feature h4 { font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+  .ai-feature p { font-size: 0.87rem; color: var(--text-2); line-height: 1.65; }
+  .ai-visual { position: relative; display: flex; flex-direction: column; gap: 14px; }
+  .match-card {
+    padding: 20px;
+    display: flex; align-items: center; gap: 16px;
+    transition: var(--t);
+  }
+  .match-card:hover { border-color: var(--border-strong); }
+  .match-card-top {
+    animation: matchPulse 3.5s ease-in-out infinite;
+  }
+  @keyframes matchPulse {
+    0%,100% { border-color: var(--border-subtle); box-shadow: none; }
+    50%       { border-color: rgba(245,158,11,0.4); box-shadow: 0 0 24px rgba(245,158,11,0.08); }
+  }
+  .match-avatar {
+    width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--amber-dark), var(--orange));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif; font-weight: 800; font-size: 1.1rem; color: #0C0A08;
+    overflow: hidden;
+  }
+  .match-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .match-info { flex: 1; min-width: 0; }
+  .match-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 3px; }
+  .match-trade {
+    font-size: 0.82rem; color: var(--text-2);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .match-score {
+    font-family: 'Fraunces', serif; font-weight: 800; font-size: 1.1rem;
+    color: var(--emerald); flex-shrink: 0;
+  }
+  .match-score small { font-family: 'Outfit', sans-serif; font-size: 0.72rem; color: var(--text-3); font-weight: 400; }
+  .ai-label {
+    position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    color: #0C0A08; font-size: 0.72rem; font-weight: 800;
+    padding: 4px 14px; border-radius: var(--r-pill); letter-spacing: 1px;
+    text-transform: uppercase; white-space: nowrap;
+  }
+
+  /* ===== TESTIMONIALS — Swiper ===== */
+  .testimonials-swiper { padding-bottom: 52px !important; }
+  .testimonials-swiper .swiper-slide {
+    height: auto; display: flex;
+  }
+  .testimonials-swiper .testi-card {
+    flex: 1; height: 100%; padding: 32px;
+  }
+  .swiper-pagination.testi-pager {
+    bottom: 0px !important;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .swiper-pagination.testi-pager .swiper-pagination-bullet {
+    background: var(--border-strong); opacity: 1;
+    width: 8px; height: 8px; border-radius: 4px;
+    transition: all 0.35s ease; margin: 0 !important;
+  }
+  .swiper-pagination.testi-pager .swiper-pagination-bullet-active {
+    background: var(--amber); width: 28px; border-radius: 4px;
+  }
+  .testi-nav {
+    display: flex; justify-content: center; gap: 12px; margin-top: 28px;
+  }
+  .testi-nav-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    color: var(--text-2); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: var(--t); font-size: 0.85rem;
+  }
+  .testi-nav-btn:hover { background: var(--surface-2); border-color: var(--border-strong); color: var(--amber); transform: scale(1.05); }
+
+  .testi-quote { font-size: 2rem; line-height: 1; color: var(--amber); margin-bottom: 16px; font-family: 'Fraunces', serif; }
+  .testi-text { font-size: 0.93rem; color: var(--text-2); line-height: 1.75; margin-bottom: 24px; font-style: italic; }
+  .testi-author { display: flex; align-items: center; gap: 12px; }
+  .testi-avatar {
+    width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif; font-weight: 800; font-size: 0.9rem; color: #0C0A08;
+    overflow: hidden;
+  }
+  .testi-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .testi-name { font-weight: 700; font-size: 0.92rem; margin-bottom: 2px; }
+  .testi-role { font-size: 0.8rem; color: var(--text-3); }
+  .testi-stars { color: var(--amber); font-size: 0.75rem; margin-bottom: 14px; }
+
+  /* ===== CTA ===== */
+  .cta-section { padding: clamp(56px,8vw,96px) 0; position: relative; z-index: 1; overflow: hidden; }
+  .cta-card {
+    padding: clamp(40px,6vw,72px) clamp(20px,5vw,60px);
+    background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(249,115,22,0.05) 50%, rgba(16,185,129,0.04) 100%);
+    border: 1px solid var(--border-subtle);
+    border-radius: 32px; text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .cta-card::before {
+    content: '';
+    position: absolute; inset: -1px;
+    border-radius: 33px;
+    background: linear-gradient(135deg, var(--amber), var(--orange), var(--emerald));
+    z-index: -1; opacity: 0.15;
+  }
+  /* Decorative orbs inside CTA */
+  .cta-orb {
+    position: absolute; border-radius: 50%;
+    filter: blur(56px); pointer-events: none; z-index: 0;
+  }
+  .cta-orb-1 { width: 360px; height: 360px; background: rgba(245,158,11,0.1);  top: -120px; left: -80px; }
+  .cta-orb-2 { width: 280px; height: 280px; background: rgba(249,115,22,0.08); bottom: -90px; right: -50px; }
+  .cta-orb-3 { width: 200px; height: 200px; background: rgba(16,185,129,0.06); top: 30%; left: 45%; }
+  .cta-inner-content { position: relative; z-index: 1; }
+  .cta-card h2 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 900; letter-spacing: -1px; line-height: 1.15;
+    margin-bottom: 16px; word-break: break-word;
+  }
+  .cta-card p { color: var(--text-2); font-size: 1.05rem; max-width: 500px; margin: 0 auto 40px; line-height: 1.75; }
+  .cta-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 1024px) {
+    .trade-grid { grid-template-columns: repeat(2, 1fr); }
+    .ai-inner { grid-template-columns: 1fr; gap: 48px; }
+    /* Hero: single column, centered on tablet */
+    .hero { text-align: center; }
+    .hero h1 { text-align: center; }
+    .hero-badge { margin-left: auto; margin-right: auto; }
+    .hero-inner { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 768px) {
+    .steps-grid { grid-template-columns: 1fr; }
+    .steps-grid::before { display: none; }
+    .job-card { grid-template-columns: auto 1fr; padding: 18px 20px; }
+    .job-right { display: none; }
+    .job-title { white-space: normal; }
+    .trust-divider { display: none; }
+    .trust-bar-inner { justify-content: center; gap: 20px 32px; }
+    .hero-search {
+      flex-direction: column; gap: 0; padding: 8px;
+      border-radius: 16px;
+    }
+    .search-field {
+      border-right: none; border-bottom: 1px solid var(--border-subtle);
+      width: 100%; padding: 12px;
+    }
+    .search-loc { border-bottom: none; width: 100%; padding: 12px; min-width: 0; }
+    .search-loc select { width: 100%; }
+    .hero-search .btn-primary { width: 100%; border-radius: 10px; }
+    .section-header { flex-direction: column; align-items: flex-start; }
+    .cta-actions { flex-direction: column; align-items: stretch; }
+    .cta-actions .btn { justify-content: center; }
+    .ac-dropdown { border-radius: var(--r-md); }
+  }
+  @media (max-width: 560px) {
+    .trade-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .trade-card { padding: 20px 16px; }
+    .trust-bar-inner { gap: 16px 24px; }
+    .trust-num { font-size: 1.4rem; }
+    .job-card { grid-template-columns: auto 1fr; gap: 12px; padding: 14px 16px; }
+    .job-logo { width: 42px; height: 42px; font-size: 1rem; }
+    .job-meta { gap: 6px 10px; }
+    .testi-card { padding: 24px 18px; }
+    .step-card { padding: 28px 20px; }
+    .hero-badge { white-space: normal; text-align: center; }
+  }
+  @media (max-width: 380px) {
+    .trade-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 2rem; letter-spacing: -0.5px; }
+  }
+
+  /* ===== AOS CUSTOM TWEAKS ===== */
+  [data-aos="fade-up"]   { transition-timing-function: cubic-bezier(0.2, 0, 0, 1); }
+  [data-aos="zoom-in"]  { transition-timing-function: cubic-bezier(0.2, 0, 0, 1); }
+  [data-aos="fade-right"],
+  [data-aos="fade-left"] { transition-timing-function: cubic-bezier(0.2, 0, 0, 1); }
+
+  /* ===== DEMO VIDEO SECTION ===== */
+  .demo-section {
+    padding: clamp(56px,8vw,96px) 0;
+    background: linear-gradient(180deg, var(--bg-raised) 0%, var(--bg-base) 100%);
+    border-top: 1px solid var(--border-subtle);
+    position: relative; z-index: 1; overflow: hidden;
+  }
+  .demo-section::before {
+    content: '';
+    position: absolute; width: 600px; height: 600px;
+    border-radius: 50%; filter: blur(100px); opacity: 0.06;
+    background: radial-gradient(circle, var(--amber), var(--orange));
+    bottom: -200px; left: 50%; transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .demo-header {
+    text-align: center; margin-bottom: 52px;
+  }
+  .demo-video-wrap {
+    position: relative;
+    max-width: 860px; margin: 0 auto;
+    border-radius: 24px; overflow: hidden;
+    border: 1px solid var(--border-subtle);
+    box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(245,158,11,0.08);
+    background: #000;
+  }
+  /* Glow ring around video */
+  .demo-video-wrap::before {
+    content: '';
+    position: absolute; inset: -2px;
+    border-radius: 26px;
+    background: linear-gradient(135deg, rgba(245,158,11,0.3), rgba(249,115,22,0.2), rgba(16,185,129,0.15));
+    z-index: -1;
+  }
+  .demo-video-wrap iframe {
+    width: 100%; aspect-ratio: 16/9;
+    display: block; border: none;
+  }
+  /* Play button overlay (decorative badge) */
+  .demo-badge {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 10px 22px;
+    background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25);
+    border-radius: var(--r-pill); font-size: 0.85rem; font-weight: 600;
+    color: var(--amber); margin-bottom: 20px;
+  }
+  .demo-badge i { font-size: 0.75rem; }
+  .demo-sub {
+    font-size: 0.95rem; color: var(--text-2); max-width: 540px;
+    margin: 20px auto 0; line-height: 1.75; text-align: center;
+  }
+  /* Feature chips below video */
+  .demo-chips {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
+    margin-top: 32px;
+  }
+  .demo-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 18px;
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-pill); font-size: 0.82rem;
+    color: var(--text-2); font-weight: 500;
+    transition: var(--t);
+  }
+  .demo-chip i { color: var(--amber); font-size: 0.75rem; }
+  .demo-chip:hover { background: var(--surface-2); border-color: var(--border-strong); color: var(--text-1); }
+
+  /* ===== FAQ SECTION ===== */
+  .faq-section {
+    padding: clamp(56px,8vw,96px) 0;
+    position: relative; z-index: 1;
+    background: var(--bg-raised);
+    border-top: 1px solid var(--border-subtle);
+  }
+  .faq-layout {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 64px; align-items: start;
+    max-width: 1200px; margin: 0 auto;
+    padding: 0 clamp(16px,4vw,48px);
+  }
+  .faq-sticky {
+    position: sticky; top: calc(var(--nav-h) + 32px);
+  }
+  .faq-sticky .section-sub {
+    font-size: 0.93rem; color: var(--text-2); line-height: 1.75; margin-bottom: 28px;
+  }
+  .faq-contact {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px;
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg); text-decoration: none;
+    transition: var(--t);
+  }
+  .faq-contact:hover { border-color: var(--border-strong); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+  .faq-contact-icon {
+    width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0;
+    background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(249,115,22,0.1));
+    border: 1px solid rgba(245,158,11,0.2); color: var(--amber);
+    display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+  }
+  .faq-contact-text { font-size: 0.85rem; }
+  .faq-contact-text strong { display: block; font-size: 0.92rem; margin-bottom: 2px; }
+  .faq-contact-text span { color: var(--text-3); }
+  /* Accordion */
+  .faq-list { display: flex; flex-direction: column; gap: 10px; }
+  .faq-item {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg); overflow: hidden;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  .faq-item.open {
+    border-color: var(--border-strong);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25), 0 0 0 1px rgba(245,158,11,0.06);
+  }
+  .faq-q {
+    width: 100%; text-align: left; padding: 22px 24px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    background: none; border: none; cursor: pointer;
+    font-family: 'Outfit', sans-serif; font-size: 0.97rem; font-weight: 600;
+    color: var(--text-1); line-height: 1.45;
+    transition: var(--t);
+  }
+  .faq-q:hover { color: var(--amber); }
+  .faq-q-icon {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; color: var(--text-3);
+    transition: transform 0.35s cubic-bezier(0.4,0,0.2,1), background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  }
+  .faq-item.open .faq-q-icon {
+    transform: rotate(45deg);
+    background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); color: var(--amber);
+  }
+  .faq-a {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.45s cubic-bezier(0.4,0,0.2,1), padding 0.35s ease;
+    padding: 0 24px;
+  }
+  .faq-item.open .faq-a { max-height: 400px; padding: 0 24px 22px; }
+  .faq-a p { font-size: 0.9rem; color: var(--text-2); line-height: 1.75; }
+  .faq-a a { color: var(--amber); text-decoration: none; font-weight: 600; }
+  .faq-a a:hover { text-decoration: underline; }
+  /* FAQ category tabs */
+  .faq-tabs {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px;
+  }
+  .faq-tab {
+    padding: 6px 18px;
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-pill); font-size: 0.82rem; font-weight: 600;
+    color: var(--text-3); cursor: pointer; transition: var(--t);
+  }
+  .faq-tab:hover, .faq-tab.active {
+    background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); color: var(--amber);
+  }
+
+  /* ===== RESPONSIVE — new sections ===== */
+  @media (max-width: 1024px) {
+    .faq-layout { grid-template-columns: 1fr; gap: 40px; }
+    .faq-sticky { position: static; }
+  }
+  @media (max-width: 768px) {
+    .demo-video-wrap { border-radius: 16px; }
+    .demo-chips { gap: 8px; }
+    .demo-chip { font-size: 0.78rem; padding: 7px 14px; }
+    .faq-q { padding: 18px 20px; font-size: 0.93rem; }
+    .faq-item.open .faq-a { padding: 0 20px 18px; }
+  }
+  @media (max-width: 560px) {
+    .demo-section { padding: clamp(40px,6vw,64px) 0; }
+    .faq-section  { padding: clamp(40px,6vw,64px) 0; }
+    .demo-video-wrap { border-radius: 12px; }
+    .faq-q { font-size: 0.9rem; padding: 16px 16px; }
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<!-- ════════════════════════════════════════════════════════════════
+     HERO
+══════════════════════════════════════════════════════════════════ -->
+<section class="hero">
+
+  <!-- Glowing background orbs -->
+  <div class="hero-orb-bg" aria-hidden="true">
+    <div class="hero-orb" style="width:520px;height:520px;background:radial-gradient(circle,rgba(245,158,11,0.10),transparent 70%);top:-120px;left:-80px;--od:9s;--ox:30px;--oy:-25px;"></div>
+    <div class="hero-orb" style="width:380px;height:380px;background:radial-gradient(circle,rgba(249,115,22,0.07),transparent 70%);bottom:-80px;right:-60px;--od:11s;--odel:2s;--ox:-25px;--oy:20px;"></div>
+    <div class="hero-orb" style="width:260px;height:260px;background:radial-gradient(circle,rgba(16,185,129,0.05),transparent 70%);top:40%;left:45%;--od:8s;--odel:1s;--ox:15px;--oy:-15px;"></div>
+  </div>
+
+  <!-- Three.js canvas lives here -->
+  <canvas id="heroCanvas"></canvas>
+
+  <!-- NESTOVA-style grid lines overlay -->
+  <div class="hero-grid-overlay" aria-hidden="true"></div>
+  <div class="hero-grid-corner-glow" aria-hidden="true"></div>
+  <div class="hero-grid-accent-tl" aria-hidden="true"></div>
+
+  <!-- Floating trade tool icons -->
+  <div class="hero-tool-ring" aria-hidden="true" id="heroToolRing">
+    <!-- positioned by JS -->
+  </div>
+
+  <div class="container">
+    <div class="hero-inner">
+
+      <!-- LEFT: hero text content -->
+      <div class="hero-content">
+
+        <div class="hero-badge" id="heroBadge">
+          <span class="hero-badge-dot"></span>
+          Nigeria's #1 Skilled Trades Platform
+        </div>
+
+        <h1 id="heroH1">
+          <span id="heroTypedLine"></span><br>
+          Are <em data-text="Worth More">Worth More</em>
+        </h1>
+
+        <p class="hero-sub" id="heroSub">
+          Find skilled work as an
+          {% for cat in all_categories|slice:":4" %}{{ cat.name|lower }}{% if not forloop.last %}, {% endif %}{% endfor %}
+          and more. Trusted by workers across Lagos, Abuja, Port Harcourt, and beyond.
+        </p>
+
+        <div class="hero-search-wrap" id="heroSearch">
+          <form method="get" action="{% url 'marketplace:job_list' %}" id="heroSearchForm">
+            <div class="hero-search">
+              <div class="search-field">
+                <i class="fas fa-search"></i>
+                <input
+                  type="text"
+                  name="q"
+                  id="heroSearchInput"
+                  placeholder="e.g. fix my generator, solar wiring Lagos..."
+                  autocomplete="off"
+                  spellcheck="false"
+                >
+                <button type="button" class="search-clear-hero" id="heroSearchClear"
+                        title="Clear" aria-label="Clear search">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <div class="search-loc">
+                <i class="fas fa-map-pin"></i>
+                <select name="state">
+                  <option value="">All States</option>
+                  {% for val, label in nigerian_states %}
+                    <option value="{{ val }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-search"></i> Find Jobs
+              </button>
+            </div>
+          </form>
+          <div class="ac-dropdown" id="heroAcDropdown" role="listbox"></div>
+        </div>
+
+        <div class="hero-tags" id="heroTags">
+          <span>Quick Browse:</span>
+          {% for cat in all_categories|slice:":6" %}
+            <a href="{% url 'marketplace:job_list' %}?trade={{ cat.pk }}" class="hero-tag">
+              {{ cat.name }}
+            </a>
+          {% empty %}
+            <a href="{% url 'marketplace:job_list' %}?q=electrician" class="hero-tag">Electrician</a>
+            <a href="{% url 'marketplace:job_list' %}?q=solar" class="hero-tag">Solar Installation</a>
+            <a href="{% url 'marketplace:job_list' %}?q=carpenter" class="hero-tag">Carpentry</a>
+            <a href="{% url 'marketplace:job_list' %}?q=plumber" class="hero-tag">Plumbing</a>
+          {% endfor %}
+        </div>
+
+        <div class="hero-scroll" id="heroScroll" aria-hidden="true">
+          <div class="hero-scroll-mouse"></div>
+          <span>Scroll</span>
+        </div>
+
+      </div><!-- /.hero-content -->
+
+      <!-- RIGHT: floating stat visual panel (desktop only) -->
+      <div class="hero-visual" aria-hidden="true">
+        <div class="wf-card" style="width:100%;max-width:270px;">
+          <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,rgba(245,158,11,0.18),rgba(249,115,22,0.10));border:1px solid rgba(245,158,11,0.32);display:flex;align-items:center;justify-content:center;color:var(--amber);font-size:1.15rem;flex-shrink:0;"><i class="fas fa-bolt"></i></div>
+          <div class="wf-info">
+            <div class="wf-name" style="color:#fff;">Live Opportunities</div>
+            <div class="wf-trade" style="color:rgba(255,255,255,0.38);">Jobs updated daily</div>
+          </div>
+          <div class="wf-badge" style="font-size:0.82rem;">Live</div>
+        </div>
+        <div class="wf-card" style="width:100%;max-width:270px;">
+          <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,rgba(16,185,129,0.18),rgba(16,185,129,0.08));border:1px solid rgba(16,185,129,0.32);display:flex;align-items:center;justify-content:center;color:#10B981;font-size:1.15rem;flex-shrink:0;"><i class="fas fa-shield-alt"></i></div>
+          <div class="wf-info">
+            <div class="wf-name" style="color:#fff;">Verified Employers</div>
+            <div class="wf-trade" style="color:rgba(255,255,255,0.38);">Trusted businesses only</div>
+          </div>
+          <div class="wf-badge" style="font-size:0.82rem;color:#10B981;">91%</div>
+        </div>
+        <div class="wf-card" style="width:100%;max-width:270px;">
+          <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,rgba(56,189,248,0.18),rgba(56,189,248,0.08));border:1px solid rgba(56,189,248,0.32);display:flex;align-items:center;justify-content:center;color:#38BDF8;font-size:1.15rem;flex-shrink:0;"><i class="fas fa-map-marked-alt"></i></div>
+          <div class="wf-info">
+            <div class="wf-name" style="color:#fff;">All 36 States</div>
+            <div class="wf-trade" style="color:rgba(255,255,255,0.38);">Lagos, Abuja &amp; beyond</div>
+          </div>
+          <div class="wf-badge" style="font-size:0.82rem;color:#38BDF8;">NG</div>
+        </div>
+      </div><!-- /.hero-visual -->
+
+    </div><!-- /.hero-inner -->
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════════
+     TRUST BAR
+══════════════════════════════════════════════════════════════════ -->
+<div class="trust-bar">
+  <div class="trust-bar-inner">
+
+    <div class="trust-stat" data-aos="fade-up">
+      <div class="trust-num"
+           data-counter="{{ total_workers|default:0 }}"
+           data-suffix="+"
+      >{{ total_workers|default:"0" }}+</div>
+      <div class="trust-lbl">Active Tradespeople</div>
+    </div>
+    <div class="trust-divider"></div>
+
+    <div class="trust-stat" data-aos="fade-up" data-aos-delay="80">
+      <div class="trust-num"
+           data-counter="{{ total_jobs|default:0 }}"
+           data-suffix="+"
+      >{{ total_jobs|default:"0" }}+</div>
+      <div class="trust-lbl">Jobs Posted</div>
+    </div>
+    <div class="trust-divider"></div>
+
+    <div class="trust-stat" data-aos="fade-up" data-aos-delay="160">
+      <div class="trust-num"
+           data-counter="{{ total_employers|default:0 }}"
+           data-suffix="+"
+      >{{ total_employers|default:"0" }}+</div>
+      <div class="trust-lbl">Employers</div>
+    </div>
+    <div class="trust-divider"></div>
+
+    <div class="trust-stat" data-aos="fade-up" data-aos-delay="240">
+      <div class="trust-num" data-counter="36" data-suffix="">36</div>
+      <div class="trust-lbl">States Covered</div>
+    </div>
+    <div class="trust-divider"></div>
+
+    <div class="trust-stat" data-aos="fade-up" data-aos-delay="320">
+      <div class="trust-num" data-counter="91" data-suffix="%">91%</div>
+      <div class="trust-lbl">Successful Placements</div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════════
+     TRADE CATEGORIES
+══════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header" data-aos="fade-up">
+      <div>
+        <p class="eyebrow">Browse by Trade</p>
+        <h2 class="section-title">What's Your <span class="amber-text">Craft?</span></h2>
+      </div>
+      <a href="{% url 'marketplace:trade_list' %}" class="btn btn-outline">
+        All Trades <i class="fas fa-arrow-right"></i>
+      </a>
+    </div>
+
+    <div class="trade-grid">
+      {% for cat in categories %}
+        {% with idx=forloop.counter0 %}
+        <a href="{% url 'marketplace:trade_detail' slug=cat.slug %}"
+           class="card trade-card tilt-card"
+           data-aos="fade-up"
+           data-aos-delay="{{ forloop.counter0|add:0 }}">
+          <div class="tilt-glare"></div>
+
+          <div class="trade-icon" style="
+            {% if idx|divisibleby:5 %}background:rgba(251,191,36,0.12);color:#F59E0B;
+            {% elif idx|divisibleby:4 %}background:rgba(249,115,22,0.12);color:#F97316;
+            {% elif idx|divisibleby:3 %}background:rgba(180,120,60,0.12);color:#B87333;
+            {% elif idx|divisibleby:2 %}background:rgba(16,185,129,0.12);color:#10B981;
+            {% elif idx|divisibleby:1 %}background:rgba(244,114,182,0.12);color:#F472B6;
+            {% else %}background:rgba(56,189,248,0.12);color:#38BDF8;
+            {% endif %}
+          ">
+            <i class="{% if cat.icon_class %}{{ cat.icon_class }}{% else %}fas fa-hard-hat{% endif %}"></i>
+          </div>
+
+          <div>
+            <div class="trade-name">{{ cat.name }}</div>
+            <div class="trade-count">
+              {{ cat.job_count }} open job{{ cat.job_count|pluralize }}
+            </div>
+          </div>
+          <div class="trade-arrow"><i class="fas fa-arrow-right"></i></div>
+        </a>
+        {% endwith %}
+      {% empty %}
+        <div style="grid-column:1/-1; text-align:center; color:var(--text-3); padding:48px;">
+          No trade categories yet. Add them in the admin panel.
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════════
+     FEATURED JOBS
+══════════════════════════════════════════════════════════════════ -->
+<section class="section jobs-section">
+  <div class="container">
+    <div class="section-header" data-aos="fade-up">
+      <div>
+        <p class="eyebrow">Freshly Posted</p>
+        <h2 class="section-title">Featured <span class="amber-text">Openings</span></h2>
+      </div>
+      <a href="{% url 'marketplace:job_list' %}" class="btn btn-outline">
+        Browse All Jobs <i class="fas fa-arrow-right"></i>
+      </a>
+    </div>
+
+    <div class="job-list">
+      {% for job in featured_jobs %}
+        <a href="{% url 'marketplace:job_detail' pk=job.pk %}"
+           class="card job-card tilt-card"
+           data-aos="fade-up"
+           style="text-decoration:none;">
+          <div class="tilt-glare"></div>
+
+          <div class="job-logo" style="color:var(--amber);">
+            {% if job.employer.logo %}
+              <img src="{{ job.employer.logo.url }}" alt="{{ job.employer }}"
+                   style="width:100%;height:100%;object-fit:cover;border-radius:14px;">
+            {% else %}
+              <i class="{% if job.trade_category.icon_class %}{{ job.trade_category.icon_class }}{% else %}fas fa-briefcase{% endif %}"></i>
+            {% endif %}
+          </div>
+
+          <div class="job-info">
+            <div class="job-title">{{ job.title }}</div>
+            <div class="job-meta">
+              <span class="job-meta-item">
+                <i class="fas fa-building"></i>
+                {{ job.employer.company_name|default:job.employer.user.username }}
+              </span>
+              {% if job.state %}
+                <span class="job-meta-item">
+                  <i class="fas fa-map-pin"></i>
+                  {{ job.get_state_display }}{% if job.lga %}, {{ job.lga }}{% endif %}
+                </span>
+              {% endif %}
+              {% if job.is_remote %}
+                <span class="job-meta-item" style="color:var(--sky);">
+                  <i class="fas fa-wifi"></i> Remote
+                </span>
+              {% endif %}
+              <span class="job-meta-item">
+                <i class="fas fa-briefcase"></i> {{ job.get_job_type_display }}
+              </span>
+              <span class="job-meta-item">
+                <i class="fas fa-clock"></i> {{ job.created|timesince }} ago
+              </span>
+              {% if job.employer.is_verified %}
+                <span class="badge badge-green">
+                  <i class="fas fa-circle" style="font-size:6px"></i> Verified Employer
+                </span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="job-right">
+            {% if job.pay_min or job.pay_max %}
+              <div class="job-pay">
+                {% if job.pay_min and job.pay_max %}
+                  ₦{{ job.pay_min|floatformat:"0" }}–{{ job.pay_max|floatformat:"0" }}
+                {% elif job.pay_min %}
+                  ₦{{ job.pay_min|floatformat:"0" }}+
+                {% else %}
+                  up to ₦{{ job.pay_max|floatformat:"0" }}
+                {% endif %}
+                <small>/{{ job.get_pay_type_display }}</small>
+              </div>
+            {% elif job.pay_type == 'negotiable' %}
+              <div class="job-pay" style="font-size:0.9rem;">Negotiable</div>
+            {% endif %}
+
+            <div class="job-tags">
+              {% if job.trade_category %}
+                <span class="badge badge-amber">{{ job.trade_category.name }}</span>
+              {% endif %}
+              {% for skill in job.required_skills.all|slice:":1" %}
+                <span class="badge badge-sky">{{ skill.name }}</span>
+              {% endfor %}
+            </div>
+
+            {% if user.is_authenticated %}
+              <button class="btn-save" aria-label="Save job"
+                      onclick="event.preventDefault(); toggleSaveHome(this, '{{ job.pk }}');">
+                <i class="far fa-heart"></i>
+              </button>
+            {% endif %}
+          </div>
+
+        </a>
+      {% empty %}
+        <div style="text-align:center; padding:64px 24px; color:var(--text-3);">
+          <i class="fas fa-briefcase" style="font-size:2.5rem; display:block; margin-bottom:16px;"></i>
+          <p>No active jobs yet. Check back soon!</p>
+          <a href="{% url 'marketplace:job_list' %}" class="btn btn-outline" style="margin-top:20px;">
+            Browse All Jobs
+          </a>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════════
+     DEMO VIDEO
+══════════════════════════════════════════════════════════════════ -->
+<section class="demo-section">
+  <div class="container">
+
+    <div class="demo-header" data-aos="fade-up">
+      <div class="demo-badge">
+        <i class="fas fa-play-circle"></i> Watch the Demo
+      </div>
+      <h2 class="section-title">
+        See TradeLink NG<br><span class="amber-text">In Action</span>
+      </h2>
+    </div>
+
+    <div class="demo-video-wrap" data-aos="zoom-in" data-aos-duration="800">
+      <!-- Replace src with your actual YouTube demo URL when ready -->
+      <iframe
+        src="https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1&color=white"
+        title="TradeLink NG — How to Find Skilled Trade Work in Nigeria"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+        loading="lazy"
+      ></iframe>
+    </div>
+
+    <p class="demo-sub" data-aos="fade-up" data-aos-delay="100">
+      In under 3 minutes, see how to create your profile, browse open trade jobs, apply to employers, and get AI-matched to the right opportunities across Nigeria.
+    </p>
+
+    <div class="demo-chips" data-aos="fade-up" data-aos-delay="180">
+      <span class="demo-chip"><i class="fas fa-user-check"></i> Profile Setup (60 sec)</span>
+      <span class="demo-chip"><i class="fas fa-search"></i> Browsing Jobs</span>
+      <span class="demo-chip"><i class="fas fa-bolt"></i> AI Matching</span>
+      <span class="demo-chip"><i class="fas fa-paper-plane"></i> Sending Applications</span>
+      <span class="demo-chip"><i class="fas fa-shield-alt"></i> Verified Employer Badges</span>
+      <span class="demo-chip"><i class="fas fa-bell"></i> Job Alerts</span>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════════
+     AI MATCHING
+══════════════════════════════════════════════════════════════════ -->
+<section class="ai-section">
+  <div class="ai-inner z1">
+
+    <div data-aos="fade-right">
+      <p class="eyebrow">AI-Powered Matching</p>
+      <h2 class="section-title">
+        Smart Jobs That<br><span class="amber-text">Find You</span>
+      </h2>
+      <p class="section-sub">
+        We use AI to understand your skills, experience, and location — then surface the most relevant opportunities automatically.
+        No more endless scrolling.
+      </p>
+
+      <div class="ai-features">
+        <div class="ai-feature" data-aos="fade-right" data-aos-delay="100">
+          <div class="ai-feature-icon"><i class="fas fa-brain"></i></div>
+          <div>
+            <h4>Skills-Based Matching</h4>
+            <p>Our AI analyses your profile and matches you to jobs by skills — not just job titles.</p>
+          </div>
+        </div>
+        <div class="ai-feature" data-aos="fade-right" data-aos-delay="200">
+          <div class="ai-feature-icon"><i class="fas fa-map-pin"></i></div>
+          <div>
+            <h4>Location-Aware Search</h4>
+            <p>Find work close to you. We optimise results by state, LGA, and commute distance.</p>
+          </div>
+        </div>
+        <div class="ai-feature" data-aos="fade-right" data-aos-delay="300">
+          <div class="ai-feature-icon"><i class="fas fa-shield-alt"></i></div>
+          <div>
+            <h4>Verified Employers</h4>
+            <p>Every employer is vetted and verified so you can apply with confidence.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ai-visual z1" data-aos="fade-left">
+      <div style="position:relative; margin-bottom: 10px;">
+        <span class="ai-label">🤖 Top Matches for You</span>
+        <div class="card match-card match-card-top" style="margin-top:8px;">
+          <div class="match-avatar">
+            <img src="https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=96&h=96&fit=crop&q=80" alt="Adewale">
+          </div>
+          <div class="match-info">
+            <div class="match-name">Adewale Okafor</div>
+            <div class="match-trade">⚡ Electrician, 6 yrs • Lagos</div>
+          </div>
+          <div><div class="match-score">96%<br><small>match</small></div></div>
+        </div>
+      </div>
+      <div class="card match-card">
+        <div class="match-avatar" style="background:linear-gradient(135deg,#F97316,#D97706);">
+          <img src="https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=96&h=96&fit=crop&q=80" alt="Blessing">
+        </div>
+        <div class="match-info">
+          <div class="match-name">Blessing Musa</div>
+          <div class="match-trade">☀️ Solar Installer, 4 yrs • Abuja</div>
+        </div>
+        <div><div class="match-score">91%<br><small>match</small></div></div>
+      </div>
+      <div class="card match-card">
+        <div class="match-avatar" style="background:linear-gradient(135deg,#10B981,#059669);">CA</div>
+        <div class="match-info">
+          <div class="match-name">Chioma Adeola</div>
+          <div class="match-trade">✂️ Hair Stylist, 8 yrs • PH</div>
+        </div>
+        <div><div class="match-score">88%<br><small>match</small></div></div>
+      </div>
+      <div class="card match-card">
+        <div class="match-avatar" style="background:linear-gradient(135deg,#38BDF8,#0EA5E9);">
+          <img src="https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=96&h=96&fit=crop&q=80" alt="Emmanuel">
+        </div>
+        <div class="match-info">
+          <div class="match-name">Emmanuel Igwe</div>
+          <div class="match-trade">🔨 Carpenter, 5 yrs • Enugu</div>
+        </div>
+        <div><div class="match-score">85%<br><small>match</small></div></div>
+      </div>
+      <div style="text-align:center; padding:16px 0;">
+        <a href="{% url 'marketplace:dashboard' %}" class="btn btn-primary">
+          <i class="fas fa-magic"></i> Get My AI Matches
+        </a>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════════
+     HOW IT WORKS
+══════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div style="text-align:center; margin-bottom:52px;" data-aos="fade-up">
+      <p class="eyebrow" style="justify-content:center;">How It Works</p>
+      <h2 class="section-title">
+        Three Steps to Your<br><span class="amber-text">Next Opportunity</span>
+      </h2>
+    </div>
+
+    <div class="steps-grid">
+      <div class="card step-card tilt-card" data-aos="fade-up" data-aos-delay="0">
+        <div class="tilt-glare"></div>
+        <div class="step-num">01</div>
+        <div class="step-icon"><i class="fas fa-user-pen"></i></div>
+        <h3>Build Your Profile</h3>
+        <p>Create your free profile in minutes. Add your trade skills, experience level, location, and the kind of work you're looking for.</p>
+      </div>
+      <div class="card step-card tilt-card" data-aos="fade-up" data-aos-delay="120">
+        <div class="tilt-glare"></div>
+        <div class="step-num">02</div>
+        <div class="step-icon" style="color:var(--orange);"><i class="fas fa-bolt"></i></div>
+        <h3>Get Smart Matches</h3>
+        <p>Our AI instantly surfaces the most relevant jobs and employers. No endless scrolling — just opportunities that fit your real skills.</p>
+      </div>
+      <div class="card step-card tilt-card" data-aos="fade-up" data-aos-delay="240">
+        <div class="tilt-glare"></div>
+        <div class="step-num">03</div>
+        <div class="step-icon" style="color:var(--emerald);"><i class="fas fa-handshake"></i></div>
+        <h3>Get Hired &amp; Earn</h3>
+        <p>Apply directly, connect with employers, and land your next job. We make it easy to track applications and negotiate your rate.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════════
+     TESTIMONIALS — Swiper Carousel
+══════════════════════════════════════════════════════════════════ -->
+<section class="section jobs-section">
+  <div class="container">
+    <div style="text-align:center; margin-bottom:48px;" data-aos="fade-up">
+      <p class="eyebrow" style="justify-content:center;">Real Stories</p>
+      <h2 class="section-title">
+        Tradespeople <span class="amber-text">Winning</span> Daily
+      </h2>
+    </div>
+
+    <div class="swiper testimonials-swiper" data-aos="fade-up">
+      <div class="swiper-wrapper">
+
+        <div class="swiper-slide">
+          <div class="card testi-card">
+            <div class="testi-stars">★★★★★</div>
+            <div class="testi-quote">"</div>
+            <p class="testi-text">
+              I was hustling for jobs on WhatsApp for months. Two weeks after joining TradeLink NG,
+              I landed a full-time position with a real construction firm in Abuja.
+              This platform understands us.
+            </p>
+            <div class="testi-author">
+              <div class="testi-avatar">KU</div>
+              <div>
+                <div class="testi-name">Kabiru Usman</div>
+                <div class="testi-role">Site Foreman · Abuja, FCT</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="swiper-slide">
+          <div class="card testi-card">
+            <div class="testi-stars">★★★★★</div>
+            <div class="testi-quote">"</div>
+            <p class="testi-text">
+              As a solar installer with no office address, nobody took me seriously online.
+              On TradeLink NG my verified profile did the talking. I now get 5–6 enquiries every week.
+            </p>
+            <div class="testi-author">
+              <div class="testi-avatar" style="background:linear-gradient(135deg,#F97316,#D97706);">FO</div>
+              <div>
+                <div class="testi-name">Folake Ogunleye</div>
+                <div class="testi-role">Solar Installer · Lagos</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="swiper-slide">
+          <div class="card testi-card">
+            <div class="testi-stars">★★★★★</div>
+            <div class="testi-quote">"</div>
+            <p class="testi-text">
+              I've been doing hair for 12 years but always depended on walk-ins.
+              Now I get clients from across Port Harcourt through the app.
+              My income doubled in 3 months.
+            </p>
+            <div class="testi-author">
+              <div class="testi-avatar" style="background:linear-gradient(135deg,#F472B6,#EC4899);">NA</div>
+              <div>
+                <div class="testi-name">Ngozi Amara</div>
+                <div class="testi-role">Hair Stylist · Port Harcourt</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="swiper-slide">
+          <div class="card testi-card">
+            <div class="testi-stars">★★★★★</div>
+            <div class="testi-quote">"</div>
+            <p class="testi-text">
+              TradeLink NG changed everything for my welding shop.
+              Within a month I had three long-term contracts lined up. The verified badge alone
+              gives clients the trust they need to commit.
+            </p>
+            <div class="testi-author">
+              <div class="testi-avatar" style="background:linear-gradient(135deg,#38BDF8,#0EA5E9);">CE</div>
+              <div>
+                <div class="testi-name">Chukwuemeka Eze</div>
+                <div class="testi-role">Master Welder · Enugu</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /.swiper-wrapper -->
+      <div class="swiper-pagination testi-pager"></div>
+    </div><!-- /.testimonials-swiper -->
+
+    <div class="testi-nav">
+      <button class="testi-nav-btn" id="testiPrev" aria-label="Previous testimonial">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <button class="testi-nav-btn" id="testiNext" aria-label="Next testimonial">
+        <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════════
+     FAQ
+══════════════════════════════════════════════════════════════════ -->
+<section class="faq-section" id="faq">
+  <div class="faq-layout">
+
+    <!-- ── Left: sticky intro ── -->
+    <div class="faq-sticky" data-aos="fade-right">
+      <p class="eyebrow">Got Questions?</p>
+      <h2 class="section-title" style="margin-bottom:16px;">
+        Frequently<br><span class="amber-text">Asked</span>
+      </h2>
+      <p class="faq-sticky section-sub">
+        Everything you need to know about TradeLink NG — whether you're a skilled worker looking for jobs or an employer hiring talent.
+      </p>
+      <a href="/contact/" class="faq-contact">
+        <div class="faq-contact-icon"><i class="fas fa-headset"></i></div>
+        <div class="faq-contact-text">
+          <strong>Still have questions?</strong>
+          <span>Chat with our support team</span>
+        </div>
+        <i class="fas fa-arrow-right" style="margin-left:auto; color:var(--text-3); font-size:0.8rem;"></i>
+      </a>
+    </div>
+
+    <!-- ── Right: accordion ── -->
+    <div data-aos="fade-left" data-aos-delay="80">
+
+      <div class="faq-tabs" id="faqTabs">
+        <button class="faq-tab active" data-group="all">All</button>
+        <button class="faq-tab" data-group="workers">For Workers</button>
+        <button class="faq-tab" data-group="employers">For Employers</button>
+        <button class="faq-tab" data-group="platform">Platform</button>
+      </div>
+
+      <div class="faq-list" id="faqList">
+
+        <!-- Workers -->
+        <div class="faq-item" data-group="workers">
+          <button class="faq-q" aria-expanded="false">
+            Is TradeLink NG free for skilled workers?
+            <span class="faq-q-icon"><i class="fas fa-plus"></i></span>
+          </button>
+          <div class="faq-a" role="region">
+            <p>Yes — creating a worker profile, browsing jobs, and applying to openings is completely free. There are no hidden fees or subscription costs. We believe every Nigerian tradesperson deserves equal access to job opportunities.</p>
+          </div>
+        </div>
+
+        <div class="faq-item" data-group="workers">
+          <button class="faq-q" aria-expanded="false">
+            What trades can I register as on the platform?
+            <span class="faq-q-icon"><i class="fas fa-plus"></i></span>
+          </button>
+          <div class="faq-a" role="region">
+            <p>We support a wide range of trades including Electricians, Plumbers, Carpenters, Welders, Masons, Painters, Solar Installers, HVAC Technicians, Auto Mechanics, Hair Stylists, Tailors, Caterers, and many more. If your trade isn't listed, <a href="/contact/">contact us</a> and we'll add it.</p>
+          </div>
+        </div>
+
+        <div class="faq-item" data-group="workers">
+          <button class="faq-q" aria-expanded="false">
+            How does AI job matching work for workers?
+            <span class="faq-q-icon"><i class="fas fa-plus"></i></span>
+          </button>
+          <div class="faq-a" role="region">
+            <p>Once your profile is complete, our AI analyses your listed trade skills, years of experience, certifications, and preferred location — then automatically surfaces job openings that best match your profile. The more complete your profile, the better your matches. You can access your personalised matches from your <a href="{% url 'marketplace:dashboard' %}">dashboard</a>.</p>
+          </div>
+        </div>
+
+        <div class="faq-item" data-group="workers">
+          <button class="faq-q" aria-expanded="false">
+            How do I get the Verified Worker badge?
+            <span class="faq-q-icon"><i class="fas fa-plus"></i></span>
+          </button>
+          <div class="faq-a" role="region">
+            <p>The Verified badge is awarded after we confirm your identity and at least one skill credential (e.g. trade certificate, references from a previous employer, or a short skills test). Verification boosts your profile visibility significantly and builds trust with employers. Apply via your profile settings.</p>
+          </div>
+        </div>
+
+        <div class="faq-item" data-group="workers">
+          <button class="faq-q" aria-expanded="false">
+            Can I find contract/one-off gigs as well as full-time jobs?
+            <span class="faq-q-icon"><i class="fas fa-plus"></i></span>
+          </button>
+          <div class="faq-a" role="region">
+            <p>Absolutely. Job listings are categorised by type: Full-Time, Part-Time, Contract, and One-Off Projects. You can filter the job board by type to find exactly the kind of work that fits your schedule. Many tradespeople use TradeLink NG for both steady employment and side contracts.</p>
+          </div>
+        </div>
+
+        <!-- Employers -->
+        <div class="faq-item" data-group="employers">
+          <button class="faq-q" aria-expanded="false">
+            How do I post a job as an employer?
+            <span class="faq-q-icon"><i class="fas fa-plus"></i></span>
+          </button>
+          <div class="faq-a" role="region">
+            <p>Register an employer account, complete your company profile, then click "Post a Job" from your dashboard. Fill in the trade category, location, pay, and requirements — your listing goes live within minutes and is immediately visible to thousands of verified tradespeople. <a href="/register/">Get started free.</a></p>
+          </div>
+        </div>
+
+        <div class="faq-item" data-group="employers">
+          <button class="faq-q" aria-expanded="false">
+            How do I know the workers are genuinely skilled?
+            <span class="faq-q-icon"><i class="fas fa-plus"></i></span>
+          </button>
+          <div class="faq-a" role="region">
+            <p>Workers with the <strong style="color:var(--emerald);">Verified</strong> badge have passed our identity and credential check. Beyond that, you can review each worker's star ratings, reviews from past employers, portfolio photos, and years of experience — all displayed on their public profile before you make contact.</p>
+          </div>
+        </div>
+
+        <div class="faq-item" data-group="employers">
+          <button class="faq-q" aria-expanded="false">
+            Is there a cost to hire through TradeLink NG?
+            <span class="faq-q-icon"><i class="fas fa-plus"></i></span>
+          </button>
+          <div class="faq-a" role="region">
+            <p>Posting jobs and browsing worker profiles is free. Premium employer plans unlock features like promoted job listings, unlimited direct messaging, and advanced analytics. See our <a href="/pricing/">pricing page</a> for full details.</p>
+          </div>
+        </div>
+
+        <!-- Platform -->
+        <div class="faq-item" data-group="platform">
+          <button class="faq-q" aria-expanded="false">
+            Which Nigerian states does TradeLink NG cover?
+            <span class="faq-q-icon"><i class="fas fa-plus"></i></span>
+          </button>
+          <div class="faq-a" role="region">
+            <p>We currently cover all 36 Nigerian states plus the FCT. Our highest concentrations of jobs and workers are currently in Lagos, Abuja, Port Harcourt, Enugu, Kano, and Ibadan — but the platform is growing rapidly in every region.</p>
+          </div>
+        </div>
+
+        <div class="faq-item" data-group="platform">
+          <button class="faq-q" aria-expanded="false">
+            Is my personal data safe on the platform?
+            <span class="faq-q-icon"><i class="fas fa-plus"></i></span>
+          </button>
+          <div class="faq-a" role="region">
+            <p>We take data privacy seriously. Your personal information is encrypted, never sold to third parties, and only shared with employers when you apply to their jobs. We comply with the Nigeria Data Protection Regulation (NDPR). See our <a href="/privacy/">Privacy Policy</a> for full details.</p>
+          </div>
+        </div>
+
+        <div class="faq-item" data-group="platform">
+          <button class="faq-q" aria-expanded="false">
+            Does TradeLink NG have a mobile app?
+            <span class="faq-q-icon"><i class="fas fa-plus"></i></span>
+          </button>
+          <div class="faq-a" role="region">
+            <p>Our website is fully mobile-optimised and works great on any smartphone browser with no download needed. A dedicated Android and iOS app is currently in development and will be available soon. <a href="/notify/">Join the waitlist</a> to get notified at launch.</p>
+          </div>
+        </div>
+
+      </div><!-- /.faq-list -->
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════════
+     CTA
+══════════════════════════════════════════════════════════════════ -->
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-card" data-aos="zoom-in" data-aos-duration="700">
+
+      <!-- Decorative orbs -->
+      <div class="cta-orb cta-orb-1" aria-hidden="true"></div>
+      <div class="cta-orb cta-orb-2" aria-hidden="true"></div>
+      <div class="cta-orb cta-orb-3" aria-hidden="true"></div>
+
+      <div class="cta-inner-content z1">
+        <p class="eyebrow" style="justify-content:center; margin-bottom:20px;">Start Today</p>
+        <h2>Your Skills Deserve<br><span class="amber-text">To Be Found</span></h2>
+        <p>Join thousands of Nigerian tradespeople already using TradeLink NG to find better work, earn more, and grow their careers.</p>
+        <div class="cta-actions">
+          <a href="/register/" class="btn btn-primary btn-lg">
+            <i class="fas fa-user-plus"></i> Create Free Account
+          </a>
+          <a href="{% url 'marketplace:job_list' %}" class="btn btn-ghost btn-lg">
+            <i class="fas fa-search"></i> Browse Jobs
+          </a>
+        </div>
+        <p style="font-size:0.82rem; color:var(--text-3); margin-top:24px;">
+          No subscription needed &nbsp;·&nbsp; Free to join &nbsp;·&nbsp; Takes 2 minutes
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+
+<!-- ── CDN Libraries (loaded at body-end for performance) ── -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+<script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+
+<script>
+/* ─────────────────────────────────────────────────────────────────────
+   HERO SEARCH AUTOCOMPLETE
+───────────────────────────────────────────────────────────────────── */
+const TRADE_SUGGESTIONS = [
+  {% for cat in all_categories %}
+  {
+    text: "{{ cat.name|escapejs }}",
+    icon: "{{ cat.icon_class|default:'fas fa-hard-hat'|escapejs }}",
+    jobs: {{ cat.job_count }},
+    url:  "{% url 'marketplace:job_list' %}?trade={{ cat.pk }}",
+  },
+  {% endfor %}
+];
+
+const KEYWORD_SUGGESTIONS = [
+  'Electrician','Plumber','Carpenter','Welder','Mason','Painter',
+  'Solar Panel Installation','CCTV Installation','Generator Repair',
+  'AC Technician','Hair Braiding','Locs','Furniture Making',
+  'Roof Framing','Aluminium Fabrication','Steel Fabrication',
+  'POP Ceiling','Screeding','Waterproofing','Tiling','Glazier',
+  'Auto Mechanic','Vulcanizer','Fumigation','Catering','Cleaning',
+].map(k => ({ text: k, icon: 'fas fa-tools', jobs: null, url: null }));
+
+const ALL_AC = [...TRADE_SUGGESTIONS, ...KEYWORD_SUGGESTIONS];
+
+const heroInput    = document.getElementById('heroSearchInput');
+const heroDropdown = document.getElementById('heroAcDropdown');
+const heroClear    = document.getElementById('heroSearchClear');
+const heroForm     = document.getElementById('heroSearchForm');
+
+let acIndex = -1;
+let acTimer = null;
+
+function hlMatch(text, q) {
+  if (!q) return text;
+  const esc = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return text.replace(new RegExp(`(${esc})`, 'gi'), '<em>$1</em>');
+}
+
+function renderAc(query) {
+  if (!query || query.length < 1) { closeAc(); return; }
+  const q = query.toLowerCase().trim();
+  const results = ALL_AC
+    .filter(s => s.text.toLowerCase().includes(q))
+    .map(s => ({ ...s, score: s.text.toLowerCase().startsWith(q) ? 1 : 0 }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 9);
+
+  if (!results.length) {
+    heroDropdown.innerHTML = `<div class="ac-empty">Press Enter — our AI will find the best matches</div>`;
+    openAc(); return;
+  }
+
+  const trades   = results.filter(r => r.jobs !== null);
+  const keywords = results.filter(r => r.jobs === null);
+  let html = '';
+
+  if (trades.length) {
+    html += `<div class="ac-section-label"><i class="fas fa-hard-hat" style="margin-right:5px;"></i>Trades</div>`;
+    trades.forEach(s => {
+      html += `<div class="ac-item" data-value="${s.text.replace(/"/g,'&quot;')}" data-url="${s.url || ''}">
+        <i class="${s.icon}"></i>
+        <span>${hlMatch(s.text, query)}</span>
+        ${s.jobs ? `<span class="ac-item-sub">${s.jobs} job${s.jobs !== 1 ? 's' : ''}</span>` : ''}
+      </div>`;
+    });
+  }
+  if (keywords.length) {
+    html += `<div class="ac-section-label"><i class="fas fa-tools" style="margin-right:5px;"></i>Skills</div>`;
+    keywords.forEach(s => {
+      html += `<div class="ac-item" data-value="${s.text.replace(/"/g,'&quot;')}" data-url="">
+        <i class="${s.icon}"></i>
+        <span>${hlMatch(s.text, query)}</span>
+      </div>`;
+    });
+  }
+
+  heroDropdown.innerHTML = html;
+  acIndex = -1;
+  heroDropdown.querySelectorAll('.ac-item').forEach(item => {
+    item.addEventListener('mousedown', e => { e.preventDefault(); selectAc(item); });
+  });
+  openAc();
+}
+
+function openAc()  { heroDropdown.classList.add('open'); }
+function closeAc() { heroDropdown.classList.remove('open'); acIndex = -1; }
+
+function selectAc(item) {
+  const url = item.dataset.url;
+  if (url) { window.location.href = url; }
+  else { heroInput.value = item.dataset.value; closeAc(); heroForm.submit(); }
+}
+
+function navigateAc(dir) {
+  const items = heroDropdown.querySelectorAll('.ac-item');
+  if (!items.length) return;
+  if (acIndex >= 0) items[acIndex].classList.remove('highlighted');
+  acIndex += dir;
+  if (acIndex < 0) acIndex = items.length - 1;
+  if (acIndex >= items.length) acIndex = 0;
+  items[acIndex].classList.add('highlighted');
+  items[acIndex].scrollIntoView({ block: 'nearest' });
+}
+
+function updateClearHero() {
+  heroClear.classList.toggle('visible', heroInput.value.length > 0);
+}
+heroClear.addEventListener('click', () => {
+  heroInput.value = ''; updateClearHero(); closeAc(); heroInput.focus();
+});
+heroInput.addEventListener('input', () => {
+  updateClearHero();
+  clearTimeout(acTimer);
+  acTimer = setTimeout(() => renderAc(heroInput.value), 100);
+});
+heroInput.addEventListener('keydown', e => {
+  if (!heroDropdown.classList.contains('open')) return;
+  if (e.key === 'ArrowDown') { e.preventDefault(); navigateAc(1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); navigateAc(-1); }
+  else if (e.key === 'Enter') {
+    const items = heroDropdown.querySelectorAll('.ac-item');
+    if (acIndex >= 0 && items[acIndex]) { e.preventDefault(); selectAc(items[acIndex]); }
+  }
+  else if (e.key === 'Escape') closeAc();
+});
+heroInput.addEventListener('focus', () => {
+  if (heroInput.value.length >= 1) renderAc(heroInput.value);
+});
+document.addEventListener('click', e => {
+  if (!document.querySelector('.hero-search-wrap').contains(e.target)) closeAc();
+});
+
+
+/* ─────────────────────────────────────────────────────────────────────
+   SAVE TOGGLE
+───────────────────────────────────────────────────────────────────── */
+function toggleSaveHome(btn, jobId) {
+  const icon = btn.querySelector('i');
+  fetch(`/jobs/${jobId}/save/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': '{{ csrf_token }}',
+      'X-Requested-With': 'XMLHttpRequest',
+    },
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.saved !== undefined) {
+      btn.classList.toggle('saved', data.saved);
+      icon.className = data.saved ? 'fas fa-heart' : 'far fa-heart';
+    }
+  })
+  .catch(() => {
+    btn.classList.toggle('saved');
+    icon.className = btn.classList.contains('saved') ? 'fas fa-heart' : 'far fa-heart';
+  });
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────
+   FAQ — Accordion + Category Tabs
+───────────────────────────────────────────────────────────────────── */
+(function initFAQ() {
+  const list  = document.getElementById('faqList');
+  const tabs  = document.querySelectorAll('.faq-tab');
+  if (!list) return;
+
+  // Accordion toggle
+  list.addEventListener('click', e => {
+    const btn = e.target.closest('.faq-q');
+    if (!btn) return;
+    const item = btn.closest('.faq-item');
+    const isOpen = item.classList.contains('open');
+
+    // Close all
+    list.querySelectorAll('.faq-item.open').forEach(i => {
+      i.classList.remove('open');
+      i.querySelector('.faq-q').setAttribute('aria-expanded', 'false');
+    });
+
+    // Open clicked (unless it was already open)
+    if (!isOpen) {
+      item.classList.add('open');
+      btn.setAttribute('aria-expanded', 'true');
+      // Smooth scroll into view on mobile
+      if (window.innerWidth < 768) {
+        setTimeout(() => item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+      }
+    }
+  });
+
+  // Tab filter
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const group = tab.dataset.group;
+      // Close all open items first
+      list.querySelectorAll('.faq-item.open').forEach(i => {
+        i.classList.remove('open');
+        i.querySelector('.faq-q').setAttribute('aria-expanded', 'false');
+      });
+      list.querySelectorAll('.faq-item').forEach(item => {
+        if (group === 'all' || item.dataset.group === group) {
+          item.style.display = '';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    });
+  });
+
+  // Open first item by default
+  const firstItem = list.querySelector('.faq-item');
+  if (firstItem) {
+    firstItem.classList.add('open');
+    firstItem.querySelector('.faq-q').setAttribute('aria-expanded', 'true');
+  }
+})();
+
+
+
+AOS.init({
+  duration: 720,
+  once: true,
+  easing: 'ease-out-cubic',
+  offset: 60,
+});
+
+
+/* ─────────────────────────────────────────────────────────────────────
+   THREE.JS — Hero 3D Particle Sphere
+───────────────────────────────────────────────────────────────────── */
+(function initThreeHero() {
+  const canvas = document.getElementById('heroCanvas');
+  if (!canvas || typeof THREE === 'undefined') return;
+
+  const heroSection = canvas.closest('.hero');
+
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  const scene  = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+  camera.position.z = 38;
+
+  function setSize() {
+    const w = heroSection.offsetWidth;
+    const h = heroSection.offsetHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  setSize();
+
+  // ── 1) Large outer sphere of glowing particles ──
+  const SPHERE_COUNT = 420;
+  const SPHERE_RADIUS = 20;
+  const spherePos = new Float32Array(SPHERE_COUNT * 3);
+  for (let i = 0; i < SPHERE_COUNT; i++) {
+    const phi   = Math.acos(-1 + (2 * i) / SPHERE_COUNT);
+    const theta = Math.sqrt(SPHERE_COUNT * Math.PI) * phi;
+    spherePos[i * 3]     = SPHERE_RADIUS * Math.cos(theta) * Math.sin(phi);
+    spherePos[i * 3 + 1] = SPHERE_RADIUS * Math.sin(theta) * Math.sin(phi);
+    spherePos[i * 3 + 2] = SPHERE_RADIUS * Math.cos(phi);
+  }
+  const sphereGeo = new THREE.BufferGeometry();
+  sphereGeo.setAttribute('position', new THREE.BufferAttribute(spherePos, 3));
+  const sphereMat = new THREE.PointsMaterial({
+    color: 0xF59E0B, size: 0.18,
+    transparent: true, opacity: 0.55,
+    sizeAttenuation: true,
+  });
+  const sphereMesh = new THREE.Points(sphereGeo, sphereMat);
+  scene.add(sphereMesh);
+
+  // ── 2) Inner dense core cloud ──
+  const CORE_COUNT = 180;
+  const corePos = new Float32Array(CORE_COUNT * 3);
+  for (let i = 0; i < CORE_COUNT; i++) {
+    const r = 6 + Math.random() * 7;
+    const theta = Math.random() * Math.PI * 2;
+    const phi   = Math.acos(2 * Math.random() - 1);
+    corePos[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+    corePos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+    corePos[i * 3 + 2] = r * Math.cos(phi);
+  }
+  const coreGeo = new THREE.BufferGeometry();
+  coreGeo.setAttribute('position', new THREE.BufferAttribute(corePos, 3));
+  const coreMat = new THREE.PointsMaterial({
+    color: 0xFBBF24, size: 0.28,
+    transparent: true, opacity: 0.75,
+  });
+  const coreMesh = new THREE.Points(coreGeo, coreMat);
+  scene.add(coreMesh);
+
+  // ── 3) Connecting lattice lines on sphere ──
+  const LINE_COUNT = 90;
+  const lnPos = new Float32Array(LINE_COUNT * 6);
+  const lnGeo = new THREE.BufferGeometry();
+  lnGeo.setAttribute('position', new THREE.BufferAttribute(lnPos, 3));
+  const lnMat = new THREE.LineBasicMaterial({
+    color: 0xF59E0B, transparent: true, opacity: 0.10,
+  });
+  const lineMesh = new THREE.LineSegments(lnGeo, lnMat);
+  scene.add(lineMesh);
+
+  // Pre-build lattice pairs
+  const latticePairs = [];
+  for (let i = 0; i < SPHERE_COUNT && latticePairs.length < LINE_COUNT; i++) {
+    for (let j = i + 1; j < SPHERE_COUNT && latticePairs.length < LINE_COUNT; j++) {
+      const dx = spherePos[i*3]-spherePos[j*3];
+      const dy = spherePos[i*3+1]-spherePos[j*3+1];
+      const dz = spherePos[i*3+2]-spherePos[j*3+2];
+      if (dx*dx+dy*dy+dz*dz < 28) latticePairs.push([i, j]);
+    }
+  }
+  latticePairs.forEach(([i, j], li) => {
+    if (li >= LINE_COUNT) return;
+    lnPos[li*6]   = spherePos[i*3];   lnPos[li*6+1] = spherePos[i*3+1]; lnPos[li*6+2] = spherePos[i*3+2];
+    lnPos[li*6+3] = spherePos[j*3];   lnPos[li*6+4] = spherePos[j*3+1]; lnPos[li*6+5] = spherePos[j*3+2];
+  });
+  lnGeo.attributes.position.needsUpdate = true;
+
+  // ── 4) Ambient floating node network (background) ──
+  const NODE_COUNT = 55;
+  const nodes = Array.from({ length: NODE_COUNT }, () => ({
+    x: (Math.random()-0.5)*80, y: (Math.random()-0.5)*50, z: (Math.random()-0.5)*10,
+    vx:(Math.random()-0.5)*0.008, vy:(Math.random()-0.5)*0.008,
+  }));
+  const netPos = new Float32Array(NODE_COUNT * 3);
+  const netGeo = new THREE.BufferGeometry();
+  netGeo.setAttribute('position', new THREE.BufferAttribute(netPos, 3));
+  const netMat = new THREE.PointsMaterial({ color:0xF97316, size:0.22, transparent:true, opacity:0.45 });
+  scene.add(new THREE.Points(netGeo, netMat));
+
+  const MAX_NET_LINES = 80;
+  const nlPos = new Float32Array(MAX_NET_LINES * 6);
+  const nlGeo = new THREE.BufferGeometry();
+  nlGeo.setAttribute('position', new THREE.BufferAttribute(nlPos, 3));
+  const nlMat = new THREE.LineBasicMaterial({ color:0xF97316, transparent:true, opacity:0.08 });
+  scene.add(new THREE.LineSegments(nlGeo, nlMat));
+
+  // Mouse parallax
+  let mx = 0, my = 0;
+  document.addEventListener('mousemove', e => {
+    mx = (e.clientX / window.innerWidth  - 0.5) * 2;
+    my = (e.clientY / window.innerHeight - 0.5) * 2;
+  });
+
+  let rafId, t = 0;
+  function animate() {
+    rafId = requestAnimationFrame(animate);
+    t += 0.004;
+
+    // Rotate sphere slowly + tilt toward cursor
+    sphereMesh.rotation.y = t * 0.35 + mx * 0.12;
+    sphereMesh.rotation.x = t * 0.12 + my * 0.08;
+    coreMesh.rotation.y   = -t * 0.22 + mx * 0.08;
+    coreMesh.rotation.x   = t * 0.18 - my * 0.06;
+    lineMesh.rotation.copy(sphereMesh.rotation);
+
+    // Breathe scale
+    const s = 1 + Math.sin(t * 1.2) * 0.018;
+    sphereMesh.scale.setScalar(s);
+    coreMesh.scale.setScalar(1 + Math.sin(t * 0.9 + 1) * 0.025);
+
+    // Animate opacity gently
+    sphereMat.opacity = 0.45 + Math.sin(t * 0.8) * 0.1;
+    coreMat.opacity   = 0.65 + Math.sin(t * 1.1 + 0.5) * 0.1;
+
+    // Ambient net
+    for (let i = 0; i < NODE_COUNT; i++) {
+      nodes[i].x += nodes[i].vx; nodes[i].y += nodes[i].vy;
+      if (Math.abs(nodes[i].x) > 40) nodes[i].vx *= -1;
+      if (Math.abs(nodes[i].y) > 25) nodes[i].vy *= -1;
+      netPos[i*3] = nodes[i].x; netPos[i*3+1] = nodes[i].y; netPos[i*3+2] = nodes[i].z;
+    }
+    netGeo.attributes.position.needsUpdate = true;
+    let li2 = 0;
+    for (let i = 0; i < NODE_COUNT && li2 < MAX_NET_LINES; i++) {
+      for (let j = i+1; j < NODE_COUNT && li2 < MAX_NET_LINES; j++) {
+        const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y;
+        if (dx*dx+dy*dy < 180) {
+          nlPos[li2*6]=nodes[i].x; nlPos[li2*6+1]=nodes[i].y; nlPos[li2*6+2]=0;
+          nlPos[li2*6+3]=nodes[j].x; nlPos[li2*6+4]=nodes[j].y; nlPos[li2*6+5]=0;
+          li2++;
+        }
+      }
+    }
+    nlGeo.setDrawRange(0, li2 * 2);
+    nlGeo.attributes.position.needsUpdate = true;
+
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  const ro = new ResizeObserver(setSize);
+  ro.observe(heroSection);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) cancelAnimationFrame(rafId);
+    else animate();
+  });
+})();
+
+
+/* ─────────────────────────────────────────────────────────────────────
+   TYPED.JS — Hero typewriter
+───────────────────────────────────────────────────────────────────── */
+(function initTyped() {
+  if (typeof Typed === 'undefined') return;
+  new Typed('#heroTypedLine', {
+    strings: [
+      'Your Trade Skills',
+      'Your Craft &amp; Expertise',
+      'Your Hard Work',
+      'Your Career',
+      'Your Potential',
+    ],
+    typeSpeed:    52,
+    backSpeed:    28,
+    backDelay:    2400,
+    startDelay:   600,
+    loop:         true,
+    cursorChar:   '|',
+    smartBackspace: true,
+  });
+})();
+
+
+/* ─────────────────────────────────────────────────────────────────────
+   FLOATING TOOL ICONS — Hero ring
+───────────────────────────────────────────────────────────────────── */
+(function initToolRing() {
+  const ring = document.getElementById('heroToolRing');
+  if (!ring) return;
+  const tools = [
+    { icon: 'fas fa-bolt',        size: 42, top: '12%', left: '8%',   dur: '7.2s', delay: '0s'   },
+    { icon: 'fas fa-wrench',      size: 38, top: '70%', left: '5%',   dur: '8.5s', delay: '1.2s' },
+    { icon: 'fas fa-hard-hat',    size: 44, top: '20%', left: '92%',  dur: '6.8s', delay: '0.6s' },
+    { icon: 'fas fa-hammer',      size: 36, top: '75%', left: '89%',  dur: '9.0s', delay: '2.0s' },
+    { icon: 'fas fa-solar-panel', size: 40, top: '45%', left: '3%',   dur: '7.8s', delay: '0.3s' },
+    { icon: 'fas fa-tools',       size: 38, top: '50%', left: '94%',  dur: '8.2s', delay: '1.5s' },
+    { icon: 'fas fa-paint-roller',size: 36, top: '85%', left: '50%',  dur: '7.5s', delay: '0.9s' },
+    { icon: 'fas fa-cog',         size: 34, top: '5%',  left: '50%',  dur: '9.5s', delay: '1.8s' },
+  ];
+  tools.forEach(t => {
+    const el = document.createElement('div');
+    el.className = 'tool-float';
+    el.style.cssText = [
+      `width:${t.size}px`, `height:${t.size}px`,
+      `top:${t.top}`, `left:${t.left}`,
+      `--dur:${t.dur}`, `--delay:${t.delay}`,
+    ].join(';');
+    el.innerHTML = `<i class="${t.icon}"></i>`;
+    ring.appendChild(el);
+    setTimeout(() => el.classList.add('show'), 1200);
+  });
+})();
+
+
+/* ─────────────────────────────────────────────────────────────────────
+   3D TILT CARDS — mousemove perspective effect
+───────────────────────────────────────────────────────────────────── */
+(function initTiltCards() {
+  const MAX_TILT = 8; // degrees
+  document.querySelectorAll('.tilt-card').forEach(card => {
+    card.style.setProperty('perspective', '900px');
+    const glare = card.querySelector('.tilt-glare');
+
+    card.addEventListener('mousemove', e => {
+      const r  = card.getBoundingClientRect();
+      const cx = r.left + r.width  / 2;
+      const cy = r.top  + r.height / 2;
+      const dx = (e.clientX - cx) / (r.width  / 2);
+      const dy = (e.clientY - cy) / (r.height / 2);
+      const rx =  dy * MAX_TILT;
+      const ry = -dx * MAX_TILT;
+      card.style.transform = `perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg) scale3d(1.02,1.02,1.02)`;
+      if (glare) {
+        const gx = ((e.clientX - r.left) / r.width)  * 100;
+        const gy = ((e.clientY - r.top)  / r.height) * 100;
+        glare.style.setProperty('--gx', `${gx}%`);
+        glare.style.setProperty('--gy', `${gy}%`);
+      }
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = 'perspective(900px) rotateX(0) rotateY(0) scale3d(1,1,1)';
+    });
+  });
+})();
+
+
+/* ─────────────────────────────────────────────────────────────────────
+   GSAP — Hero entrance + floating worker cards
+───────────────────────────────────────────────────────────────────── */
+(function initGSAP() {
+  if (typeof gsap === 'undefined') return;
+
+  // Set initial states
+  gsap.set(['#heroBadge','#heroH1','#heroSub','#heroSearch','#heroTags'], {
+    opacity: 0, y: 28,
+  });
+  gsap.set('#heroScroll', { opacity: 0, y: 10 });
+  gsap.set('.wf-card',    { opacity: 0, scale: 0.88, rotationY: 8 });
+
+  // Hero timeline — staggered cinematic entrance
+  gsap.timeline({ delay: 0.35 })
+    .to('#heroBadge', { opacity: 1, y: 0, duration: 0.7,  ease: 'back.out(1.8)' })
+    .to('#heroH1',    { opacity: 1, y: 0, duration: 0.85, ease: 'power3.out' }, '-=0.4')
+    .to('#heroSub',   { opacity: 1, y: 0, duration: 0.65, ease: 'power3.out' }, '-=0.45')
+    .to('#heroSearch',{ opacity: 1, y: 0, duration: 0.65, ease: 'power3.out' }, '-=0.38')
+    .to('#heroTags',  { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out' }, '-=0.3')
+    .to('#heroScroll',{ opacity: 1, y: 0, duration: 0.5,  ease: 'power3.out' }, '-=0.2')
+    .to('.wf-card',   { opacity: 1, scale: 1, rotationY: 0, stagger: 0.16, duration: 0.8, ease: 'back.out(1.6)' }, '-=0.5');
+
+  // Floating animation for worker cards
+  gsap.to('.hero-workers-left  .wf-card:nth-child(1)', { y: -10, repeat:-1, yoyo:true, duration:3.2, ease:'sine.inOut' });
+  gsap.to('.hero-workers-left  .wf-card:nth-child(2)', { y: -8,  repeat:-1, yoyo:true, duration:3.8, ease:'sine.inOut', delay:0.7 });
+  gsap.to('.hero-workers-right .wf-card:nth-child(1)', { y: -9,  repeat:-1, yoyo:true, duration:3.5, ease:'sine.inOut', delay:0.4 });
+  gsap.to('.hero-workers-right .wf-card:nth-child(2)', { y: -11, repeat:-1, yoyo:true, duration:4.0, ease:'sine.inOut', delay:1.1 });
+})();
+
+
+/* ─────────────────────────────────────────────────────────────────────
+   SWIPER — Testimonials Carousel
+───────────────────────────────────────────────────────────────────── */
+(function initSwiper() {
+  if (typeof Swiper === 'undefined') return;
+
+  const swiper = new Swiper('.testimonials-swiper', {
+    slidesPerView: 1,
+    spaceBetween: 20,
+    loop: true,
+    autoplay: { delay: 5000, disableOnInteraction: false, pauseOnMouseEnter: true },
+    pagination: { el: '.testi-pager', clickable: true },
+    breakpoints: {
+      640:  { slidesPerView: 2, spaceBetween: 20 },
+      1024: { slidesPerView: 3, spaceBetween: 24 },
+    },
+    on: { slideChange: () => {} },
+  });
+
+  document.getElementById('testiPrev').addEventListener('click', () => swiper.slidePrev());
+  document.getElementById('testiNext').addEventListener('click', () => swiper.slideNext());
+})();
+
+
+/* ─────────────────────────────────────────────────────────────────────
+   TRUST BAR — Animated Counters
+───────────────────────────────────────────────────────────────────── */
+(function initCounters() {
+  const counters = document.querySelectorAll('.trust-num[data-counter]');
+  if (!counters.length) return;
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const el     = entry.target;
+      const target = parseInt(el.dataset.counter, 10) || 0;
+      const suffix = el.dataset.suffix || '';
+      const start  = performance.now();
+      const dur    = 1800;
+
+      // Only animate if target > 0 (DB might have real numbers)
+      if (target === 0) return;
+
+      function tick(now) {
+        const p = Math.min((now - start) / dur, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+        const val = Math.round(target * eased);
+        el.textContent = val.toLocaleString() + suffix;
+        if (p < 1) requestAnimationFrame(tick);
+        else el.textContent = target.toLocaleString() + suffix;
+      }
+      requestAnimationFrame(tick);
+      observer.unobserve(el);
+    });
+  }, { threshold: 0.6 });
+
+  counters.forEach(c => observer.observe(c));
+})();
+
+</script>
+{% endblock %}

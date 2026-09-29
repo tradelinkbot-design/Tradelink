@@ -1,0 +1,12 @@
+sk_test_819e7b74de52464e1a16ee6a67e0cc6fda401fc8 pk_test_0ce944b55fdf24f031942b88d383fd7cfc850ffa http://127.0.0.1:8000/escrow/paystack/callback/ sk_test_819e7b74de52464e1a16ee6a67e0cc6fda401fc8
+[TradeLink] Loading sentence-transformer (sync)...
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:  95%|#########4| 189/199 [00:00<00:00, 1884.40it/s]Loading weights: 100%|##########| 199/199 [00:00<00:00, 1932.63it/s]
+release_order_to_seller: Paystack transfer failed for order b5f6d6a7-d9fd-4874-905d-a3ee2f75327b — You cannot initiate third party payouts as a starter business
+[TradeLink] [OK] Model ready.
+Found Order: b5f6d6a7-d9fd-4874-905d-a3ee2f75327b | Status: confirmed
+Seller payout amount: 7790.00
+Bank: 8030824223, Recipient: RCP_6d7awszw8b8cpdz
+Attempting to release funds now...
+release_order_to_seller returned: False
+New Status: confirmed
+Transfer Ref: None

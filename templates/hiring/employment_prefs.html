@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  .prefs-page-container {
+    min-height: 100vh;
+    padding: calc(var(--nav-h) + 40px) clamp(16px, 5vw, 64px) 80px;
+    max-width: 700px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .breadcrumb-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+    font-size: 0.85rem;
+    color: var(--text-3);
+  }
+  .breadcrumb-nav a {
+    color: var(--text-2);
+    text-decoration: none;
+    transition: var(--t);
+  }
+  .breadcrumb-nav a:hover {
+    color: var(--amber);
+  }
+
+  .prefs-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 36px clamp(20px, 4vw, 40px);
+    box-shadow: var(--shadow-md);
+  }
+  .prefs-card h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: var(--text-1);
+  }
+  .prefs-card-sub {
+    color: var(--text-2);
+    font-size: 0.92rem;
+    margin-bottom: 28px;
+  }
+
+  /* Open to work toggle card */
+  .toggle-banner {
+    background: rgba(16, 185, 129, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: var(--r-lg);
+    padding: 20px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .toggle-info h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-1);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .toggle-info p {
+    color: var(--text-2);
+    font-size: 0.84rem;
+    line-height: 1.5;
+    margin-bottom: 0;
+  }
+
+  .form-group-custom {
+    margin-bottom: 22px;
+  }
+  .form-group-custom label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-2);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-subtle);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="prefs-page-container">
+
+  {# ── Breadcrumb ── #}
+  <div class="breadcrumb-nav">
+    <a href="{% url 'home' %}">Home</a>
+    <span>/</span>
+    <a href="{% url 'hiring:worker_profile_enhanced' %}">My Profile</a>
+    <span>/</span>
+    <span style="color: var(--text-1);">Employment Preferences</span>
+  </div>
+
+  <div class="prefs-card">
+    <div class="eyebrow"><i class="fas fa-sliders-h"></i> Career Settings</div>
+    <h1>{{ page_title }}</h1>
+    <p class="prefs-card-sub">
+      Control how employers find you in the talent directory and communicate your hiring availability.
+    </p>
+
+    <form method="post">
+      {% csrf_token %}
+
+      {# Open to Work Switch #}
+      <div class="toggle-banner">
+        <div class="toggle-info">
+          <h3><i class="fas fa-dot-circle" style="color: var(--emerald);"></i> Open to Permanent Work</h3>
+          <p>When turned on, your profile is indexed in the Talent Directory so businesses can contact you directly.</p>
+        </div>
+        <div>
+          <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            {{ form.open_to_employment }}
+            <span style="font-weight: 700; color: var(--emerald); font-size: 0.9rem;">Enable</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group-custom">
+        <label for="id_employment_preference">Employment Type Preference</label>
+        {{ form.employment_preference }}
+        {% for err in form.employment_preference.errors %}
+          <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ err }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="form-group-custom">
+        <label for="id_expected_monthly_salary">Expected Monthly Salary (₦ NGN)</label>
+        {{ form.expected_monthly_salary }}
+        <div style="font-size: 0.78rem; color: var(--text-3); margin-top: 4px;">
+          Set your baseline monthly salary expectation for full-time permanent roles.
+        </div>
+        {% for err in form.expected_monthly_salary.errors %}
+          <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ err }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="form-group-custom">
+        <label for="id_notice_period">Notice Period / Availability</label>
+        {{ form.notice_period }}
+        <div style="font-size: 0.78rem; color: var(--text-3); margin-top: 4px;">
+          e.g. "Available Immediately", "2 Weeks Notice", or "1 Month Notice".
+        </div>
+        {% for err in form.notice_period.errors %}
+          <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ err }}</div>
+        {% endfor %}
+      </div>
+
+      {% if form.non_field_errors %}
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--r-md); padding: 12px; color: #EF4444; margin-bottom: 20px;">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      <div class="btn-row">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save"></i> Save Preferences
+        </button>
+        <a href="{% url 'hiring:worker_profile_enhanced' %}" class="btn btn-ghost">
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,1281 @@
+{% extends "base.html" %}
+{% block title %}
+  {% if action == 'update' %}Edit Listing — {{ product.title }}{% else %}New Listing{% endif %}
+  — TradeLink NG Marketplace
+{% endblock %}
+{% block nav_marketplace %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* =====================================================
+     MARKETPLACE — PRODUCT FORM
+     Supports: create (action='create') and edit (action='update')
+  ===================================================== */
+
+  /* ── Page shell ─────────────────────────────────────── */
+  .pf-page {
+    padding-top: calc(var(--nav-h) + clamp(32px, 5vw, 64px));
+    padding-bottom: clamp(56px, 8vw, 96px);
+    position: relative; z-index: 1;
+  }
+
+  /* ── Breadcrumb ──────────────────────────────────────── */
+  .pf-breadcrumb {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.8rem; color: var(--text-3); margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .pf-breadcrumb a {
+    color: var(--text-3); text-decoration: none; transition: var(--t);
+  }
+  .pf-breadcrumb a:hover { color: var(--amber); }
+  .pf-breadcrumb i { font-size: 0.65rem; }
+  .pf-breadcrumb .current { color: var(--text-2); }
+
+  /* ── Page header ─────────────────────────────────────── */
+  .pf-header { margin-bottom: 36px; }
+  .pf-header .eyebrow { margin-bottom: 10px; }
+  .pf-header h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.7rem, 4vw, 2.6rem);
+    font-weight: 800; line-height: 1.15; letter-spacing: -0.5px;
+    margin-bottom: 10px;
+  }
+  .pf-header p { color: var(--text-2); font-size: 0.95rem; max-width: 520px; }
+
+  /* ── Layout: 2-col on desktop ─────────────────────────── */
+  .pf-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 28px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .pf-layout { grid-template-columns: 1fr; }
+  }
+
+  /* ── Shared section card ─────────────────────────────── */
+  .pf-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: clamp(20px, 3vw, 32px);
+    margin-bottom: 20px;
+  }
+  .pf-section:last-child { margin-bottom: 0; }
+
+  .pf-section-head {
+    display: flex; align-items: center; gap: 12px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 24px;
+  }
+  .pf-section-icon {
+    width: 38px; height: 38px; border-radius: var(--r-md);
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--amber); font-size: 0.9rem; flex-shrink: 0;
+  }
+  .pf-section-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.05rem; font-weight: 700; color: var(--text-1);
+  }
+  .pf-section-sub {
+    font-size: 0.78rem; color: var(--text-3); margin-top: 2px;
+  }
+
+  /* ── Form rows ───────────────────────────────────────── */
+  .pf-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  .pf-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .pf-row.cols-1 { grid-template-columns: 1fr; }
+  @media (max-width: 640px) {
+    .pf-row, .pf-row.cols-3 { grid-template-columns: 1fr; }
+  }
+
+  /* ── Form group overrides ────────────────────────────── */
+  .form-group { margin-bottom: 0; }
+  .form-label {
+    font-size: 0.82rem; font-weight: 600; color: var(--text-2);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .form-label .req { color: var(--amber); font-size: 0.7rem; }
+  .form-label .opt { color: var(--text-3); font-size: 0.72rem; font-weight: 400; }
+
+  .form-control {
+    width: 100%; padding: 12px 16px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg); color: var(--text-1);
+    font-family: 'Outfit', sans-serif; font-size: 0.92rem;
+    transition: var(--t); outline: none;
+  }
+  .form-control::placeholder { color: var(--text-3); }
+  .form-control:focus {
+    border-color: var(--amber); background: rgba(245,158,11,0.04);
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.12);
+  }
+  .form-control.is-error { border-color: #F87171; box-shadow: 0 0 0 3px rgba(248,113,113,0.12); }
+  .form-control.has-icon { padding-left: 42px; }
+
+  textarea.form-control { resize: vertical; min-height: 110px; line-height: 1.6; }
+  select.form-control { cursor: pointer; }
+  select.form-control option { background: var(--bg-card); color: var(--text-1); }
+
+  /* Prefix / suffix wraps */
+  .input-affix-wrap { position: relative; display: flex; align-items: center; }
+  .input-prefix {
+    position: absolute; left: 0;
+    height: 100%; display: flex; align-items: center; padding: 0 14px;
+    font-size: 0.9rem; font-weight: 600; color: var(--amber);
+    border-right: 1px solid var(--border-subtle);
+    pointer-events: none; white-space: nowrap;
+  }
+  .input-affix-wrap .form-control { padding-left: 46px; }
+
+  .input-wrap { position: relative; }
+  .input-icon {
+    position: absolute; left: 14px; top: 50%;
+    transform: translateY(-50%); color: var(--text-3);
+    font-size: 0.85rem; pointer-events: none;
+  }
+  .input-wrap .form-control { padding-left: 42px; }
+
+  .field-hint {
+    font-size: 0.75rem; color: var(--text-3); margin-top: 5px; line-height: 1.4;
+  }
+  .field-error {
+    font-size: 0.75rem; color: #F87171; margin-top: 5px;
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  /* ── Condition card picker ───────────────────────────── */
+  .condition-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+  }
+  @media (max-width: 480px) { .condition-grid { grid-template-columns: 1fr; } }
+
+  .condition-card input[type="radio"] { display: none; }
+  .condition-label {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px 16px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg); cursor: pointer; transition: var(--t);
+  }
+  .condition-label:hover {
+    border-color: var(--border-strong); background: var(--surface-1);
+  }
+  .condition-card input[type="radio"]:checked + .condition-label {
+    border-color: var(--amber);
+    background: rgba(245,158,11,0.07);
+    box-shadow: 0 0 0 1px var(--amber);
+  }
+  .condition-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--surface-1); display: flex; align-items: center;
+    justify-content: center; font-size: 0.85rem; flex-shrink: 0;
+  }
+  .condition-card input[type="radio"]:checked + .condition-label .condition-icon {
+    background: rgba(245,158,11,0.15); color: var(--amber);
+  }
+  .condition-text { flex: 1; min-width: 0; }
+  .condition-name { font-size: 0.85rem; font-weight: 600; color: var(--text-1); line-height: 1.2; }
+  .condition-desc { font-size: 0.72rem; color: var(--text-3); margin-top: 3px; }
+
+  /* ── Image upload zone ───────────────────────────────── */
+  .img-upload-zone {
+    border: 2px dashed var(--border-subtle);
+    border-radius: var(--r-lg);
+    padding: 32px 20px;
+    text-align: center; cursor: pointer;
+    transition: var(--t); position: relative;
+    background: rgba(255,255,255,0.015);
+  }
+  .img-upload-zone:hover, .img-upload-zone.drag-over {
+    border-color: var(--amber); background: rgba(245,158,11,0.04);
+  }
+  .img-upload-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .img-upload-icon {
+    width: 52px; height: 52px; border-radius: var(--r-lg);
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px; font-size: 1.3rem; color: var(--amber);
+    pointer-events: none;
+  }
+  .img-upload-title {
+    font-weight: 600; font-size: 0.92rem; color: var(--text-1);
+    margin-bottom: 5px; pointer-events: none;
+  }
+  .img-upload-sub { font-size: 0.78rem; color: var(--text-3); pointer-events: none; }
+
+  /* Preview thumbnails */
+  .img-preview-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    margin-top: 14px; display: none;
+  }
+  .img-preview-grid.has-images { display: grid; }
+  .img-thumb {
+    position: relative; border-radius: var(--r-md);
+    overflow: hidden; aspect-ratio: 1/1;
+    border: 1px solid var(--border-subtle);
+  }
+  .img-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .img-thumb .thumb-remove {
+    position: absolute; top: 4px; right: 4px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: rgba(0,0,0,0.75); border: none; cursor: pointer;
+    color: #fff; font-size: 0.65rem; display: flex; align-items: center;
+    justify-content: center; transition: var(--t);
+  }
+  .img-thumb .thumb-remove:hover { background: #F87171; }
+  .img-thumb.is-cover::after {
+    content: 'Cover'; position: absolute; bottom: 4px; left: 4px;
+    font-size: 0.62rem; font-weight: 700; padding: 2px 6px;
+    background: rgba(245,158,11,0.85); color: #0C0A08; border-radius: 4px;
+  }
+
+  /* Existing images (edit mode) */
+  .existing-images-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    margin-bottom: 12px;
+  }
+  .existing-img-thumb {
+    position: relative; border-radius: var(--r-md);
+    overflow: hidden; aspect-ratio: 1/1;
+    border: 1px solid var(--border-subtle);
+  }
+  .existing-img-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .existing-img-delete {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; background: rgba(0,0,0,0); transition: var(--t);
+    text-decoration: none;
+  }
+  .existing-img-delete:hover { background: rgba(248,113,113,0.55); }
+  .existing-img-delete i {
+    font-size: 1.1rem; color: #fff; opacity: 0; transition: var(--t);
+  }
+  .existing-img-delete:hover i { opacity: 1; }
+
+  /* ── Toggle switch ───────────────────────────────────── */
+  .toggle-row {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border-subtle);
+  }
+  .toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .toggle-row:first-child { padding-top: 0; }
+  .toggle-info { flex: 1; }
+  .toggle-label {
+    font-size: 0.88rem; font-weight: 600; color: var(--text-1);
+  }
+  .toggle-desc { font-size: 0.76rem; color: var(--text-3); margin-top: 3px; }
+
+  .toggle-switch { position: relative; width: 42px; height: 24px; flex-shrink: 0; margin-top: 2px; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-track {
+    position: absolute; inset: 0; cursor: pointer;
+    background: var(--surface-2); border: 1px solid var(--border-subtle);
+    border-radius: 100px; transition: var(--t);
+  }
+  .toggle-track::before {
+    content: ''; position: absolute;
+    width: 16px; height: 16px; left: 3px; top: 50%;
+    transform: translateY(-50%); background: var(--text-3);
+    border-radius: 50%; transition: var(--t);
+  }
+  .toggle-switch input:checked + .toggle-track {
+    background: rgba(245,158,11,0.2); border-color: var(--amber);
+  }
+  .toggle-switch input:checked + .toggle-track::before {
+    transform: translate(18px, -50%); background: var(--amber);
+  }
+
+  /* ── Sidebar cards ───────────────────────────────────── */
+  .sidebar-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 22px;
+    margin-bottom: 16px;
+  }
+  .sidebar-card:last-child { margin-bottom: 0; }
+  .sidebar-card-title {
+    font-family: 'Fraunces', serif;
+    font-size: 0.95rem; font-weight: 700; color: var(--text-1);
+    margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+  }
+  .sidebar-card-title i { color: var(--amber); font-size: 0.85rem; }
+
+  /* Fee preview */
+  .fee-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 0; border-bottom: 1px solid var(--border-subtle);
+    font-size: 0.83rem;
+  }
+  .fee-row:last-child { border-bottom: none; }
+  .fee-row-label { color: var(--text-2); }
+  .fee-row-value { font-weight: 600; color: var(--text-1); }
+  .fee-row.payout .fee-row-value { color: var(--emerald); font-size: 0.95rem; }
+
+  /* Tips list */
+  .tip-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .tip-list li {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 0.82rem; color: var(--text-2); line-height: 1.5;
+  }
+  .tip-list li i { color: var(--amber); font-size: 0.75rem; margin-top: 3px; flex-shrink: 0; }
+
+  /* ── Status selector (edit mode) ─────────────────────── */
+  .status-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  .status-opt input[type="radio"] { display: none; }
+  .status-opt-label {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 12px 8px; border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg); cursor: pointer; transition: var(--t);
+    font-size: 0.75rem; font-weight: 600; text-align: center; color: var(--text-2);
+  }
+  .status-opt-label i { font-size: 1rem; }
+  .status-opt-label:hover { border-color: var(--border-strong); background: var(--surface-1); color: var(--text-1); }
+  .status-opt input:checked + .status-opt-label {
+    border-color: var(--amber); background: rgba(245,158,11,0.08); color: var(--amber);
+  }
+
+  /* ── Action bar ──────────────────────────────────────── */
+  .pf-actions {
+    display: flex; gap: 12px; align-items: center;
+    flex-wrap: wrap; padding-top: 8px;
+  }
+  .pf-actions .btn { min-width: 140px; justify-content: center; }
+  .pf-actions .btn-save-draft {
+    background: var(--surface-1); color: var(--text-2);
+    border: 1px solid var(--border-subtle);
+  }
+  .pf-actions .btn-save-draft:hover {
+    background: var(--surface-2); color: var(--text-1); border-color: var(--border-strong);
+  }
+
+  /* ── Alert / error banner ────────────────────────────── */
+  .pf-alert {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 16px 20px; border-radius: var(--r-lg);
+    margin-bottom: 24px; font-size: 0.85rem;
+  }
+  .pf-alert-error {
+    background: rgba(248,113,113,0.08);
+    border: 1px solid rgba(248,113,113,0.22);
+    color: #FCA5A5;
+  }
+  .pf-alert i { font-size: 0.95rem; margin-top: 1px; flex-shrink: 0; }
+
+  /* ── Progress steps ──────────────────────────────────── */
+  .pf-steps {
+    display: flex; align-items: center; gap: 0;
+    margin-bottom: 36px; overflow-x: auto;
+  }
+  .pf-step {
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  }
+  .pf-step-num {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.72rem; font-weight: 700;
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    color: var(--text-3); flex-shrink: 0;
+  }
+  .pf-step.done .pf-step-num { background: rgba(16,185,129,0.12); border-color: var(--emerald); color: var(--emerald); }
+  .pf-step.active .pf-step-num { background: rgba(245,158,11,0.15); border-color: var(--amber); color: var(--amber); }
+  .pf-step-label { font-size: 0.78rem; font-weight: 500; color: var(--text-3); }
+  .pf-step.active .pf-step-label { color: var(--text-1); font-weight: 600; }
+  .pf-step-line { flex: 1; height: 1px; background: var(--border-subtle); margin: 0 8px; min-width: 24px; }
+
+  @media (max-width: 560px) {
+    .pf-steps { gap: 4px; }
+    .pf-step-label { display: none; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="pf-page">
+  <div class="container">
+
+    {% if not verification_profile or verification_profile.level < 1 %}
+    <!-- Gating Screen -->
+    <div class="pf-section fade-up text-center" style="padding: 64px 24px; text-align: center; max-width: 600px; margin: 40px auto 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;">
+      <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(245,158,11,0.12); display: flex; align-items: center; justify-content: center; font-size: 2.2rem; color: var(--amber); margin-bottom: 8px;">
+        <i class="fas fa-lock"></i>
+      </div>
+      <h2 style="font-family: 'Fraunces', serif; font-size: 1.8rem; font-weight: 800; color: var(--text-1); margin: 0;">
+        Identity Verification Required
+      </h2>
+      <p style="color: var(--text-2); font-size: 0.98rem; line-height: 1.6; margin: 0 0 16px; max-width: 480px;">
+        To list tools and products on TradeLink NG, you must first verify your identity. This helps keep our community safe and trusted.
+      </p>
+      <div style="display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap;">
+        <a href="{% url 'verify:nin' %}" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px;">
+          <i class="fas fa-id-card"></i> Verify My NIN
+        </a>
+        <a href="{% url 'mktplace:product_list' %}" class="btn btn-outline" style="padding: 12px 24px; text-decoration: none;">
+          Browse Marketplace
+        </a>
+      </div>
+    </div>
+    {% else %}
+
+    <!-- ── Breadcrumb ─────────────────────────────────────── -->
+    <nav class="pf-breadcrumb" aria-label="Breadcrumb">
+      <a href="{% url 'home' %}">Home</a>
+      <i class="fas fa-chevron-right"></i>
+      <a href="{% url 'mktplace:product_list' %}">Marketplace</a>
+      <i class="fas fa-chevron-right"></i>
+      <a href="{% url 'mktplace:seller_dashboard' %}">My Dashboard</a>
+      <i class="fas fa-chevron-right"></i>
+      <span class="current">
+        {% if action == 'update' %}Edit Listing{% else %}New Listing{% endif %}
+      </span>
+    </nav>
+
+    <!-- ── Page header ────────────────────────────────────── -->
+    <div class="pf-header fade-up">
+      <p class="eyebrow">
+        <i class="fas fa-store"></i>
+        {% if action == 'update' %}Edit Listing{% else %}Sell on Marketplace{% endif %}
+      </p>
+      <h1>
+        {% if action == 'update' %}
+          Update <em class="amber-text">{{ product.title|truncatechars:40 }}</em>
+        {% else %}
+          List a <em class="amber-text">Tool or Item</em>
+        {% endif %}
+      </h1>
+      <p>
+        {% if action == 'update' %}
+          Update your listing details. Changes are reflected immediately for active listings.
+        {% else %}
+          Reach thousands of tradespeople looking for quality tools. Your payout lands in your bank within 24 hours of buyer confirmation.
+        {% endif %}
+      </p>
+    </div>
+
+    <!-- ── Progress steps ─────────────────────────────────── -->
+    <div class="pf-steps fade-up d1">
+      <div class="pf-step active">
+        <div class="pf-step-num">1</div>
+        <span class="pf-step-label">Listing details</span>
+      </div>
+      <div class="pf-step-line"></div>
+      <div class="pf-step">
+        <div class="pf-step-num">2</div>
+        <span class="pf-step-label">Review &amp; publish</span>
+      </div>
+      <div class="pf-step-line"></div>
+      <div class="pf-step">
+        <div class="pf-step-num">3</div>
+        <span class="pf-step-label">Go live</span>
+      </div>
+    </div>
+
+    <!-- ── Error banner ───────────────────────────────────── -->
+    {% if errors %}
+    <div class="pf-alert pf-alert-error fade-up" role="alert">
+      <i class="fas fa-circle-exclamation"></i>
+      <div>
+        <strong>Please fix the errors below before continuing.</strong>
+        <ul style="margin-top:6px; padding-left:16px; display:flex; flex-direction:column; gap:3px;">
+          {% for field, msg in errors.items %}
+          <li>{{ msg }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Django messages ────────────────────────────────── -->
+    {% if messages %}
+      {% for message in messages %}
+      <div class="pf-alert pf-alert-{% if message.tags == 'error' %}error{% else %}success{% endif %} fade-up"
+           style="{% if message.tags != 'error' %}background:rgba(16,185,129,0.08);border-color:rgba(16,185,129,0.22);color:#6EE7B7;{% endif %}">
+        <i class="fas fa-{% if message.tags == 'error' %}circle-exclamation{% else %}circle-check{% endif %}"></i>
+        <div>{{ message }}</div>
+      </div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- ── Main form ──────────────────────────────────────── -->
+    <form method="post"
+          enctype="multipart/form-data"
+          id="productForm"
+          novalidate>
+      {% csrf_token %}
+
+      <div class="pf-layout">
+
+        <!-- ════════════════ LEFT COLUMN ════════════════ -->
+        <div class="pf-main">
+
+          <!-- ─ SECTION 1: Core details ─────────────────── -->
+          <div class="pf-section fade-up d1">
+            <div class="pf-section-head">
+              <div class="pf-section-icon"><i class="fas fa-tag"></i></div>
+              <div>
+                <div class="pf-section-title">Listing Details</div>
+                <div class="pf-section-sub">Title, category, description, and brand</div>
+              </div>
+            </div>
+
+            <!-- Title -->
+            <div class="form-group pf-row cols-1" style="margin-bottom:18px;">
+              <div>
+                <label class="form-label" for="id_title">
+                  Title <span class="req">required</span>
+                </label>
+                <div class="input-wrap" style="margin-top:7px;">
+                  <i class="fas fa-pencil input-icon"></i>
+                  <input
+                    type="text"
+                    id="id_title"
+                    name="title"
+                    class="form-control has-icon {% if errors.title %}is-error{% endif %}"
+                    placeholder="e.g. Bosch 9-inch Angle Grinder, barely used"
+                    maxlength="200"
+                    value="{% if action == 'update' and not form_data.title %}{{ product.title }}{% else %}{{ form_data.title }}{% endif %}"
+                    required
+                  />
+                </div>
+                {% if errors.title %}
+                <p class="field-error"><i class="fas fa-circle-exclamation"></i> {{ errors.title }}</p>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Category + Condition row -->
+            <div class="pf-row" style="margin-bottom:18px;">
+              <div class="form-group">
+                <label class="form-label" for="id_category">
+                  Category <span class="opt">(optional)</span>
+                </label>
+                <div class="input-wrap" style="margin-top:7px;">
+                  <i class="fas fa-folder input-icon"></i>
+                  <select id="id_category" name="category"
+                          class="form-control has-icon">
+                    <option value="">— Select a category —</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.pk }}"
+                      {% if selected_category == cat.pk|stringformat:'s' %}selected{% endif %}>
+                      {{ cat.name }}
+                    </option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="id_slots">
+                  Quantity <span class="opt">(units available)</span>
+                </label>
+                <div class="input-wrap" style="margin-top:7px;">
+                  <i class="fas fa-layer-group input-icon"></i>
+                  <input
+                    type="number"
+                    id="id_slots"
+                    name="slots"
+                    class="form-control has-icon"
+                    min="1" max="999"
+                    value="{% if action == 'update' and not form_data.slots %}{{ product.slots }}{% else %}{{ form_data.slots|default:'1' }}{% endif %}"
+                  />
+                </div>
+                <p class="field-hint">Set to 1 for a single item</p>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="form-group" style="margin-bottom:18px;">
+              <label class="form-label" for="id_description">
+                Description <span class="req">required</span>
+              </label>
+              <textarea
+                id="id_description"
+                name="description"
+                class="form-control {% if errors.description %}is-error{% endif %}"
+                rows="5"
+                placeholder="Describe the item — its age, what it's been used for, any faults or defects, what's included…"
+                style="margin-top:7px;"
+              >{% if action == 'update' and not form_data.description %}{{ product.description }}{% else %}{{ form_data.description }}{% endif %}</textarea>
+              {% if errors.description %}
+              <p class="field-error"><i class="fas fa-circle-exclamation"></i> {{ errors.description }}</p>
+              {% endif %}
+              <p class="field-hint">A detailed description helps buyers trust the listing and boosts your ranking in search results.</p>
+            </div>
+
+            <!-- Brand + Model row -->
+            <div class="pf-row">
+              <div class="form-group">
+                <label class="form-label" for="id_brand">
+                  Brand <span class="opt">(optional)</span>
+                </label>
+                <div class="input-wrap" style="margin-top:7px;">
+                  <i class="fas fa-certificate input-icon"></i>
+                  <input
+                    type="text"
+                    id="id_brand"
+                    name="brand"
+                    class="form-control has-icon"
+                    placeholder="e.g. Bosch, Dewalt, Makita"
+                    maxlength="100"
+                    value="{% if action == 'update' and not form_data.brand %}{{ product.brand }}{% else %}{{ form_data.brand }}{% endif %}"
+                  />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="id_model_number">
+                  Model / SKU <span class="opt">(optional)</span>
+                </label>
+                <div class="input-wrap" style="margin-top:7px;">
+                  <i class="fas fa-barcode input-icon"></i>
+                  <input
+                    type="text"
+                    id="id_model_number"
+                    name="model_number"
+                    class="form-control has-icon"
+                    placeholder="e.g. GWS 9-125"
+                    maxlength="100"
+                    value="{% if action == 'update' and not form_data.model_number %}{{ product.model_number }}{% else %}{{ form_data.model_number }}{% endif %}"
+                  />
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /section 1 -->
+
+          <!-- ─ SECTION 2: Condition ────────────────────── -->
+          <div class="pf-section fade-up d2">
+            <div class="pf-section-head">
+              <div class="pf-section-icon"><i class="fas fa-star-half-stroke"></i></div>
+              <div>
+                <div class="pf-section-title">Condition</div>
+                <div class="pf-section-sub">Be honest — buyers rely on this</div>
+              </div>
+            </div>
+
+            <div class="condition-grid">
+              {% for value, label in conditions %}
+              <div class="condition-card">
+                <input
+                  type="radio"
+                  id="cond_{{ value }}"
+                  name="condition"
+                  value="{{ value }}"
+                  {% if form_data.condition == value %}checked{% endif %}
+                />
+                <label class="condition-label" for="cond_{{ value }}">
+                  <div class="condition-icon">
+                    {% if value == 'new' %}<i class="fas fa-sparkles"></i>
+                    {% elif value == 'used_good' %}<i class="fas fa-thumbs-up"></i>
+                    {% elif value == 'used_fair' %}<i class="fas fa-wrench"></i>
+                    {% else %}<i class="fas fa-screwdriver-wrench"></i>{% endif %}
+                  </div>
+                  <div class="condition-text">
+                    <div class="condition-name">{{ label }}</div>
+                    <div class="condition-desc">
+                      {% if value == 'new' %}Unused, original packaging or without defects
+                      {% elif value == 'used_good' %}Fully functional, minimal wear
+                      {% elif value == 'used_fair' %}Works but shows noticeable use
+                      {% else %}Sold for parts or repair only{% endif %}
+                    </div>
+                  </div>
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+            {% if errors.condition %}
+            <p class="field-error" style="margin-top:12px;"><i class="fas fa-circle-exclamation"></i> {{ errors.condition }}</p>
+            {% endif %}
+          </div><!-- /section 2 -->
+
+          <!-- ─ SECTION 3: Pricing ──────────────────────── -->
+          <div class="pf-section fade-up d3">
+            <div class="pf-section-head">
+              <div class="pf-section-icon"><i class="fas fa-naira-sign"></i></div>
+              <div>
+                <div class="pf-section-title">Pricing</div>
+                <div class="pf-section-sub">Listed price and offer settings</div>
+              </div>
+            </div>
+
+            <div class="pf-row" style="margin-bottom:18px;">
+              <!-- Listed price -->
+              <div class="form-group">
+                <label class="form-label" for="id_price">
+                  Listed Price (₦) <span class="req">required</span>
+                </label>
+                <div class="input-affix-wrap" style="margin-top:7px;">
+                  <span class="input-prefix">₦</span>
+                  <input
+                    type="number"
+                    id="id_price"
+                    name="price"
+                    class="form-control {% if errors.price %}is-error{% endif %}"
+                    placeholder="0.00"
+                    min="1"
+                    step="0.01"
+                    value="{% if action == 'update' and not form_data.price %}{{ product.price }}{% else %}{{ form_data.price }}{% endif %}"
+                    required
+                  />
+                </div>
+                {% if errors.price %}
+                <p class="field-error"><i class="fas fa-circle-exclamation"></i> {{ errors.price }}</p>
+                {% endif %}
+              </div>
+
+              <!-- Minimum offer (private) -->
+              <div class="form-group" id="minOfferGroup">
+                <label class="form-label" for="id_min_offer">
+                  Min Offer (₦) <span class="opt">private — not shown to buyers</span>
+                </label>
+                <div class="input-affix-wrap" style="margin-top:7px;">
+                  <span class="input-prefix">₦</span>
+                  <input
+                    type="number"
+                    id="id_min_offer"
+                    name="min_offer"
+                    class="form-control {% if errors.min_offer %}is-error{% endif %}"
+                    placeholder="e.g. 18000"
+                    min="1"
+                    step="0.01"
+                    value="{% if action == 'update' and not form_data.min_offer %}{{ product.min_offer }}{% else %}{{ form_data.min_offer }}{% endif %}"
+                  />
+                </div>
+                {% if errors.min_offer %}
+                <p class="field-error"><i class="fas fa-circle-exclamation"></i> {{ errors.min_offer }}</p>
+                {% endif %}
+                <p class="field-hint">Offers below this are automatically declined.</p>
+              </div>
+            </div>
+
+            <!-- Offer toggles -->
+            <div>
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <div class="toggle-label">Accept Offers</div>
+                  <div class="toggle-desc">Allow buyers to negotiate a lower price</div>
+                </div>
+                <label class="toggle-switch">
+                  <input
+                    type="checkbox"
+                    name="offers_allowed"
+                    id="id_offers_allowed"
+                    value="1"
+                    {% if form_data.offers_allowed == '1' %}checked{% endif %}
+                  />
+                  <span class="toggle-track"></span>
+                </label>
+              </div>
+            </div>
+
+          </div><!-- /section 3 -->
+
+          <!-- ─ SECTION 4: Location & Pickup ───────────── -->
+          <div class="pf-section fade-up d4">
+            <div class="pf-section-head">
+              <div class="pf-section-icon"><i class="fas fa-location-dot"></i></div>
+              <div>
+                <div class="pf-section-title">Location &amp; Pickup</div>
+                <div class="pf-section-sub">Where and how buyers can collect the item</div>
+              </div>
+            </div>
+
+            <div class="pf-row" style="margin-bottom:18px;">
+              <!-- State -->
+              <div class="form-group">
+                <label class="form-label" for="id_state">State</label>
+                <div class="input-wrap" style="margin-top:7px;">
+                  <i class="fas fa-map input-icon"></i>
+                  <select id="id_state" name="state" class="form-control has-icon">
+                    <option value="">— Select state —</option>
+                    {% with current_state=selected_state %}
+                    <option value="Abia"{% if current_state == "Abia" %} selected{% endif %}>Abia</option>
+                    <option value="Adamawa"{% if current_state == "Adamawa" %} selected{% endif %}>Adamawa</option>
+                    <option value="Akwa Ibom"{% if current_state == "Akwa Ibom" %} selected{% endif %}>Akwa Ibom</option>
+                    <option value="Anambra"{% if current_state == "Anambra" %} selected{% endif %}>Anambra</option>
+                    <option value="Bauchi"{% if current_state == "Bauchi" %} selected{% endif %}>Bauchi</option>
+                    <option value="Bayelsa"{% if current_state == "Bayelsa" %} selected{% endif %}>Bayelsa</option>
+                    <option value="Benue"{% if current_state == "Benue" %} selected{% endif %}>Benue</option>
+                    <option value="Borno"{% if current_state == "Borno" %} selected{% endif %}>Borno</option>
+                    <option value="Cross River"{% if current_state == "Cross River" %} selected{% endif %}>Cross River</option>
+                    <option value="Delta"{% if current_state == "Delta" %} selected{% endif %}>Delta</option>
+                    <option value="Ebonyi"{% if current_state == "Ebonyi" %} selected{% endif %}>Ebonyi</option>
+                    <option value="Edo"{% if current_state == "Edo" %} selected{% endif %}>Edo</option>
+                    <option value="Ekiti"{% if current_state == "Ekiti" %} selected{% endif %}>Ekiti</option>
+                    <option value="Enugu"{% if current_state == "Enugu" %} selected{% endif %}>Enugu</option>
+                    <option value="FCT"{% if current_state == "FCT" %} selected{% endif %}>FCT — Abuja</option>
+                    <option value="Gombe"{% if current_state == "Gombe" %} selected{% endif %}>Gombe</option>
+                    <option value="Imo"{% if current_state == "Imo" %} selected{% endif %}>Imo</option>
+                    <option value="Jigawa"{% if current_state == "Jigawa" %} selected{% endif %}>Jigawa</option>
+                    <option value="Kaduna"{% if current_state == "Kaduna" %} selected{% endif %}>Kaduna</option>
+                    <option value="Kano"{% if current_state == "Kano" %} selected{% endif %}>Kano</option>
+                    <option value="Katsina"{% if current_state == "Katsina" %} selected{% endif %}>Katsina</option>
+                    <option value="Kebbi"{% if current_state == "Kebbi" %} selected{% endif %}>Kebbi</option>
+                    <option value="Kogi"{% if current_state == "Kogi" %} selected{% endif %}>Kogi</option>
+                    <option value="Kwara"{% if current_state == "Kwara" %} selected{% endif %}>Kwara</option>
+                    <option value="Lagos"{% if current_state == "Lagos" %} selected{% endif %}>Lagos</option>
+                    <option value="Nasarawa"{% if current_state == "Nasarawa" %} selected{% endif %}>Nasarawa</option>
+                    <option value="Niger"{% if current_state == "Niger" %} selected{% endif %}>Niger</option>
+                    <option value="Ogun"{% if current_state == "Ogun" %} selected{% endif %}>Ogun</option>
+                    <option value="Ondo"{% if current_state == "Ondo" %} selected{% endif %}>Ondo</option>
+                    <option value="Osun"{% if current_state == "Osun" %} selected{% endif %}>Osun</option>
+                    <option value="Oyo"{% if current_state == "Oyo" %} selected{% endif %}>Oyo</option>
+                    <option value="Plateau"{% if current_state == "Plateau" %} selected{% endif %}>Plateau</option>
+                    <option value="Rivers"{% if current_state == "Rivers" %} selected{% endif %}>Rivers</option>
+                    <option value="Sokoto"{% if current_state == "Sokoto" %} selected{% endif %}>Sokoto</option>
+                    <option value="Taraba"{% if current_state == "Taraba" %} selected{% endif %}>Taraba</option>
+                    <option value="Yobe"{% if current_state == "Yobe" %} selected{% endif %}>Yobe</option>
+                    <option value="Zamfara"{% if current_state == "Zamfara" %} selected{% endif %}>Zamfara</option>
+                    {% endwith %}
+                  </select>
+                </div>
+              </div>
+
+              <!-- LGA -->
+              <div class="form-group">
+                <label class="form-label" for="id_lga">
+                  LGA / Area <span class="opt">(optional)</span>
+                </label>
+                <div class="input-wrap" style="margin-top:7px;">
+                  <i class="fas fa-map-pin input-icon"></i>
+                  <input
+                    type="text"
+                    id="id_lga"
+                    name="lga"
+                    class="form-control has-icon"
+                    placeholder="e.g. Surulere, Ikeja, Enugu North"
+                    maxlength="120"
+                    value="{% if action == 'update' and not form_data.lga %}{{ product.lga }}{% else %}{{ form_data.lga }}{% endif %}"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Pickup notes -->
+            <div class="form-group">
+              <label class="form-label" for="id_pickup_notes">
+                Pickup Notes <span class="opt">(optional)</span>
+              </label>
+              <textarea
+                id="id_pickup_notes"
+                name="pickup_notes"
+                class="form-control"
+                rows="3"
+                placeholder="e.g. Available weekdays after 4 pm. Meetup at GTB branch, Allen Avenue. Call first."
+                style="margin-top:7px;"
+              >{% if action == 'update' and not form_data.pickup_notes %}{{ product.pickup_notes }}{% else %}{{ form_data.pickup_notes }}{% endif %}</textarea>
+              <p class="field-hint">Give buyers clear guidance on when and where to meet you for collection.</p>
+            </div>
+          </div><!-- /section 4 -->
+
+          <!-- ─ SECTION 5: Photos ───────────────────────── -->
+          <div class="pf-section fade-up d5">
+            <div class="pf-section-head">
+              <div class="pf-section-icon"><i class="fas fa-images"></i></div>
+              <div>
+                <div class="pf-section-title">Photos</div>
+                <div class="pf-section-sub">Up to 8 photos — first image is the cover</div>
+              </div>
+            </div>
+
+            <!-- Existing images (edit mode) -->
+            {% if action == 'update' and product.images.all %}
+            <p style="font-size:0.8rem; color:var(--text-3); margin-bottom:10px;">
+              <i class="fas fa-circle-info" style="color:var(--amber);"></i>
+              Current photos — click to delete one
+            </p>
+            <div class="existing-images-grid">
+              {% for img in product.images.all %}
+              <div class="existing-img-thumb">
+                <img src="{{ img.image.url }}" alt="{{ img.caption|default:product.title }}" loading="lazy" />
+                <a href="{% url 'mktplace:product_image_delete' pk=img.pk %}"
+                   class="existing-img-delete"
+                   title="Delete this photo"
+                   onclick="return confirm('Delete this photo?')">
+                  <i class="fas fa-trash-can"></i>
+                </a>
+                {% if forloop.first %}
+                <span style="position:absolute;bottom:4px;left:4px;font-size:0.62rem;font-weight:700;padding:2px 6px;background:rgba(245,158,11,0.85);color:#0C0A08;border-radius:4px;">Cover</span>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Upload zone -->
+            <div class="img-upload-zone" id="imgUploadZone">
+              <input
+                type="file"
+                name="images"
+                id="id_images"
+                multiple
+                accept="image/jpeg,image/png,image/webp"
+              />
+              <div class="img-upload-icon"><i class="fas fa-cloud-arrow-up"></i></div>
+              <p class="img-upload-title">Drag &amp; drop photos here or click to browse</p>
+              <p class="img-upload-sub">JPEG, PNG or WebP · max 5 MB each · up to 8 photos</p>
+            </div>
+
+            <!-- Preview -->
+            <div class="img-preview-grid" id="imgPreviewGrid"></div>
+          </div><!-- /section 5 -->
+
+          <!-- ─ SECTION 6: Publish (create mode only) ──── -->
+          {% if action == 'create' %}
+          <div class="pf-section fade-up d6">
+            <div class="pf-section-head">
+              <div class="pf-section-icon"><i class="fas fa-rocket"></i></div>
+              <div>
+                <div class="pf-section-title">Publishing</div>
+                <div class="pf-section-sub">Go live immediately or save as a draft</div>
+              </div>
+            </div>
+
+            <div class="pf-actions">
+              <button type="submit" name="publish" value="publish" class="btn btn-primary btn-lg">
+                <i class="fas fa-rocket"></i> Publish Listing
+              </button>
+              <button type="submit" name="publish" value="draft" class="btn btn-save-draft btn-lg">
+                <i class="fas fa-floppy-disk"></i> Save as Draft
+              </button>
+              <a href="{% url 'mktplace:seller_dashboard' %}" class="btn btn-ghost">
+                Cancel
+              </a>
+            </div>
+            <p class="field-hint" style="margin-top:12px;">
+              <i class="fas fa-shield-check" style="color:var(--amber);"></i>
+              Listings are reviewed within 5 minutes. Active listings appear in search immediately.
+            </p>
+          </div>
+          {% endif %}
+
+          <!-- ─ SECTION 7: Status & actions (update mode) ─ -->
+          {% if action == 'update' %}
+          <div class="pf-section fade-up d6">
+            <div class="pf-section-head">
+              <div class="pf-section-icon"><i class="fas fa-toggle-on"></i></div>
+              <div>
+                <div class="pf-section-title">Listing Status</div>
+                <div class="pf-section-sub">Control visibility in the marketplace</div>
+              </div>
+            </div>
+
+            <div class="status-grid" style="margin-bottom:24px;">
+              <div class="status-opt">
+                <input type="radio" id="status_active" name="status" value="active"
+                  {% if product.status == 'active' %}checked{% endif %} />
+                <label class="status-opt-label" for="status_active">
+                  <i class="fas fa-circle-check" style="color:var(--emerald);"></i>
+                  Active
+                </label>
+              </div>
+              <div class="status-opt">
+                <input type="radio" id="status_draft" name="status" value="draft"
+                  {% if product.status == 'draft' %}checked{% endif %} />
+                <label class="status-opt-label" for="status_draft">
+                  <i class="fas fa-file-pen" style="color:var(--sky);"></i>
+                  Draft
+                </label>
+              </div>
+              <div class="status-opt">
+                <input type="radio" id="status_inactive" name="status" value="inactive"
+                  {% if product.status == 'inactive' %}checked{% endif %} />
+                <label class="status-opt-label" for="status_inactive">
+                  <i class="fas fa-eye-slash" style="color:var(--text-3);"></i>
+                  Hidden
+                </label>
+              </div>
+            </div>
+
+            <div class="pf-actions">
+              <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-floppy-disk"></i> Save Changes
+              </button>
+              <a href="{% url 'mktplace:product_detail' pk=product.pk %}" class="btn btn-ghost">
+                <i class="fas fa-eye"></i> View Listing
+              </a>
+              <a href="{% url 'mktplace:product_delete' pk=product.pk %}"
+                 class="btn btn-ghost"
+                 style="color:#F87171;border-color:rgba(248,113,113,0.2);"
+                 onclick="return confirm('Are you sure you want to delete this listing? This cannot be undone.')">
+                <i class="fas fa-trash-can"></i> Delete
+              </a>
+            </div>
+          </div>
+          {% endif %}
+
+        </div><!-- /pf-main -->
+
+        <!-- ════════════════ RIGHT SIDEBAR ════════════════ -->
+        <aside class="pf-sidebar">
+
+          <!-- Fee preview card -->
+          <div class="sidebar-card fade-up d2">
+            <div class="sidebar-card-title">
+              <i class="fas fa-calculator"></i>
+              Payout Estimate
+            </div>
+            <div class="fee-row">
+              <span class="fee-row-label">Listed price</span>
+              <span class="fee-row-value" id="previewPrice">₦0.00</span>
+            </div>
+            <div class="fee-row">
+              <span class="fee-row-label">Platform fee (5%)</span>
+              <span class="fee-row-value" id="previewFee" style="color:#F87171;">— ₦0.00</span>
+            </div>
+            <div class="fee-row payout">
+              <span class="fee-row-label" style="font-weight:600;">You receive</span>
+              <span class="fee-row-value" id="previewPayout">₦0.00</span>
+            </div>
+            <p class="field-hint" style="margin-top:10px;">
+              Payout lands in your registered bank account within 24 hours of buyer confirmation.
+            </p>
+          </div>
+
+          <!-- Tips card -->
+          <div class="sidebar-card fade-up d3">
+            <div class="sidebar-card-title">
+              <i class="fas fa-lightbulb"></i>
+              Tips for a great listing
+            </div>
+            <ul class="tip-list">
+              <li><i class="fas fa-check"></i> Use a clear, descriptive title with the brand and model</li>
+              <li><i class="fas fa-check"></i> Add 4–8 photos from multiple angles in good lighting</li>
+              <li><i class="fas fa-check"></i> Be honest about defects — it builds trust and fewer disputes</li>
+              <li><i class="fas fa-check"></i> Set your location precisely so nearby buyers find you first</li>
+              <li><i class="fas fa-check"></i> Price competitively — check similar listings before publishing</li>
+            </ul>
+          </div>
+
+          <!-- Escrow info card -->
+          <div class="sidebar-card fade-up d4">
+            <div class="sidebar-card-title">
+              <i class="fas fa-shield-halved"></i>
+              Seller Protection
+            </div>
+            <ul class="tip-list">
+              <li><i class="fas fa-lock"></i> Payment is held in Paystack escrow — you never get paid before the buyer confirms receipt</li>
+              <li><i class="fas fa-clock"></i> If the buyer doesn't raise a dispute within 7 days, funds are automatically released</li>
+              <li><i class="fas fa-headset"></i> Our team mediates all disputes fairly, typically within 24 hours</li>
+            </ul>
+          </div>
+
+          <!-- Quick links (edit mode only) -->
+          {% if action == 'update' %}
+          <div class="sidebar-card fade-up d5">
+            <div class="sidebar-card-title">
+              <i class="fas fa-link"></i>
+              Quick Links
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <a href="{% url 'mktplace:product_detail' pk=product.pk %}"
+                 class="btn btn-ghost btn-sm" style="justify-content:flex-start; gap:8px;">
+                <i class="fas fa-eye"></i> View public listing
+              </a>
+              <a href="{% url 'mktplace:product_image_add' pk=product.pk %}"
+                 class="btn btn-ghost btn-sm" style="justify-content:flex-start; gap:8px;">
+                <i class="fas fa-images"></i> Manage photos
+              </a>
+              <a href="{% url 'mktplace:seller_order_list' %}"
+                 class="btn btn-ghost btn-sm" style="justify-content:flex-start; gap:8px;">
+                <i class="fas fa-list-check"></i> My orders
+              </a>
+              <a href="{% url 'mktplace:seller_dashboard' %}"
+                 class="btn btn-ghost btn-sm" style="justify-content:flex-start; gap:8px;">
+                <i class="fas fa-gauge"></i> Dashboard
+              </a>
+            </div>
+          </div>
+          {% endif %}
+
+        </aside><!-- /pf-sidebar -->
+
+    </form>
+    {% endif %}
+
+  </div><!-- /container -->
+</main>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+/* ====================================================
+   PRODUCT FORM — interactive JS
+   ─ Fee preview calculator
+   ─ Image upload + preview + drag-and-drop
+   ─ Offer toggle show/hide
+==================================================== */
+
+(function () {
+  'use strict';
+
+  /* ── Fee preview ─────────────────────────────────── */
+  const priceInput  = document.getElementById('id_price');
+  const previewPrice  = document.getElementById('previewPrice');
+  const previewFee    = document.getElementById('previewFee');
+  const previewPayout = document.getElementById('previewPayout');
+  const FEE_PCT = 0.05;
+
+  function fmt(n) {
+    return '₦' + n.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function updatePreview() {
+    const price  = parseFloat(priceInput.value) || 0;
+    const fee    = price * FEE_PCT;
+    const payout = price - fee;
+    previewPrice.textContent   = fmt(price);
+    previewFee.textContent     = '— ' + fmt(fee);
+    previewPayout.textContent  = fmt(payout);
+  }
+
+  if (priceInput) {
+    priceInput.addEventListener('input', updatePreview);
+    updatePreview(); // seed with existing value (edit mode)
+  }
+
+  /* ── Offer toggle ────────────────────────────────── */
+  const offersToggle  = document.getElementById('id_offers_allowed');
+  const minOfferGroup = document.getElementById('minOfferGroup');
+
+  function syncMinOffer() {
+    if (!minOfferGroup) return;
+    minOfferGroup.style.opacity      = offersToggle.checked ? '1' : '0.38';
+    minOfferGroup.style.pointerEvents = offersToggle.checked ? '' : 'none';
+  }
+
+  if (offersToggle) {
+    offersToggle.addEventListener('change', syncMinOffer);
+    syncMinOffer();
+  }
+
+  /* ── Image preview ───────────────────────────────── */
+  const fileInput   = document.getElementById('id_images');
+  const previewGrid = document.getElementById('imgPreviewGrid');
+  const uploadZone  = document.getElementById('imgUploadZone');
+  const MAX_IMGS    = 8;
+
+  let selectedFiles = [];
+
+  function renderPreviews() {
+    previewGrid.innerHTML = '';
+    if (!selectedFiles.length) {
+      previewGrid.classList.remove('has-images');
+      return;
+    }
+    previewGrid.classList.add('has-images');
+    selectedFiles.forEach((file, idx) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const thumb = document.createElement('div');
+        thumb.className = 'img-thumb' + (idx === 0 ? ' is-cover' : '');
+        thumb.innerHTML = `
+          <img src="${e.target.result}" alt="Preview ${idx + 1}" />
+          <button type="button" class="thumb-remove" data-idx="${idx}" aria-label="Remove">
+            <i class="fas fa-xmark"></i>
+          </button>
+        `;
+        previewGrid.appendChild(thumb);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function applyFilesToInput() {
+    const dt = new DataTransfer();
+    selectedFiles.forEach(f => dt.items.add(f));
+    fileInput.files = dt.files;
+    renderPreviews();
+  }
+
+  if (fileInput) {
+    fileInput.addEventListener('change', () => {
+      const newFiles = Array.from(fileInput.files);
+      const combined = [...selectedFiles, ...newFiles].slice(0, MAX_IMGS);
+      selectedFiles = combined;
+      applyFilesToInput();
+    });
+  }
+
+  if (previewGrid) {
+    previewGrid.addEventListener('click', (e) => {
+      const btn = e.target.closest('.thumb-remove');
+      if (!btn) return;
+      const idx = parseInt(btn.dataset.idx, 10);
+      selectedFiles.splice(idx, 1);
+      applyFilesToInput();
+    });
+  }
+
+  /* ── Drag and drop ────────────────────────────────── */
+  if (uploadZone) {
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('drag-over');
+    });
+    ['dragleave', 'dragend'].forEach(ev => {
+      uploadZone.addEventListener(ev, () => uploadZone.classList.remove('drag-over'));
+    });
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('drag-over');
+      const dropped = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      const combined = [...selectedFiles, ...dropped].slice(0, MAX_IMGS);
+      selectedFiles = combined;
+      applyFilesToInput();
+    });
+  }
+
+  /* ── Character counter for description ──────────── */
+  const descField = document.getElementById('id_description');
+  if (descField) {
+    const hint = descField.nextElementSibling;
+    // hint may be field-error or field-hint depending on validation
+    function updateCounter() {
+      const len = descField.value.length;
+      descField.style.borderColor = len > 1900 ? 'var(--amber)' : '';
+    }
+    descField.addEventListener('input', updateCounter);
+  }
+
+  /* ── Form submit guard ────────────────────────────── */
+  const form = document.getElementById('productForm');
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      const submitBtn = e.submitter;
+      if (submitBtn) {
+        // If the button has a name (e.g. name="publish"), its value won't be 
+        // sent if it's disabled. We append a hidden input to preserve it.
+        if (submitBtn.name) {
+          const hiddenInput = document.createElement('input');
+          hiddenInput.type = 'hidden';
+          hiddenInput.name = submitBtn.name;
+          hiddenInput.value = submitBtn.value;
+          form.appendChild(hiddenInput);
+        }
+        submitBtn.disabled = true;
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+        // re-enable if server-side error returns
+        setTimeout(() => { 
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalText;
+        }, 12000);
+      }
+    });
+  }
+
+})();
+</script>
+{% endblock %}

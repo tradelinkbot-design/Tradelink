@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+{% block title %}My Contracts — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Page layout ── */
+  .page-wrap {
+    padding-top: calc(var(--nav-h) + 48px);
+    padding-bottom: 80px;
+    min-height: 100vh;
+    position: relative; z-index: 1;
+  }
+
+  /* ── Page header ── */
+  .page-header {
+    margin-bottom: 40px;
+  }
+  .page-header h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.6rem, 4vw, 2.6rem);
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .page-header p {
+    color: var(--text-2);
+    font-size: 0.98rem;
+  }
+
+  /* ── Status tabs ── */
+  .status-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+  .status-tab {
+    padding: 7px 18px;
+    border-radius: var(--r-pill);
+    font-size: 0.83rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--border-subtle);
+    background: transparent;
+    color: var(--text-2);
+    transition: var(--t);
+    text-decoration: none;
+  }
+  .status-tab:hover,
+  .status-tab.active {
+    background: var(--surface-2);
+    color: var(--amber);
+    border-color: var(--border-strong);
+  }
+
+  /* ── Contract card ── */
+  .contract-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 24px 28px;
+    margin-bottom: 16px;
+    transition: var(--t);
+    text-decoration: none;
+    display: block;
+    position: relative;
+    overflow: hidden;
+  }
+  .contract-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--surface-1) 0%, transparent 60%);
+    opacity: 0;
+    transition: var(--t);
+    pointer-events: none;
+  }
+  .contract-card:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+  .contract-card:hover::before { opacity: 1; }
+
+  .contract-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .contract-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-1);
+    line-height: 1.3;
+    flex: 1;
+  }
+
+  .contract-meta {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.85rem;
+    color: var(--text-2);
+  }
+  .meta-item i {
+    color: var(--text-3);
+    font-size: 0.8rem;
+    width: 14px;
+  }
+
+  /* ── Milestone progress bar ── */
+  .progress-wrap {
+    margin-top: 16px;
+  }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: var(--text-3);
+    margin-bottom: 6px;
+  }
+  .progress-bar {
+    height: 5px;
+    background: var(--surface-2);
+    border-radius: var(--r-pill);
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--amber), var(--orange));
+    border-radius: var(--r-pill);
+    transition: width 0.6s var(--ease);
+  }
+
+  /* ── Contract status badges ── */
+  .badge-pending   { background: rgba(56,189,248,0.10); color: #7DD3FC; border: 1px solid rgba(56,189,248,0.2); }
+  .badge-active    { background: rgba(16,185,129,0.12); color: #6EE7B7; border: 1px solid rgba(16,185,129,0.2); }
+  .badge-completed { background: rgba(245,158,11,0.12); color: #FCD34D; border: 1px solid rgba(245,158,11,0.2); }
+  .badge-disputed  { background: rgba(249,115,22,0.12); color: #FDA975; border: 1px solid rgba(249,115,22,0.2); }
+  .badge-cancelled { background: rgba(250,245,235,0.06); color: var(--text-3); border: 1px solid var(--border-subtle); }
+
+  /* ── Empty state ── */
+  .empty-state {
+    text-align: center;
+    padding: 80px 24px;
+  }
+  .empty-icon {
+    width: 72px; height: 72px;
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 1.6rem; color: var(--text-3);
+  }
+  .empty-state h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .empty-state p {
+    color: var(--text-2);
+    font-size: 0.93rem;
+    max-width: 340px;
+    margin: 0 auto 28px;
+    line-height: 1.65;
+  }
+
+  /* ── Messages ── */
+  .flash-messages { margin-bottom: 24px; }
+  .flash {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px; border-radius: var(--r-lg);
+    font-size: 0.88rem; margin-bottom: 8px;
+  }
+  .flash-success { background: rgba(16,185,129,0.10); border: 1px solid rgba(16,185,129,0.2); color: #6EE7B7; }
+  .flash-error   { background: rgba(249,115,22,0.10); border: 1px solid rgba(249,115,22,0.2); color: #FDA975; }
+  .flash-info    { background: rgba(56,189,248,0.10); border: 1px solid rgba(56,189,248,0.2); color: #7DD3FC; }
+
+  @media (max-width: 600px) {
+    .contract-card { padding: 18px 20px; }
+    .contract-top { flex-direction: column; gap: 10px; }
+    .contract-meta { gap: 12px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+  <div class="container">
+
+    <!-- Flash messages -->
+    {% if messages %}
+    <div class="flash-messages">
+      {% for message in messages %}
+      <div class="flash flash-{% if message.tags == 'error' %}error{% elif message.tags == 'success' %}success{% else %}info{% endif %}">
+        <i class="fas fa-{% if message.tags == 'error' %}exclamation-circle{% elif message.tags == 'success' %}check-circle{% else %}info-circle{% endif %}"></i>
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Page header -->
+    <div class="page-header fade-up">
+      <span class="eyebrow">Escrow</span>
+      <h1>My Contracts</h1>
+      <p>Track milestones and payments for all your active engagements.</p>
+    </div>
+
+    <!-- Status filter tabs -->
+    <div class="status-tabs fade-up d1">
+      <a href="?status=" class="status-tab {% if not request.GET.status %}active{% endif %}">All</a>
+      <a href="?status=active"    class="status-tab {% if request.GET.status == 'active' %}active{% endif %}">Active</a>
+      <a href="?status=pending"   class="status-tab {% if request.GET.status == 'pending' %}active{% endif %}">Pending</a>
+      <a href="?status=completed" class="status-tab {% if request.GET.status == 'completed' %}active{% endif %}">Completed</a>
+      <a href="?status=disputed"  class="status-tab {% if request.GET.status == 'disputed' %}active{% endif %}">Disputed</a>
+    </div>
+
+    <!-- Contract list -->
+    {% if contracts %}
+      {% for contract in contracts %}
+      {% if not request.GET.status or contract.status == request.GET.status %}
+
+        {% with total=contract.milestones.count %}
+        {% with released=contract.milestones.filter_released_count %}
+        <a href="{% url 'marketplace:contract_detail' pk=contract.pk %}"
+           class="contract-card fade-up d{{ forloop.counter|add:1 }}">
+
+          <div class="contract-top">
+            <div class="contract-title">{{ contract.title }}</div>
+            <span class="badge badge-{{ contract.status }}">
+              <i class="fas fa-circle" style="font-size:0.45rem;"></i>
+              {{ contract.get_status_display }}
+            </span>
+          </div>
+
+          <div class="contract-meta">
+            <span class="meta-item">
+              <i class="fas fa-building"></i>
+              {{ contract.employer.company_name|default:contract.employer.user.username }}
+            </span>
+            <span class="meta-item">
+              <i class="fas fa-hard-hat"></i>
+              {{ contract.worker.user.get_full_name|default:contract.worker.user.username }}
+            </span>
+            <span class="meta-item">
+              <i class="fas fa-briefcase"></i>
+              {{ contract.job.title }}
+            </span>
+            <span class="meta-item">
+              <i class="fas fa-calendar-alt"></i>
+              {{ contract.created_at|date:"d M Y" }}
+            </span>
+          </div>
+
+          <!-- Milestone summary -->
+          {% with milestones=contract.milestones.all %}
+          {% if milestones %}
+          <div class="progress-wrap">
+            {% with total_count=milestones|length %}
+            {% with released_count=milestones|dictsortreversed:"status"|length %}
+            <div class="progress-label">
+              <span>{{ milestones.count }} milestone{{ milestones.count|pluralize }}</span>
+              <span>
+                ₦{{ milestones|dictsort:"amount"|last|default_if_none:"0" }}
+                total value
+              </span>
+            </div>
+            {% endwith %}
+            {% endwith %}
+            <!-- Count funded/released milestones for progress -->
+            {% with ms_list=milestones %}
+            {% with ms_total=ms_list|length %}
+            {% if ms_total > 0 %}
+            <div class="progress-bar">
+              {% with done_count=0 %}
+              <div class="progress-fill" id="prog-{{ contract.pk }}" style="width: 0%"></div>
+              {% endwith %}
+            </div>
+            <script>
+              (function(){
+                var milestones = [
+                  {% for m in ms_list %}"{{ m.status }}"{% if not forloop.last %},{% endif %}{% endfor %}
+                ];
+                var done = milestones.filter(function(s){
+                  return s === 'released' || s === 'approved' || s === 'in_review';
+                }).length;
+                var pct = milestones.length > 0 ? Math.round(done / milestones.length * 100) : 0;
+                var el = document.getElementById('prog-{{ contract.pk }}');
+                if (el) el.style.width = pct + '%';
+              })();
+            </script>
+            {% endif %}
+            {% endwith %}
+            {% endwith %}
+          </div>
+          {% endif %}
+          {% endwith %}
+
+        </a>
+        {% endwith %}
+        {% endwith %}
+
+      {% endif %}
+      {% endfor %}
+
+    {% else %}
+    <!-- Empty state -->
+    <div class="empty-state fade-up d2">
+      <div class="empty-icon"><i class="fas fa-file-contract"></i></div>
+      <h3>No contracts yet</h3>
+      <p>Contracts are created when an employer accepts a job application. Start by applying to jobs or posting one.</p>
+      <a href="{% url 'marketplace:job_list' %}" class="btn btn-primary">
+        <i class="fas fa-search"></i> Browse Jobs
+      </a>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+{% block title %}Identity Verification — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+/* =====================================================
+   VERIFICATION — SHARED STYLES
+===================================================== */
+:root {
+  --ver-blue:  #3B82F6;
+  --ver-gold:  #F59E0B;
+  --ver-green: #10B981;
+  --ver-grey:  #6B7280;
+}
+
+.ver-page {
+  padding-top: calc(var(--nav-h) + clamp(40px, 5vw, 64px));
+  padding-bottom: clamp(48px, 8vw, 96px);
+  min-height: 100vh;
+}
+
+.ver-page__inner {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 clamp(16px, 4vw, 48px);
+}
+
+.ver-page h1 {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+
+.ver-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ver-blue);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ver-sub {
+  color: var(--text-2);
+  font-size: 1rem;
+  line-height: 1.7;
+  margin-bottom: 40px;
+}
+
+/* ── Tier Progress ── */
+.ver-tiers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 48px;
+}
+
+.ver-tier {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  position: relative;
+  transition: var(--t);
+}
+
+.ver-tier--done {
+  border-color: var(--ver-green);
+  background: rgba(16,185,129,0.05);
+}
+
+.ver-tier--active {
+  border-color: var(--ver-blue);
+  background: rgba(59,130,246,0.05);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+
+.ver-tier__icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+}
+
+.ver-tier--done   .ver-tier__icon { background: rgba(16,185,129,0.15); color: var(--ver-green); }
+.ver-tier--active .ver-tier__icon { background: rgba(59,130,246,0.12); color: var(--ver-blue); }
+.ver-tier--locked .ver-tier__icon { background: rgba(107,114,128,0.1); color: var(--ver-grey); }
+
+.ver-tier__label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.ver-tier--done   .ver-tier__label { color: var(--ver-green); }
+.ver-tier--active .ver-tier__label { color: var(--ver-blue);  }
+.ver-tier--locked .ver-tier__label { color: var(--ver-grey);  }
+
+.ver-tier__name { font-size: 1rem; font-weight: 700; color: var(--text-1); }
+.ver-tier__desc { font-size: 0.82rem; color: var(--text-3); line-height: 1.5; }
+
+.ver-tier__check {
+  position: absolute;
+  top: 12px; right: 12px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--ver-green);
+  color: #fff;
+  font-size: 0.65rem;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.ver-tier__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: var(--r-pill);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: var(--t);
+}
+.ver-tier__btn--primary {
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  color: #0C0A08;
+}
+.ver-tier__btn--primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.ver-tier__btn--done {
+  background: rgba(16,185,129,0.12);
+  color: var(--ver-green);
+  pointer-events: none;
+}
+.ver-tier__btn--locked {
+  background: rgba(107,114,128,0.1);
+  color: var(--ver-grey);
+  pointer-events: none;
+}
+
+/* ── Current badge display ── */
+.ver-badge-display {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl);
+  padding: 32px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.ver-badge-display__icon {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+
+.badge-icon--blue  { background: rgba(59,130,246,0.12);  color: var(--ver-blue);  }
+.badge-icon--gold  { background: rgba(245,158,11,0.12);  color: var(--ver-gold);  }
+.badge-icon--green { background: rgba(16,185,129,0.12);  color: var(--ver-green); }
+.badge-icon--grey  { background: rgba(107,114,128,0.10); color: var(--ver-grey);  }
+
+.ver-badge-display__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 4px;
+}
+.ver-badge-display__name {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-1);
+  margin-bottom: 6px;
+}
+.ver-badge-display__desc {
+  font-size: 0.88rem;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+
+/* ── Attempts table ── */
+.ver-attempts {
+  margin-top: 40px;
+}
+.ver-attempts h3 {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 16px;
+}
+.ver-attempt-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--r-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+}
+.ver-attempt-status { font-weight: 700; }
+.ver-attempt-status--success { color: var(--ver-green); }
+.ver-attempt-status--failed  { color: #F87171; }
+.ver-attempt-status--pending { color: var(--ver-gold); }
+
+@media (max-width: 640px) {
+  .ver-tiers { grid-template-columns: 1fr; }
+  .ver-badge-display { flex-direction: column; text-align: center; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ver-page">
+  <div class="ver-page__inner">
+
+    <p class="ver-eyebrow"><i class="fas fa-shield-alt"></i> Verification Centre</p>
+    <h1>Your Trust Profile</h1>
+    <p class="ver-sub">
+      Verify your identity to unlock platform features, earn trust badges,
+      and build confidence with other TradeLink NG users.
+    </p>
+
+    {# ── Current Badge ── #}
+    <div class="ver-badge-display">
+      <div class="ver-badge-display__icon badge-icon--{{ vp.badge_colour }}">
+        <i class="{{ vp.badge_icon }}"></i>
+      </div>
+      <div>
+        <p class="ver-badge-display__label">Current Trust Level</p>
+        <p class="ver-badge-display__name">{{ vp.badge_label }}</p>
+        <p class="ver-badge-display__desc">
+          {% if vp.level == 0 %}
+            You haven't completed any verification yet. Start with NIN to unlock
+            the marketplace and earn your first trust badge.
+          {% elif vp.level == 1 %}
+            Your identity has been verified via NIN. You can now list products on
+            the marketplace. Add your BVN to unlock Enhanced verification.
+          {% elif vp.level == 2 %}
+            Great! Your identity and bank record are verified. You can now do high-value
+            escrow transactions. Add your CAC registration for a Trusted Business badge.
+          {% else %}
+            You have reached the highest trust level. Your business is fully verified.
+            All platform features are unlocked.
+          {% endif %}
+        </p>
+      </div>
+    </div>
+
+    {# ── Tier Cards ── #}
+    <div class="ver-tiers">
+
+      {# Level 1 — NIN #}
+      <div class="ver-tier {% if vp.nin_verified %}ver-tier--done{% elif vp.level == 0 %}ver-tier--active{% else %}ver-tier--locked{% endif %}">
+        {% if vp.nin_verified %}
+          <div class="ver-tier__check"><i class="fas fa-check"></i></div>
+        {% endif %}
+        <div class="ver-tier__icon"><i class="fas fa-id-card"></i></div>
+        <span class="ver-tier__label">
+          {% if vp.nin_verified %}Completed{% elif vp.level == 0 %}Next Step{% else %}Locked{% endif %}
+        </span>
+        <p class="ver-tier__name">NIN Verification</p>
+        <p class="ver-tier__desc">
+          Verify your National ID Number. Unlocks marketplace listings and trust badge.
+        </p>
+        {% if vp.nin_verified %}
+          <span class="ver-tier__btn ver-tier__btn--done"><i class="fas fa-check"></i> Verified</span>
+        {% elif vp.level == 0 %}
+          <a href="{% url 'verify:nin' %}" class="ver-tier__btn ver-tier__btn--primary">
+            <i class="fas fa-arrow-right"></i> Verify Now
+          </a>
+        {% else %}
+          <span class="ver-tier__btn ver-tier__btn--done"><i class="fas fa-check"></i> Done</span>
+        {% endif %}
+      </div>
+
+      {# Level 2 — BVN #}
+      <div class="ver-tier {% if vp.bvn_verified %}ver-tier--done{% elif vp.nin_verified and not vp.bvn_verified %}ver-tier--active{% else %}ver-tier--locked{% endif %}">
+        {% if vp.bvn_verified %}
+          <div class="ver-tier__check"><i class="fas fa-check"></i></div>
+        {% endif %}
+        <div class="ver-tier__icon"><i class="fas fa-shield-alt"></i></div>
+        <span class="ver-tier__label">
+          {% if vp.bvn_verified %}Completed{% elif vp.nin_verified %}Next Step{% else %}Locked{% endif %}
+        </span>
+        <p class="ver-tier__name">BVN Verification</p>
+        <p class="ver-tier__desc">
+          Verify your Bank Verification Number. Unlocks high-value escrow transactions.
+        </p>
+        {% if vp.bvn_verified %}
+          <span class="ver-tier__btn ver-tier__btn--done"><i class="fas fa-check"></i> Verified</span>
+        {% elif vp.nin_verified %}
+          <a href="{% url 'verify:bvn' %}" class="ver-tier__btn ver-tier__btn--primary">
+            <i class="fas fa-arrow-right"></i> Verify Now
+          </a>
+        {% else %}
+          <span class="ver-tier__btn ver-tier__btn--locked"><i class="fas fa-lock"></i> Complete NIN First</span>
+        {% endif %}
+      </div>
+
+      {# Level 3 — CAC #}
+      <div class="ver-tier {% if vp.cac_verified %}ver-tier--done{% elif vp.bvn_verified and not vp.cac_verified %}ver-tier--active{% else %}ver-tier--locked{% endif %}">
+        {% if vp.cac_verified %}
+          <div class="ver-tier__check"><i class="fas fa-check"></i></div>
+        {% endif %}
+        <div class="ver-tier__icon"><i class="fas fa-building"></i></div>
+        <span class="ver-tier__label">
+          {% if vp.cac_verified %}Completed{% elif vp.bvn_verified %}Next Step{% else %}Locked{% endif %}
+        </span>
+        <p class="ver-tier__name">CAC Verification</p>
+        <p class="ver-tier__desc">
+          Register your company with TradeLink. Unlocks corporate job postings and the Trusted Business badge.
+        </p>
+        {% if vp.cac_verified %}
+          <span class="ver-tier__btn ver-tier__btn--done"><i class="fas fa-check"></i> Verified</span>
+        {% elif vp.bvn_verified %}
+          <a href="{% url 'verify:cac' %}" class="ver-tier__btn ver-tier__btn--primary">
+            <i class="fas fa-arrow-right"></i> Verify Now
+          </a>
+        {% else %}
+          <span class="ver-tier__btn ver-tier__btn--locked"><i class="fas fa-lock"></i> Complete BVN First</span>
+        {% endif %}
+      </div>
+
+    </div>{# /ver-tiers #}
+
+    {# ── Attempt Log ── #}
+    {% if recent_attempts %}
+    <div class="ver-attempts">
+      <h3><i class="fas fa-history"></i> Recent Verification Attempts</h3>
+      {% for a in recent_attempts %}
+      <div class="ver-attempt-row">
+        <i class="fas fa-{% if a.ver_type == 'nin' %}id-card{% elif a.ver_type == 'bvn' %}shield-alt{% else %}building{% endif %}" style="color:var(--text-3)"></i>
+        <span style="font-weight:600;color:var(--text-1);text-transform:uppercase;">{{ a.ver_type }}</span>
+        <span class="ver-attempt-status ver-attempt-status--{{ a.status }}">{{ a.get_status_display }}</span>
+        <span style="color:var(--text-3);margin-left:auto;">{{ a.created|date:"d M Y, H:i" }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
