@@ -109,10 +109,10 @@ def _hf_api_encode(text: str) -> List[float]:
     """
     import requests
 
-    token = os.environ.get('HF_TOKEN', '').strip()
+    token = (os.environ.get('HF_TOKEN') or os.environ.get('HF_API_TOKEN') or os.environ.get('HUGGINGFACE_TOKEN') or '').strip()
     if not token:
         logger.warning(
-            "HF_TOKEN is not configured in production environment variables! "
+            "HF_TOKEN / HF_API_TOKEN is not configured in production environment variables! "
             "Falling back to deterministic 768-dim vectorizer. "
             "Add HF_TOKEN=hf_... to your deployment dashboard to enable deep-learning embeddings."
         )
@@ -143,7 +143,7 @@ def _hf_api_encode(text: str) -> List[float]:
                     continue
                 if resp.status_code in (401, 403):
                     logger.error(
-                        "HF API returned %s (%s) — your HF_TOKEN is invalid or lacks Inference permissions. "
+                        "HF API returned %s (%s) — your HF token is invalid or lacks Inference permissions. "
                         "Falling back to deterministic vectorizer.",
                         resp.status_code, resp.text[:120],
                     )
@@ -189,11 +189,14 @@ def _hf_api_encode_batch(texts: List[str]) -> List[List[float]]:
     """
     import requests
 
-    token = os.environ.get('HF_TOKEN', '').strip()
+    token = (os.environ.get('HF_TOKEN') or os.environ.get('HF_API_TOKEN') or os.environ.get('HUGGINGFACE_TOKEN') or '').strip()
     if not token:
         return _deterministic_fallback_encode_batch(texts)
 
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type":  "application/json",
+    }
     placeholders = {i for i, t in enumerate(texts) if not t.strip()}
     safe_texts   = [t if t.strip() else 'placeholder' for t in texts]
 

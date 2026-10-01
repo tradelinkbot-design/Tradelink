@@ -70,10 +70,10 @@ def _hf_clip_encode_image(image_bytes: bytes) -> List[float]:
     """
     import requests
 
-    token = os.environ.get('HF_TOKEN', '').strip()
+    token = (os.environ.get('HF_TOKEN') or os.environ.get('HF_API_TOKEN') or os.environ.get('HUGGINGFACE_TOKEN') or '').strip()
     if not token:
         logger.warning(
-            "HF_TOKEN is not set in environment variables! "
+            "HF_TOKEN / HF_API_TOKEN is not set in environment variables! "
             "Returning zero vector for CLIP image embedding."
         )
         return [0.0] * CLIP_EMBED_DIM
@@ -121,7 +121,7 @@ def _hf_clip_encode_text(text: str) -> List[float]:
     """
     import requests
 
-    token = os.environ.get('HF_TOKEN', '').strip()
+    token = (os.environ.get('HF_TOKEN') or os.environ.get('HF_API_TOKEN') or os.environ.get('HUGGINGFACE_TOKEN') or '').strip()
     if not token:
         return [0.0] * CLIP_EMBED_DIM
 
