@@ -1,2 +1,2 @@
 web: python manage.py collectstatic --no-input && python manage.py migrate --no-input && daphne -b 0.0.0.0 -p $PORT technicians.asgi:application
-worker: celery -A technicians worker --beat --loglevel=info --concurrency=1 --scheduler django_celery_beat.schedulers:DatabaseScheduler
+worker: celery -A technicians worker --loglevel=info solo=pool
