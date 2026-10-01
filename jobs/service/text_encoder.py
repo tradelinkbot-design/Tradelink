@@ -49,11 +49,10 @@ logger = logging.getLogger(__name__)
 _DEFAULT_MODEL_NAME = 'sentence-transformers/all-mpnet-base-v2'
 EMBEDDING_DIM       = 768   # matches all-mpnet-base-v2 output
 
-# HuggingFace Inference API endpoints (primary router, standard model endpoint, and legacy pipeline)
+# HuggingFace Inference API endpoints (current canonical router endpoints)
 _HF_API_ENDPOINTS = [
-    "https://api-inference.huggingface.co/models/sentence-transformers/all-mpnet-base-v2",
+    "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-mpnet-base-v2/pipeline/feature-extraction",
     "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-mpnet-base-v2",
-    "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-mpnet-base-v2",
 ]
 
 
@@ -119,9 +118,12 @@ def _hf_api_encode(text: str) -> List[float]:
         )
         return _deterministic_fallback_encode(text)
 
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type":  "application/json",
+    }
     payload = {
-        "inputs": text,
+        "inputs": [text],
         "options": {"wait_for_model": True},
     }
 
@@ -144,6 +146,12 @@ def _hf_api_encode(text: str) -> List[float]:
                         "HF API returned %s (%s) — your HF_TOKEN is invalid or lacks Inference permissions. "
                         "Falling back to deterministic vectorizer.",
                         resp.status_code, resp.text[:120],
+                    )
+                    return _deterministic_fallback_encode(text)
+                if resp.status_code == 400:
+                    logger.warning(
+                        "HF API returned 400 (%s) at %s — falling back to deterministic vectorizer.",
+                        resp.text[:120], url,
                     )
                     return _deterministic_fallback_encode(text)
                 if resp.status_code == 404:

@@ -54,9 +54,8 @@ CLIP_EMBED_DIM   = 512
 
 # HuggingFace Inference API endpoints for CLIP
 _HF_CLIP_API_ENDPOINTS = [
-    "https://api-inference.huggingface.co/models/openai/clip-vit-base-patch32",
+    "https://router.huggingface.co/hf-inference/models/openai/clip-vit-base-patch32/pipeline/feature-extraction",
     "https://router.huggingface.co/hf-inference/models/openai/clip-vit-base-patch32",
-    "https://api-inference.huggingface.co/pipeline/feature-extraction/openai/clip-vit-base-patch32",
 ]
 
 
@@ -97,8 +96,7 @@ def _hf_clip_encode_image(image_bytes: bytes) -> List[float]:
                     wait = 5 * (attempt + 1)
                     time.sleep(wait)
                     continue
-                if resp.status_code in (401, 403):
-                    logger.error("HF CLIP API returned %s Unauthorized — check HF_TOKEN.", resp.status_code)
+                if resp.status_code in (400, 401, 403):
                     return [0.0] * CLIP_EMBED_DIM
                 if resp.status_code == 404:
                     break
@@ -127,9 +125,12 @@ def _hf_clip_encode_text(text: str) -> List[float]:
     if not token:
         return [0.0] * CLIP_EMBED_DIM
 
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type":  "application/json",
+    }
     payload = {
-        "inputs": text,
+        "inputs": [text],
         "options": {"wait_for_model": True},
     }
 
@@ -145,7 +146,7 @@ def _hf_clip_encode_text(text: str) -> List[float]:
                 if resp.status_code == 503:
                     time.sleep(5)
                     continue
-                if resp.status_code in (401, 403):
+                if resp.status_code in (400, 401, 403):
                     return [0.0] * CLIP_EMBED_DIM
                 if resp.status_code == 404:
                     break
@@ -272,6 +273,8 @@ class CLIPImageEncoder:
             embedding = self._model.encode_text(tokens)
             embedding = embedding / embedding.norm(dim=-1, keepdim=True)
             return embedding.cpu().float().numpy()[0].tolist()
+
+    encode_text = encode_text_for_image_comparison
 
     # ── Similarity ───────────────────────────────────────────────────────────
 
