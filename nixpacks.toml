@@ -1,0 +1,17 @@
+# Railway Nixpacks Configuration
+[phases.setup]
+nixPkgs = ["python311"]
+
+[phases.install]
+cmds = [
+    "pip install --upgrade pip",
+    "pip install -r requirements-prod.txt"
+]
+
+[phases.build]
+cmds = [
+    "python manage.py collectstatic --no-input"
+]
+
+[start]
+cmd = "python manage.py migrate --no-input && daphne -b 0.0.0.0 -p $PORT technicians.asgi:application"

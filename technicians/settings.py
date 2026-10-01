@@ -56,6 +56,14 @@ else:
         ALLOWED_HOSTS.append(render_hostname)
     if '.onrender.com' not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append('.onrender.com')
+    # Auto-allow Railway domains
+    railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+    if railway_domain and railway_domain not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(railway_domain)
+    if '.railway.app' not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append('.railway.app')
+    if '.up.railway.app' not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append('.up.railway.app')
 
 
 
@@ -70,6 +78,9 @@ _extra_origins = [
 CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:8000',
     'http://localhost:8000',
+    'https://*.onrender.com',
+    'https://*.railway.app',
+    'https://*.up.railway.app',
     *_extra_origins,
 ]
 render_hostname = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
@@ -77,6 +88,11 @@ if render_hostname:
     render_origin = f'https://{render_hostname}'
     if render_origin not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(render_origin)
+railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+if railway_domain:
+    railway_origin = f'https://{railway_domain}'
+    if railway_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(railway_origin)
 
 
 # ==================================
@@ -366,7 +382,7 @@ SOCIALACCOUNT_PROVIDERS = {
 # ==================================
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+STATICFILES_DIRS = [BASE_DIR / 'static'] if (BASE_DIR / 'static').is_dir() else []
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 STATICFILES_FINDERS = [
@@ -383,7 +399,7 @@ if DEBUG:
             "BACKEND": "django.core.files.storage.FileSystemStorage",
         },
         "staticfiles": {
-            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+            "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
         },
     }
 else:
@@ -405,15 +421,16 @@ else:
             "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
         },
         "staticfiles": {
-            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+            "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
         },
     }
 
 # WhiteNoise settings
-WHITENOISE_AUTOREFRESH    = DEBUG
-WHITENOISE_USE_FINDERS    = DEBUG
-WHITENOISE_MAX_AGE        = 0 if DEBUG else 31536000
-WHITENOISE_ALLOW_ALL_ORIGINS = False
+WHITENOISE_AUTOREFRESH        = DEBUG
+WHITENOISE_USE_FINDERS        = DEBUG
+WHITENOISE_MAX_AGE            = 0 if DEBUG else 31536000
+WHITENOISE_ALLOW_ALL_ORIGINS  = False
+WHITENOISE_MANIFEST_STRICT    = False  # Never raise 500 ValueError if a staticfile is not in manifest (e.g. Jazzmin bootswatch)
 
 
 # ==================================
