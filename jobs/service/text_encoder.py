@@ -49,11 +49,51 @@ logger = logging.getLogger(__name__)
 _DEFAULT_MODEL_NAME = 'sentence-transformers/all-mpnet-base-v2'
 EMBEDDING_DIM       = 768   # matches all-mpnet-base-v2 output
 
-# HuggingFace Inference API endpoint for sentence-transformers
-_HF_API_URL = (
-    "https://api-inference.huggingface.co/pipeline/feature-extraction/"
-    "sentence-transformers/all-mpnet-base-v2"
-)
+# HuggingFace Inference API endpoints (primary router, standard model endpoint, and legacy pipeline)
+_HF_API_ENDPOINTS = [
+    "https://api-inference.huggingface.co/models/sentence-transformers/all-mpnet-base-v2",
+    "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-mpnet-base-v2",
+    "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-mpnet-base-v2",
+]
+
+
+# ── Deterministic fallback (zero-dependency scikit-learn / numpy) ─────────────
+
+def _deterministic_fallback_encode(text: str) -> List[float]:
+    """
+    Fast, deterministic fallback using scikit-learn's HashingVectorizer.
+    Produces an L2-normalised 768-dim float vector without requiring PyTorch,
+    external network calls, or HF_TOKEN.
+    Maintains semantic token overlap correlation so matching and scoring remain functional.
+    """
+    try:
+        from sklearn.feature_extraction.text import HashingVectorizer
+        hv = HashingVectorizer(n_features=EMBEDDING_DIM, norm='l2', alternate_sign=False)
+        vec = hv.transform([text]).toarray()[0].astype(np.float32)
+        norm = np.linalg.norm(vec)
+        if norm > 0:
+            vec = vec / norm
+        return vec.tolist()
+    except Exception as exc:
+        logger.error("Deterministic fallback failed: %s — returning zero vector", exc)
+        return [0.0] * EMBEDDING_DIM
+
+
+def _deterministic_fallback_encode_batch(texts: List[str]) -> List[List[float]]:
+    """
+    Batch version of deterministic HashingVectorizer fallback.
+    """
+    try:
+        from sklearn.feature_extraction.text import HashingVectorizer
+        hv = HashingVectorizer(n_features=EMBEDDING_DIM, norm='l2', alternate_sign=False)
+        matrix = hv.transform(texts).toarray().astype(np.float32)
+        norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+        norms = np.where(norms == 0, 1e-8, norms)
+        matrix = matrix / norms
+        return matrix.tolist()
+    except Exception as exc:
+        logger.error("Deterministic batch fallback failed: %s", exc)
+        return [[0.0] * EMBEDDING_DIM for _ in texts]
 
 
 # ── HF API helpers (production path) ─────────────────────────────────────────
@@ -64,63 +104,88 @@ def _hf_api_encode(text: str) -> List[float]:
     Returns an L2-normalised 768-dim float list — identical contract to the
     local SentenceTransformer path.
 
-    Used when AI_BACKEND='hf_api' (i.e. production on Render).
+    If HF_TOKEN is not configured or HuggingFace is temporarily unavailable,
+    it falls back gracefully to a deterministic 768-dim vector so background tasks
+    never crash or block matching.
     """
     import requests
 
-    token = os.environ.get('HF_TOKEN', '')
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    token = os.environ.get('HF_TOKEN', '').strip()
+    if not token:
+        logger.warning(
+            "HF_TOKEN is not configured in production environment variables! "
+            "Falling back to deterministic 768-dim vectorizer. "
+            "Add HF_TOKEN=hf_... to your deployment dashboard to enable deep-learning embeddings."
+        )
+        return _deterministic_fallback_encode(text)
 
+    headers = {"Authorization": f"Bearer {token}"}
     payload = {
         "inputs": text,
         "options": {"wait_for_model": True},
     }
 
-    for attempt in range(3):
-        try:
-            resp = requests.post(
-                _HF_API_URL,
-                headers=headers,
-                json=payload,
-                timeout=30,
-            )
-            if resp.status_code == 503:
-                # Model is loading on HF's side — wait and retry
-                wait = 20 * (attempt + 1)
-                logger.warning(
-                    "HF API: model loading (503) — retrying in %ss (attempt %d/3)",
-                    wait, attempt + 1,
+    for url in _HF_API_ENDPOINTS:
+        for attempt in range(2):
+            try:
+                resp = requests.post(
+                    url,
+                    headers=headers,
+                    json=payload,
+                    timeout=25,
                 )
-                time.sleep(wait)
-                continue
-            resp.raise_for_status()
-            vec = np.array(resp.json(), dtype=np.float32)
-            # L2-normalise to match local SentenceTransformer(normalize_embeddings=True)
-            norm = np.linalg.norm(vec)
-            if norm > 0:
-                vec = vec / norm
-            return vec.tolist()
-        except Exception as exc:
-            logger.warning("HF API encode attempt %d failed: %s", attempt + 1, exc)
-            if attempt == 2:
-                raise
-            time.sleep(2 ** attempt)
+                if resp.status_code == 503:
+                    wait = 5 * (attempt + 1)
+                    logger.info("HF API: model loading (503) — waiting %ss", wait)
+                    time.sleep(wait)
+                    continue
+                if resp.status_code in (401, 403):
+                    logger.error(
+                        "HF API returned %s (%s) — your HF_TOKEN is invalid or lacks Inference permissions. "
+                        "Falling back to deterministic vectorizer.",
+                        resp.status_code, resp.text[:120],
+                    )
+                    return _deterministic_fallback_encode(text)
+                if resp.status_code == 404:
+                    break  # try next endpoint URL
+                resp.raise_for_status()
 
-    raise RuntimeError("_hf_api_encode: all retries exhausted")
+                raw = resp.json()
+                vec = np.array(raw, dtype=np.float32)
+                # Ensure 1D shape (768,)
+                if vec.ndim > 1:
+                    if vec.shape[0] == 1:
+                        vec = vec.squeeze(0)
+                    else:
+                        vec = np.mean(vec, axis=0)
+                if vec.ndim > 1:
+                    vec = vec.flatten()[:EMBEDDING_DIM]
+
+                norm = np.linalg.norm(vec)
+                if norm > 0:
+                    vec = vec / norm
+                if len(vec) == EMBEDDING_DIM:
+                    return vec.tolist()
+            except Exception as exc:
+                logger.warning("HF API (%s) attempt %d failed: %s", url, attempt + 1, exc)
+                time.sleep(1)
+
+    logger.warning("All HuggingFace API attempts failed — using deterministic fallback.")
+    return _deterministic_fallback_encode(text)
 
 
 def _hf_api_encode_batch(texts: List[str]) -> List[List[float]]:
     """
-    Encode a list of strings via the HF API in one call.
+    Encode a list of strings via the HF API in one call, with deterministic fallback.
     Returns a list of L2-normalised 768-dim float lists.
     """
     import requests
 
-    token = os.environ.get('HF_TOKEN', '')
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    token = os.environ.get('HF_TOKEN', '').strip()
+    if not token:
+        return _deterministic_fallback_encode_batch(texts)
 
-    # Replace empty strings with a placeholder to avoid API errors,
-    # then zero the output — same contract as the local path.
+    headers = {"Authorization": f"Bearer {token}"}
     placeholders = {i for i, t in enumerate(texts) if not t.strip()}
     safe_texts   = [t if t.strip() else 'placeholder' for t in texts]
 
@@ -129,42 +194,43 @@ def _hf_api_encode_batch(texts: List[str]) -> List[List[float]]:
         "options": {"wait_for_model": True},
     }
 
-    for attempt in range(3):
-        try:
-            resp = requests.post(
-                _HF_API_URL,
-                headers=headers,
-                json=payload,
-                timeout=60,
-            )
-            if resp.status_code == 503:
-                wait = 20 * (attempt + 1)
-                logger.warning(
-                    "HF API batch: model loading (503) — retrying in %ss (attempt %d/3)",
-                    wait, attempt + 1,
+    for url in _HF_API_ENDPOINTS:
+        for attempt in range(2):
+            try:
+                resp = requests.post(
+                    url,
+                    headers=headers,
+                    json=payload,
+                    timeout=45,
                 )
-                time.sleep(wait)
-                continue
-            resp.raise_for_status()
-            raw = resp.json()   # list of lists
-            result = []
-            for idx, vec_list in enumerate(raw):
-                vec = np.array(vec_list, dtype=np.float32)
-                norm = np.linalg.norm(vec)
-                if norm > 0:
-                    vec = vec / norm
-                result.append(vec.tolist())
-            # Zero out placeholder slots
-            for idx in placeholders:
-                result[idx] = [0.0] * EMBEDDING_DIM
-            return result
-        except Exception as exc:
-            logger.warning("HF API batch attempt %d failed: %s", attempt + 1, exc)
-            if attempt == 2:
-                raise
-            time.sleep(2 ** attempt)
+                if resp.status_code in (401, 403):
+                    return _deterministic_fallback_encode_batch(texts)
+                if resp.status_code == 404:
+                    break
+                if resp.status_code == 503:
+                    time.sleep(5)
+                    continue
+                resp.raise_for_status()
+                raw = resp.json()
+                result = []
+                for item in raw:
+                    vec = np.array(item, dtype=np.float32)
+                    if vec.ndim > 1:
+                        vec = np.mean(vec, axis=0)
+                    norm = np.linalg.norm(vec)
+                    if norm > 0:
+                        vec = vec / norm
+                    result.append(vec.tolist())
+                # Zero out placeholder slots
+                for idx in placeholders:
+                    result[idx] = [0.0] * EMBEDDING_DIM
+                if len(result) == len(texts):
+                    return result
+            except Exception as exc:
+                logger.warning("HF API batch (%s) attempt %d failed: %s", url, attempt + 1, exc)
+                time.sleep(1)
 
-    raise RuntimeError("_hf_api_encode_batch: all retries exhausted")
+    return _deterministic_fallback_encode_batch(texts)
 
 
 # ── TextEncoder singleton ─────────────────────────────────────────────────────

@@ -52,11 +52,12 @@ logger = logging.getLogger(__name__)
 CLIP_MODEL_NAME  = 'ViT-B/32'
 CLIP_EMBED_DIM   = 512
 
-# HuggingFace Inference API endpoint for CLIP
-_HF_CLIP_API_URL = (
-    "https://api-inference.huggingface.co/pipeline/feature-extraction/"
-    "openai/clip-vit-base-patch32"
-)
+# HuggingFace Inference API endpoints for CLIP
+_HF_CLIP_API_ENDPOINTS = [
+    "https://api-inference.huggingface.co/models/openai/clip-vit-base-patch32",
+    "https://router.huggingface.co/hf-inference/models/openai/clip-vit-base-patch32",
+    "https://api-inference.huggingface.co/pipeline/feature-extraction/openai/clip-vit-base-patch32",
+]
 
 
 # ── HF API helpers (production path) ─────────────────────────────────────────
@@ -70,41 +71,47 @@ def _hf_clip_encode_image(image_bytes: bytes) -> List[float]:
     """
     import requests
 
-    token = os.environ.get('HF_TOKEN', '')
+    token = os.environ.get('HF_TOKEN', '').strip()
+    if not token:
+        logger.warning(
+            "HF_TOKEN is not set in environment variables! "
+            "Returning zero vector for CLIP image embedding."
+        )
+        return [0.0] * CLIP_EMBED_DIM
+
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type":  "image/jpeg",
     }
 
-    for attempt in range(3):
-        try:
-            resp = requests.post(
-                _HF_CLIP_API_URL,
-                headers=headers,
-                data=image_bytes,
-                timeout=30,
-            )
-            if resp.status_code == 503:
-                wait = 20 * (attempt + 1)
-                logger.warning(
-                    "HF CLIP API: model loading (503) — retrying in %ss (attempt %d/3)",
-                    wait, attempt + 1,
+    for url in _HF_CLIP_API_ENDPOINTS:
+        for attempt in range(2):
+            try:
+                resp = requests.post(
+                    url,
+                    headers=headers,
+                    data=image_bytes,
+                    timeout=30,
                 )
-                time.sleep(wait)
-                continue
-            resp.raise_for_status()
-            vec = np.array(resp.json(), dtype=np.float32)
-            norm = np.linalg.norm(vec)
-            return (vec / norm if norm > 0 else vec).tolist()
-        except Exception as exc:
-            logger.warning("HF CLIP image encode attempt %d failed: %s", attempt + 1, exc)
-            if attempt == 2:
-                logger.error(
-                    "HF CLIP API failed after 3 attempts — returning zero vector. "
-                    "Text-based matching will still work."
-                )
-                return [0.0] * CLIP_EMBED_DIM
-            time.sleep(2 ** attempt)
+                if resp.status_code == 503:
+                    wait = 5 * (attempt + 1)
+                    time.sleep(wait)
+                    continue
+                if resp.status_code in (401, 403):
+                    logger.error("HF CLIP API returned %s Unauthorized — check HF_TOKEN.", resp.status_code)
+                    return [0.0] * CLIP_EMBED_DIM
+                if resp.status_code == 404:
+                    break
+                resp.raise_for_status()
+                raw = resp.json()
+                vec = np.array(raw, dtype=np.float32)
+                if vec.ndim > 1:
+                    vec = vec.flatten()[:CLIP_EMBED_DIM]
+                norm = np.linalg.norm(vec)
+                return (vec / norm if norm > 0 else vec).tolist()
+            except Exception as exc:
+                logger.warning("HF CLIP image encode attempt %d failed: %s", attempt + 1, exc)
+                time.sleep(1)
 
     return [0.0] * CLIP_EMBED_DIM
 
@@ -116,39 +123,42 @@ def _hf_clip_encode_text(text: str) -> List[float]:
     """
     import requests
 
-    token = os.environ.get('HF_TOKEN', '')
-    headers = {"Authorization": f"Bearer {token}"}
+    token = os.environ.get('HF_TOKEN', '').strip()
+    if not token:
+        return [0.0] * CLIP_EMBED_DIM
 
+    headers = {"Authorization": f"Bearer {token}"}
     payload = {
         "inputs": text,
         "options": {"wait_for_model": True},
     }
 
-    for attempt in range(3):
-        try:
-            resp = requests.post(
-                _HF_CLIP_API_URL,
-                headers=headers,
-                json=payload,
-                timeout=30,
-            )
-            if resp.status_code == 503:
-                wait = 20 * (attempt + 1)
-                logger.warning(
-                    "HF CLIP text API: model loading (503) — retrying in %ss",
-                    wait,
+    for url in _HF_CLIP_API_ENDPOINTS:
+        for attempt in range(2):
+            try:
+                resp = requests.post(
+                    url,
+                    headers=headers,
+                    json=payload,
+                    timeout=30,
                 )
-                time.sleep(wait)
-                continue
-            resp.raise_for_status()
-            vec = np.array(resp.json(), dtype=np.float32)
-            norm = np.linalg.norm(vec)
-            return (vec / norm if norm > 0 else vec).tolist()
-        except Exception as exc:
-            logger.warning("HF CLIP text encode attempt %d failed: %s", attempt + 1, exc)
-            if attempt == 2:
-                return [0.0] * CLIP_EMBED_DIM
-            time.sleep(2 ** attempt)
+                if resp.status_code == 503:
+                    time.sleep(5)
+                    continue
+                if resp.status_code in (401, 403):
+                    return [0.0] * CLIP_EMBED_DIM
+                if resp.status_code == 404:
+                    break
+                resp.raise_for_status()
+                raw = resp.json()
+                vec = np.array(raw, dtype=np.float32)
+                if vec.ndim > 1:
+                    vec = vec.flatten()[:CLIP_EMBED_DIM]
+                norm = np.linalg.norm(vec)
+                return (vec / norm if norm > 0 else vec).tolist()
+            except Exception as exc:
+                logger.warning("HF CLIP text encode attempt %d failed: %s", attempt + 1, exc)
+                time.sleep(1)
 
     return [0.0] * CLIP_EMBED_DIM
 

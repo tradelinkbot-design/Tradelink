@@ -674,6 +674,14 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'marketplace.tasks.auto_complete_orders_task',
         'schedule': crontab(minute='*'),  # Run every minute for testing
     },
+    'recompute-all-embeddings-daily': {
+        'task': 'jobs.tasks.recompute_all_embeddings_task',
+        'schedule': crontab(hour=2, minute=0),
+    },
+    'recompute-all-product-embeddings-daily': {
+        'task': 'marketplace.tasks.recompute_all_product_embeddings_task',
+        'schedule': crontab(hour=2, minute=30),
+    },
 }
 RECOVERY_CODE = os.environ.get("RECOVERY_CODE")
 
