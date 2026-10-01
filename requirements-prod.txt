@@ -41,14 +41,14 @@ click-didyoumean==0.3.1
 click-plugins==1.1.1.2
 click-repl==0.3.0
 
-# ── AI / ML — Minimal (HF API in prod; numpy still needed for vector math) ────
-# torch, torchvision, sentence-transformers, transformers NOT installed here.
-# The HuggingFace Inference API handles model inference remotely.
+# ── AI / ML — FastEmbed (ONNX Runtime, in-process, CPU-optimized, ~120MB RAM) ──
+# FastEmbed replaces HuggingFace API / PyTorch with lightweight ONNX inference.
+fastembed==0.8.1
 numpy==2.2.6
 scikit-learn==1.7.2      # used by recommendation_service for cosine_similarity fallback
 scipy==1.16.3
 joblib==1.5.2
-Pillow==12.0.0           # still needed for image handling (CLIP image pre-processing)
+Pillow==12.0.0           # still needed for image handling
 
 # ── MEDIA / STORAGE ───────────────────────────────────────────────────────────
 cloudinary==1.44.1

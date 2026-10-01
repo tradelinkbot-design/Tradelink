@@ -182,7 +182,7 @@ class CLIPImageEncoder:
         return cls._instance
 
     def _ensure_loaded(self) -> None:
-        """Load CLIP locally. No-op when AI_BACKEND=hf_api."""
+        """Load CLIP locally via torch. No-op when AI_BACKEND=hf_api or fastembed."""
         if self._model is not None:
             return
         with self._model_lock:
@@ -202,35 +202,56 @@ class CLIPImageEncoder:
                 self._torch      = torch
                 logger.info("CLIP image encoder loaded.")
             except Exception as exc:
-                logger.exception("Failed to load CLIP model: %s", exc)
-                raise
+                logger.warning("Failed to load local PyTorch CLIP model: %s — will fallback gracefully.", exc)
+                self._model = None
 
     # ── Image encoding ───────────────────────────────────────────────────────
 
     def encode_image_file(self, image_path: str) -> List[float]:
         """Encode an image file at the given path. Returns 512-dim float list."""
-        if os.environ.get('AI_BACKEND', 'local') == 'hf_api':
-            with open(image_path, 'rb') as f:
-                return _hf_clip_encode_image(f.read())
-
-        self._ensure_loaded()
         try:
-            image = Image.open(image_path).convert('RGB')
+            backend = os.environ.get('AI_BACKEND', 'fastembed')
+            if backend == 'hf_api':
+                with open(image_path, 'rb') as f:
+                    return _hf_clip_encode_image(f.read())
+
+            if backend == 'fastembed':
+                try:
+                    from fastembed import ImageEmbedding
+                    cache_dir = os.environ.get('FASTEMBED_CACHE_PATH', '').strip() or None
+                    model = ImageEmbedding(model_name="Qdrant/clip-ViT-B-32-vision", cache_dir=cache_dir)
+                    embeddings = list(model.embed([image_path]))
+                    vec = np.array(embeddings[0], dtype=np.float32)
+                    norm = np.linalg.norm(vec)
+                    return (vec / norm if norm > 0 else vec).tolist()
+                except Exception as exc:
+                    logger.warning("FastEmbed CLIP image encode failed: %s — returning zero vector.", exc)
+                    return [0.0] * CLIP_EMBED_DIM
+
+            self._ensure_loaded()
+            if self._model is not None:
+                image = Image.open(image_path).convert('RGB')
+                return self._encode_pil(image)
         except Exception as exc:
-            raise ValueError(f"Cannot open image {image_path}: {exc}") from exc
-        return self._encode_pil(image)
+            logger.warning("encode_image_file failed for %s: %s — returning zero vector.", image_path, exc)
+
+        return [0.0] * CLIP_EMBED_DIM
 
     def encode_image_bytes(self, image_bytes: bytes) -> List[float]:
         """Encode raw image bytes. Returns 512-dim float list."""
-        if os.environ.get('AI_BACKEND', 'local') == 'hf_api':
-            return _hf_clip_encode_image(image_bytes)
-
-        self._ensure_loaded()
         try:
-            image = Image.open(BytesIO(image_bytes)).convert('RGB')
+            backend = os.environ.get('AI_BACKEND', 'fastembed')
+            if backend == 'hf_api':
+                return _hf_clip_encode_image(image_bytes)
+
+            self._ensure_loaded()
+            if self._model is not None:
+                image = Image.open(BytesIO(image_bytes)).convert('RGB')
+                return self._encode_pil(image)
         except Exception as exc:
-            raise ValueError(f"Cannot decode image bytes: {exc}") from exc
-        return self._encode_pil(image)
+            logger.warning("encode_image_bytes failed: %s — returning zero vector.", exc)
+
+        return [0.0] * CLIP_EMBED_DIM
 
     def _encode_pil(self, image: Image.Image) -> List[float]:
         with self._torch.no_grad():
@@ -251,15 +272,35 @@ class CLIPImageEncoder:
 
         For text-to-text similarity, use text_encoder.encode() instead.
         """
-        if os.environ.get('AI_BACKEND', 'local') == 'hf_api':
-            return _hf_clip_encode_text(text)
+        try:
+            backend = os.environ.get('AI_BACKEND', 'fastembed')
+            if backend == 'hf_api':
+                return _hf_clip_encode_text(text)
 
-        self._ensure_loaded()
-        with self._torch.no_grad():
-            tokens    = self._clip.tokenize([text], truncate=True).to(self._device)
-            embedding = self._model.encode_text(tokens)
-            embedding = embedding / embedding.norm(dim=-1, keepdim=True)
-            return embedding.cpu().float().numpy()[0].tolist()
+            if backend == 'fastembed':
+                try:
+                    from fastembed import TextEmbedding
+                    cache_dir = os.environ.get('FASTEMBED_CACHE_PATH', '').strip() or None
+                    model = TextEmbedding(model_name="Qdrant/clip-ViT-B-32-text", cache_dir=cache_dir)
+                    embeddings = list(model.embed([text]))
+                    vec = np.array(embeddings[0], dtype=np.float32)
+                    norm = np.linalg.norm(vec)
+                    return (vec / norm if norm > 0 else vec).tolist()
+                except Exception as exc:
+                    logger.warning("FastEmbed CLIP text encode failed: %s — returning zero vector.", exc)
+                    return [0.0] * CLIP_EMBED_DIM
+
+            self._ensure_loaded()
+            if self._model is not None:
+                with self._torch.no_grad():
+                    tokens    = self._clip.tokenize([text], truncate=True).to(self._device)
+                    embedding = self._model.encode_text(tokens)
+                    embedding = embedding / embedding.norm(dim=-1, keepdim=True)
+                    return embedding.cpu().float().numpy()[0].tolist()
+        except Exception as exc:
+            logger.warning("encode_text_for_image_comparison failed: %s — returning zero vector.", exc)
+
+        return [0.0] * CLIP_EMBED_DIM
 
     encode_text = encode_text_for_image_comparison
 

@@ -16,6 +16,7 @@ bin/
 lib/
 include/
 .hf_cache/
+.fastembed_cache/
 
 # --- Secret Keys & Credentials ---
 # Never commit your .env file or specific secrets!

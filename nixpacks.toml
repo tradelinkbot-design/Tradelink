@@ -10,7 +10,8 @@ cmds = [
 
 [phases.build]
 cmds = [
-    "python manage.py collectstatic --no-input"
+    "python manage.py collectstatic --no-input",
+    "python -c \"import os; from fastembed import TextEmbedding; cache = os.environ.get('FASTEMBED_CACHE_PATH', '.fastembed_cache'); TextEmbedding(model_name='BAAI/bge-base-en-v1.5', cache_dir=cache)\""
 ]
 
 [start]

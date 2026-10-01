@@ -16,25 +16,12 @@ load_dotenv()
 # huggingface_hub library caches its "check for updates" intent at import time.
 #
 # AI_BACKEND logic:
-#   DEBUG=True  (local dev)  → AI_BACKEND='local'  — loads cached model from disk
-#   DEBUG=False (production) → AI_BACKEND='hf_api' — calls HuggingFace Inference API
-#                              (free, no PyTorch/torch needed in prod)
-#
-# You can always override explicitly: set AI_BACKEND=local in a .env to force
-# local loading even in a production-like environment.
-_debug_env = os.environ.get('DEBUG', 'False') == 'True'
-
-if _debug_env:
-    # Local development — use locally cached HuggingFace model
-    os.environ['HF_HUB_OFFLINE']      = '1'
-    os.environ['TRANSFORMERS_OFFLINE'] = '1'
-    os.environ.setdefault('AI_BACKEND', 'local')
-else:
-    # Production — use HuggingFace Inference API (no local model loading)
-    # Remove offline flags so the HF hub client doesn't block outbound requests
-    os.environ.pop('HF_HUB_OFFLINE',      None)
-    os.environ.pop('TRANSFORMERS_OFFLINE', None)
-    os.environ.setdefault('AI_BACKEND', 'hf_api')
+#   FastEmbed (ONNX Runtime) is the default in-process engine for both local
+#   development and production. It runs offline with CPU-quantized ONNX models,
+#   requires zero API tokens, has no external network latency, and avoids PyTorch
+#   memory overhead (~120 MB RAM vs PyTorch's ~1.5 GB).
+os.environ.setdefault('AI_BACKEND', 'fastembed')
+os.environ.setdefault('FASTEMBED_MODEL_NAME', 'BAAI/bge-base-en-v1.5')
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -618,6 +605,9 @@ if DEBUG:
     DEFAULT_FROM_EMAIL  = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 
 
+
+# FastEmbed ONNX model cache
+os.environ.setdefault('FASTEMBED_CACHE_PATH', str(BASE_DIR / '.fastembed_cache'))
 
 # Disable symlinks — use real copies of files instead (required on Windows
 # unless Developer Mode / symlink privilege is enabled)

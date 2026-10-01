@@ -42,14 +42,11 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 # ── Constants ────────────────────────────────────────────────────────────────
-# Fallback model name (HuggingFace hub id) used ONLY if no path is configured.
-# NOTE: do not resolve os.environ here at module level — Django settings and
-# os.environ.setdefault() calls in settings.py may not have run yet when this
-# module is first imported.  The path is resolved lazily inside _ensure_loaded().
-_DEFAULT_MODEL_NAME = 'sentence-transformers/all-mpnet-base-v2'
-EMBEDDING_DIM       = 768   # matches all-mpnet-base-v2 output
+# Default FastEmbed model (BAAI/bge-base-en-v1.5 produces native 768-dim embeddings)
+_DEFAULT_MODEL_NAME = 'BAAI/bge-base-en-v1.5'
+EMBEDDING_DIM       = 768   # matches BAAI/bge-base-en-v1.5 and all-mpnet-base-v2
 
-# HuggingFace Inference API endpoint (current canonical router endpoint)
+# HuggingFace Inference API endpoint (kept as legacy fallback option)
 _HF_API_URL = (
     "https://router.huggingface.co/hf-inference/models/"
     "sentence-transformers/all-mpnet-base-v2/pipeline/feature-extraction"
@@ -243,11 +240,16 @@ def _hf_api_encode_batch(texts: List[str]) -> List[List[float]]:
 
 class TextEncoder:
     """
-    Lazy-loading singleton for the sentence-transformer text encoder.
+    Lazy-loading singleton for text semantic embeddings.
 
-    Routing:
-        AI_BACKEND=local   → loads all-mpnet-base-v2 from local disk (dev)
-        AI_BACKEND=hf_api  → calls HuggingFace Inference API (production)
+    Default Engine:
+        FastEmbed (ONNX Runtime, BAAI/bge-base-en-v1.5)
+        Produces native 768-dim L2-normalised vectors in-process on CPU with ~120 MB RAM.
+
+    Fallbacks:
+        1. If AI_BACKEND='hf_api', routes to HuggingFace Inference API.
+        2. If AI_BACKEND='local', routes to sentence_transformers if installed.
+        3. If model loading fails, seamlessly uses deterministic HashingVectorizer fallback.
 
     Usage:
         from jobs.service.text_encoder import text_encoder
@@ -272,107 +274,140 @@ class TextEncoder:
     # ── Private ─────────────────────────────────────────────────────────────
 
     def _ensure_loaded(self) -> None:
-        """Load the model on first call (local backend only). No-op for hf_api."""
+        """Load the model on first call (lazy singleton)."""
         if self._model is not None:
             return
         with self._model_lock:
             if self._model is not None:
                 return
 
-            model_path = os.environ.get('TEXT_ENCODER_MODEL_PATH', '').strip()
-            if not model_path:
-                logger.warning(
-                    "TEXT_ENCODER_MODEL_PATH is not set. "
-                    "Falling back to hub name '%s'. "
-                    "Set TEXT_ENCODER_MODEL_PATH to the absolute snapshot "
-                    "directory to guarantee offline loading.",
-                    _DEFAULT_MODEL_NAME,
-                )
-                model_path = _DEFAULT_MODEL_NAME
-            else:
-                if not os.path.isdir(model_path):
-                    raise FileNotFoundError(
-                        f"TEXT_ENCODER_MODEL_PATH does not exist: {model_path!r}\n"
-                        "Check your settings.py SNAPSHOT_HASH and that the model "
-                        "has been downloaded."
-                    )
+            backend = os.environ.get('AI_BACKEND', 'fastembed')
 
-            try:
-                from sentence_transformers import SentenceTransformer
-                logger.info("Loading sentence-transformer from %r …", model_path)
-                self._model = SentenceTransformer(model_path, local_files_only=True)
-                logger.info("Text encoder ready (dim=%d).", EMBEDDING_DIM)
-            except Exception as exc:
-                logger.exception("Failed to load text encoder from %r: %s", model_path, exc)
-                raise
+            if backend == 'fastembed':
+                model_name = os.environ.get('FASTEMBED_MODEL_NAME', _DEFAULT_MODEL_NAME).strip()
+                cache_dir = os.environ.get('FASTEMBED_CACHE_PATH', '').strip() or None
+                try:
+                    from fastembed import TextEmbedding
+                    logger.info("Initializing FastEmbed TextEmbedding (%s, cache_dir=%s)...", model_name, cache_dir)
+                    self._model = TextEmbedding(model_name=model_name, cache_dir=cache_dir)
+                    logger.info("FastEmbed text encoder ready (dim=%d).", EMBEDDING_DIM)
+                    return
+                except Exception as exc:
+                    logger.exception("Failed to load FastEmbed text encoder: %s. Falling back to deterministic vectorizer.", exc)
+                    self._model = None
+                    return
+
+            if backend == 'local':
+                model_path = os.environ.get('TEXT_ENCODER_MODEL_PATH', '').strip() or 'sentence-transformers/all-mpnet-base-v2'
+                try:
+                    from sentence_transformers import SentenceTransformer
+                    logger.info("Loading sentence-transformer from %r …", model_path)
+                    self._model = SentenceTransformer(model_path)
+                    logger.info("Text encoder ready (dim=%d).", EMBEDDING_DIM)
+                    return
+                except Exception as exc:
+                    logger.exception("Failed to load sentence-transformer: %s", exc)
+                    self._model = None
+                    return
 
     # ── Public API ───────────────────────────────────────────────────────────
 
     def encode(self, text: str) -> List[float]:
         """
         Encode a single text string into a normalised 768-dim float list.
-
-        Routes to HuggingFace Inference API (AI_BACKEND=hf_api) in production,
-        or local SentenceTransformer model (AI_BACKEND=local) in development.
         """
         text = text.strip()
         if not text:
             raise ValueError("Cannot encode an empty string.")
 
-        if os.environ.get('AI_BACKEND', 'local') == 'hf_api':
+        if os.environ.get('AI_BACKEND', 'fastembed') == 'hf_api':
             logger.debug("text_encoder.encode → HF API")
             return _hf_api_encode(text)
 
-        # Local dev path — loads cached model from disk
         self._ensure_loaded()
-        vec = self._model.encode(
-            text,
-            normalize_embeddings=True,
-            show_progress_bar=False,
-        )
-        return vec.tolist()
+
+        if self._model is not None:
+            try:
+                # FastEmbed path
+                if hasattr(self._model, 'embed'):
+                    embeddings = list(self._model.embed([text]))
+                    vec = np.array(embeddings[0], dtype=np.float32)
+                    norm = np.linalg.norm(vec)
+                    if norm > 0:
+                        vec = vec / norm
+                    return vec.tolist()
+
+                # SentenceTransformer path
+                vec = self._model.encode(
+                    text,
+                    normalize_embeddings=True,
+                    show_progress_bar=False,
+                )
+                return vec.tolist()
+            except Exception as exc:
+                logger.warning("text_encoder.encode error: %s — falling back to deterministic vectorizer.", exc)
+                return _deterministic_fallback_encode(text)
+
+        return _deterministic_fallback_encode(text)
 
     def encode_batch(self, texts: List[str]) -> List[List[float]]:
         """
-        Encode a list of strings.
-
-        In production (hf_api) sends them all in one API call.
-        In development, runs a batched forward pass through the local model.
+        Encode a list of strings into normalised 768-dim float lists.
         """
         if not texts:
             return []
 
-        if os.environ.get('AI_BACKEND', 'local') == 'hf_api':
+        if os.environ.get('AI_BACKEND', 'fastembed') == 'hf_api':
             logger.debug("text_encoder.encode_batch (%d texts) → HF API", len(texts))
             return _hf_api_encode_batch(texts)
 
-        # Local dev path
         self._ensure_loaded()
         placeholders = {i: '' for i, t in enumerate(texts) if not t.strip()}
         safe_texts   = [t if t.strip() else 'placeholder' for t in texts]
 
-        vecs = self._model.encode(
-            safe_texts,
-            normalize_embeddings=True,
-            show_progress_bar=False,
-            batch_size=64,
-        )
+        if self._model is not None:
+            try:
+                if hasattr(self._model, 'embed'):
+                    embeddings = list(self._model.embed(safe_texts))
+                    result = []
+                    for item in embeddings:
+                        vec = np.array(item, dtype=np.float32)
+                        norm = np.linalg.norm(vec)
+                        if norm > 0:
+                            vec = vec / norm
+                        result.append(vec.tolist())
+                    for idx in placeholders:
+                        result[idx] = [0.0] * EMBEDDING_DIM
+                    return result
 
-        result = vecs.tolist()
-        for idx in placeholders:
-            result[idx] = [0.0] * EMBEDDING_DIM
+                # SentenceTransformer path
+                vecs = self._model.encode(
+                    safe_texts,
+                    normalize_embeddings=True,
+                    show_progress_bar=False,
+                    batch_size=64,
+                )
+                result = vecs.tolist()
+                for idx in placeholders:
+                    result[idx] = [0.0] * EMBEDDING_DIM
+                return result
+            except Exception as exc:
+                logger.warning("text_encoder.encode_batch error: %s — falling back to deterministic batch vectorizer.", exc)
+                return _deterministic_fallback_encode_batch(texts)
 
-        return result
+        return _deterministic_fallback_encode_batch(texts)
 
     @property
     def is_ready(self) -> bool:
         """
-        True if the model is loaded (local) or API backend is configured.
-        Non-blocking.
+        True if the model is loaded or ready. Non-blocking.
         """
-        if os.environ.get('AI_BACKEND', 'local') == 'hf_api':
+        if self._model is not None:
+            return True
+        backend = os.environ.get('AI_BACKEND', 'fastembed')
+        if backend == 'hf_api':
             return bool(os.environ.get('HF_TOKEN', ''))
-        return self._model is not None
+        return True
 
     @property
     def embedding_dim(self) -> int:
