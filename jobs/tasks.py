@@ -282,17 +282,12 @@ def compute_job_embedding_task(self, job_id: str) -> None:
     st_success = compute_job_embedding(job_id)
 
     if st_success:
-        # Step 2: CLIP text encoder (secondary signal — failure is logged but
-        # does not block match computation; image_score defaults to 0.5 neutral)
-        clip_success = compute_job_clip_embedding(job_id)
-        if not clip_success:
-            logger.warning(
-                "Task: CLIP text embedding failed for job %s — "
-                "image scores will use neutral default (0.5) until it succeeds.",
-                job_id,
-            )
+        # Step 2: CLIP text encoder (secondary signal — skipped when disabled to preserve RAM)
+        from jobs.service.clip_service import is_clip_enabled
+        if is_clip_enabled():
+            compute_job_clip_embedding(job_id)
 
-        # Step 3: trigger match computation regardless of CLIP result
+        # Step 3: trigger match computation
         compute_matches_for_job_task.delay(job_id)
 
 
@@ -311,6 +306,11 @@ def compute_portfolio_image_task(self, portfolio_item_id: str) -> None:
     Encodes a PortfolioItem image with CLIP's visual encoder (512-dim)
     and saves it to PortfolioItem.clip_image_embedding.
     """
+    from jobs.service.clip_service import is_clip_enabled
+    if not is_clip_enabled():
+        logger.info("compute_portfolio_image_task: CLIP is disabled — skipping %s.", portfolio_item_id)
+        return
+
     from jobs.service.matching_service import compute_portfolio_image_embedding
 
     logger.info("Task: compute_portfolio_image for %s", portfolio_item_id)

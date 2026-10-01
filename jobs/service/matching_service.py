@@ -198,7 +198,10 @@ def compute_job_clip_embedding(job_id: str) -> bool:
     Returns True on success, False on failure.
     """
     from jobs.models import Job
-    from jobs.service.clip_service import clip_image_encoder
+    from jobs.service.clip_service import clip_image_encoder, is_clip_enabled
+
+    if not is_clip_enabled():
+        return False
 
     try:
         job = (
@@ -227,6 +230,8 @@ def compute_job_clip_embedding(job_id: str) -> bool:
 
     try:
         embedding = clip_image_encoder.encode_text_for_image_comparison(text)
+        if not embedding or not any(embedding):
+            return False
         Job.objects.filter(pk=job_id).update(
             clip_embedding=embedding,
             clip_embedding_updated=timezone.now(),
@@ -249,7 +254,10 @@ def compute_portfolio_image_embedding(portfolio_item_id: str) -> bool:
     Returns True on success, False on failure.
     """
     from jobs.models import PortfolioItem
-    from jobs.service.clip_service import clip_image_encoder
+    from jobs.service.clip_service import clip_image_encoder, is_clip_enabled
+
+    if not is_clip_enabled():
+        return False
 
     try:
         item = PortfolioItem.objects.get(pk=portfolio_item_id)
@@ -273,6 +281,8 @@ def compute_portfolio_image_embedding(portfolio_item_id: str) -> bool:
             portfolio_item_id, item.image.name,
         )
         embedding = clip_image_encoder.encode_image_file(item.image.path)
+        if not embedding or not any(embedding):
+            return False
         PortfolioItem.objects.filter(pk=portfolio_item_id).update(
             clip_image_embedding=embedding,
         )
@@ -383,8 +393,12 @@ def _resolve_job_clip_embedding(
     The fallback result is NOT persisted here — compute_job_clip_embedding()
     should be called to store it properly.
     """
-    if stored_embedding:
+    if stored_embedding and any(stored_embedding):
         return stored_embedding
+
+    from jobs.service.clip_service import is_clip_enabled
+    if not is_clip_enabled():
+        return None
 
     # Fallback: compute on-the-fly (slower — model inference)
     from jobs.models import Job
@@ -400,7 +414,8 @@ def _resolve_job_clip_embedding(
         return None
     text = f"{job['title']}. {job['description']}"[:300]
     try:
-        return clip_image_encoder.encode_text_for_image_comparison(text)
+        embedding = clip_image_encoder.encode_text_for_image_comparison(text)
+        return embedding if embedding and any(embedding) else None
     except Exception as exc:
         logger.warning(
             "Fallback CLIP encoding failed for job %s: %s", job_id, exc

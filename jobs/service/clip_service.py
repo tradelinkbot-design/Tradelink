@@ -52,6 +52,16 @@ logger = logging.getLogger(__name__)
 CLIP_MODEL_NAME  = 'ViT-B/32'
 CLIP_EMBED_DIM   = 512
 
+def is_clip_enabled() -> bool:
+    """
+    Check if CLIP multimodal cross-matching is enabled.
+    Disabled by default on memory-constrained servers (like Railway 512MB RAM)
+    because loading two AI models simultaneously causes Linux OOM (SIGKILL).
+    When disabled, returns False and encoders return zero vectors safely.
+    To enable on instances with >=2GB RAM, set ENABLE_CLIP=True in environment.
+    """
+    return os.environ.get('ENABLE_CLIP', 'False').strip().lower() in ('true', '1')
+
 # HuggingFace Inference API endpoint for CLIP
 _HF_CLIP_API_URL = (
     "https://router.huggingface.co/hf-inference/models/"
@@ -209,6 +219,9 @@ class CLIPImageEncoder:
 
     def encode_image_file(self, image_path: str) -> List[float]:
         """Encode an image file at the given path. Returns 512-dim float list."""
+        if not is_clip_enabled():
+            return [0.0] * CLIP_EMBED_DIM
+
         try:
             backend = os.environ.get('AI_BACKEND', 'fastembed')
             if backend == 'hf_api':
@@ -239,6 +252,9 @@ class CLIPImageEncoder:
 
     def encode_image_bytes(self, image_bytes: bytes) -> List[float]:
         """Encode raw image bytes. Returns 512-dim float list."""
+        if not is_clip_enabled():
+            return [0.0] * CLIP_EMBED_DIM
+
         try:
             backend = os.environ.get('AI_BACKEND', 'fastembed')
             if backend == 'hf_api':
@@ -272,6 +288,9 @@ class CLIPImageEncoder:
 
         For text-to-text similarity, use text_encoder.encode() instead.
         """
+        if not is_clip_enabled():
+            return [0.0] * CLIP_EMBED_DIM
+
         try:
             backend = os.environ.get('AI_BACKEND', 'fastembed')
             if backend == 'hf_api':

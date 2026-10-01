@@ -540,7 +540,8 @@ CELERY_BROKER_TRANSPORT_OPTIONS = {
 # ── Celery Production Scaling & Memory Management ──────────────────────────────
 CELERY_TASK_TIME_LIMIT            = 300   # Hard kill task after 5 min
 CELERY_TASK_SOFT_TIME_LIMIT       = 240   # Raise SoftTimeLimitExceeded after 4 min
-CELERY_WORKER_MAX_TASKS_PER_CHILD = 50    # Recycle worker process every 50 tasks (prevents PyTorch memory leaks)
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 50    # Recycle worker process every 50 tasks (prevents memory leaks)
+CELERY_WORKER_MAX_MEMORY_PER_CHILD = 350000  # 350 MB max RAM per worker before recycling
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1     # Take one task at a time so long AI jobs don't starve other tasks
 
 # ── Production Security Headers ────────────────────────────────────────────────
@@ -608,6 +609,7 @@ if DEBUG:
 
 # FastEmbed ONNX model cache
 os.environ.setdefault('FASTEMBED_CACHE_PATH', str(BASE_DIR / '.fastembed_cache'))
+os.environ.setdefault('ENABLE_CLIP', 'False')  # Keep False on 512MB RAM instances to prevent OOM SIGKILL
 
 # Disable symlinks — use real copies of files instead (required on Windows
 # unless Developer Mode / symlink privilege is enabled)
