@@ -52,11 +52,11 @@ logger = logging.getLogger(__name__)
 CLIP_MODEL_NAME  = 'ViT-B/32'
 CLIP_EMBED_DIM   = 512
 
-# HuggingFace Inference API endpoints for CLIP
-_HF_CLIP_API_ENDPOINTS = [
-    "https://router.huggingface.co/hf-inference/models/openai/clip-vit-base-patch32/pipeline/feature-extraction",
-    "https://router.huggingface.co/hf-inference/models/openai/clip-vit-base-patch32",
-]
+# HuggingFace Inference API endpoint for CLIP
+_HF_CLIP_API_URL = (
+    "https://router.huggingface.co/hf-inference/models/"
+    "openai/clip-vit-base-patch32/pipeline/feature-extraction"
+)
 
 
 # ── HF API helpers (production path) ─────────────────────────────────────────
@@ -83,35 +83,28 @@ def _hf_clip_encode_image(image_bytes: bytes) -> List[float]:
         "Content-Type":  "image/jpeg",
     }
 
-    for url in _HF_CLIP_API_ENDPOINTS:
-        for attempt in range(2):
-            try:
-                resp = requests.post(
-                    url,
-                    headers=headers,
-                    data=image_bytes,
-                    timeout=30,
-                )
-                if resp.status_code == 503:
-                    wait = 5 * (attempt + 1)
-                    time.sleep(wait)
-                    continue
-                if resp.status_code in (400, 401, 403):
-                    return [0.0] * CLIP_EMBED_DIM
-                if resp.status_code == 404:
-                    break
-                resp.raise_for_status()
-                raw = resp.json()
-                vec = np.array(raw, dtype=np.float32)
-                if vec.ndim > 1:
-                    vec = vec.flatten()[:CLIP_EMBED_DIM]
-                norm = np.linalg.norm(vec)
-                return (vec / norm if norm > 0 else vec).tolist()
-            except Exception as exc:
-                logger.warning("HF CLIP image encode attempt %d failed: %s", attempt + 1, exc)
-                time.sleep(1)
-
-    return [0.0] * CLIP_EMBED_DIM
+    try:
+        resp = requests.post(
+            _HF_CLIP_API_URL,
+            headers=headers,
+            data=image_bytes,
+            timeout=(8, 30),
+        )
+        if resp.status_code in (400, 401, 403, 503):
+            return [0.0] * CLIP_EMBED_DIM
+        resp.raise_for_status()
+        raw = resp.json()
+        vec = np.array(raw, dtype=np.float32)
+        if vec.ndim > 1:
+            vec = vec.flatten()[:CLIP_EMBED_DIM]
+        norm = np.linalg.norm(vec)
+        return (vec / norm if norm > 0 else vec).tolist()
+    except requests.exceptions.Timeout:
+        logger.warning("HF CLIP image encode timed out — using zero vector.")
+        return [0.0] * CLIP_EMBED_DIM
+    except Exception as exc:
+        logger.warning("HF CLIP image encode failed: %s — using zero vector.", exc)
+        return [0.0] * CLIP_EMBED_DIM
 
 
 def _hf_clip_encode_text(text: str) -> List[float]:
@@ -134,34 +127,28 @@ def _hf_clip_encode_text(text: str) -> List[float]:
         "options": {"wait_for_model": True},
     }
 
-    for url in _HF_CLIP_API_ENDPOINTS:
-        for attempt in range(2):
-            try:
-                resp = requests.post(
-                    url,
-                    headers=headers,
-                    json=payload,
-                    timeout=30,
-                )
-                if resp.status_code == 503:
-                    time.sleep(5)
-                    continue
-                if resp.status_code in (400, 401, 403):
-                    return [0.0] * CLIP_EMBED_DIM
-                if resp.status_code == 404:
-                    break
-                resp.raise_for_status()
-                raw = resp.json()
-                vec = np.array(raw, dtype=np.float32)
-                if vec.ndim > 1:
-                    vec = vec.flatten()[:CLIP_EMBED_DIM]
-                norm = np.linalg.norm(vec)
-                return (vec / norm if norm > 0 else vec).tolist()
-            except Exception as exc:
-                logger.warning("HF CLIP text encode attempt %d failed: %s", attempt + 1, exc)
-                time.sleep(1)
-
-    return [0.0] * CLIP_EMBED_DIM
+    try:
+        resp = requests.post(
+            _HF_CLIP_API_URL,
+            headers=headers,
+            json=payload,
+            timeout=(8, 30),
+        )
+        if resp.status_code in (400, 401, 403, 503):
+            return [0.0] * CLIP_EMBED_DIM
+        resp.raise_for_status()
+        raw = resp.json()
+        vec = np.array(raw, dtype=np.float32)
+        if vec.ndim > 1:
+            vec = vec.flatten()[:CLIP_EMBED_DIM]
+        norm = np.linalg.norm(vec)
+        return (vec / norm if norm > 0 else vec).tolist()
+    except requests.exceptions.Timeout:
+        logger.warning("HF CLIP text encode timed out — using zero vector.")
+        return [0.0] * CLIP_EMBED_DIM
+    except Exception as exc:
+        logger.warning("HF CLIP text encode failed: %s — using zero vector.", exc)
+        return [0.0] * CLIP_EMBED_DIM
 
 
 # ── CLIPImageEncoder singleton ────────────────────────────────────────────────

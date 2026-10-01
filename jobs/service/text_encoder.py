@@ -49,11 +49,11 @@ logger = logging.getLogger(__name__)
 _DEFAULT_MODEL_NAME = 'sentence-transformers/all-mpnet-base-v2'
 EMBEDDING_DIM       = 768   # matches all-mpnet-base-v2 output
 
-# HuggingFace Inference API endpoints (current canonical router endpoints)
-_HF_API_ENDPOINTS = [
-    "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-mpnet-base-v2/pipeline/feature-extraction",
-    "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-mpnet-base-v2",
-]
+# HuggingFace Inference API endpoint (current canonical router endpoint)
+_HF_API_URL = (
+    "https://router.huggingface.co/hf-inference/models/"
+    "sentence-transformers/all-mpnet-base-v2/pipeline/feature-extraction"
+)
 
 
 # ── Deterministic fallback (zero-dependency scikit-learn / numpy) ─────────────
@@ -103,9 +103,9 @@ def _hf_api_encode(text: str) -> List[float]:
     Returns an L2-normalised 768-dim float list — identical contract to the
     local SentenceTransformer path.
 
-    If HF_TOKEN is not configured or HuggingFace is temporarily unavailable,
+    If HF_TOKEN is not configured or HuggingFace is temporarily unavailable/slow,
     it falls back gracefully to a deterministic 768-dim vector so background tasks
-    never crash or block matching.
+    never crash or stall.
     """
     import requests
 
@@ -127,58 +127,57 @@ def _hf_api_encode(text: str) -> List[float]:
         "options": {"wait_for_model": True},
     }
 
-    for url in _HF_API_ENDPOINTS:
-        for attempt in range(2):
-            try:
-                resp = requests.post(
-                    url,
-                    headers=headers,
-                    json=payload,
-                    timeout=25,
-                )
-                if resp.status_code == 503:
-                    wait = 5 * (attempt + 1)
-                    logger.info("HF API: model loading (503) — waiting %ss", wait)
-                    time.sleep(wait)
-                    continue
-                if resp.status_code in (401, 403):
-                    logger.error(
-                        "HF API returned %s (%s) — your HF token is invalid or lacks Inference permissions. "
-                        "Falling back to deterministic vectorizer.",
-                        resp.status_code, resp.text[:120],
-                    )
-                    return _deterministic_fallback_encode(text)
-                if resp.status_code == 400:
-                    logger.warning(
-                        "HF API returned 400 (%s) at %s — falling back to deterministic vectorizer.",
-                        resp.text[:120], url,
-                    )
-                    return _deterministic_fallback_encode(text)
-                if resp.status_code == 404:
-                    break  # try next endpoint URL
-                resp.raise_for_status()
+    try:
+        resp = requests.post(
+            _HF_API_URL,
+            headers=headers,
+            json=payload,
+            timeout=(8, 40),  # 8s connect, 40s read (accommodates serverless cold start)
+        )
+        if resp.status_code == 503:
+            logger.info("HF API model is loading (503) — falling back to deterministic vectorizer.")
+            return _deterministic_fallback_encode(text)
+        if resp.status_code in (401, 403):
+            logger.error(
+                "HF API returned %s (%s) — your HF token is invalid or lacks Inference permissions. "
+                "Falling back to deterministic vectorizer.",
+                resp.status_code, resp.text[:120],
+            )
+            return _deterministic_fallback_encode(text)
+        if resp.status_code == 400:
+            logger.warning(
+                "HF API returned 400 (%s) — falling back to deterministic vectorizer.",
+                resp.text[:120],
+            )
+            return _deterministic_fallback_encode(text)
+        resp.raise_for_status()
 
-                raw = resp.json()
-                vec = np.array(raw, dtype=np.float32)
-                # Ensure 1D shape (768,)
-                if vec.ndim > 1:
-                    if vec.shape[0] == 1:
-                        vec = vec.squeeze(0)
-                    else:
-                        vec = np.mean(vec, axis=0)
-                if vec.ndim > 1:
-                    vec = vec.flatten()[:EMBEDDING_DIM]
+        raw = resp.json()
+        vec = np.array(raw, dtype=np.float32)
+        # Ensure 1D shape (768,)
+        if vec.ndim > 1:
+            if vec.shape[0] == 1:
+                vec = vec.squeeze(0)
+            else:
+                vec = np.mean(vec, axis=0)
+        if vec.ndim > 1:
+            vec = vec.flatten()[:EMBEDDING_DIM]
 
-                norm = np.linalg.norm(vec)
-                if norm > 0:
-                    vec = vec / norm
-                if len(vec) == EMBEDDING_DIM:
-                    return vec.tolist()
-            except Exception as exc:
-                logger.warning("HF API (%s) attempt %d failed: %s", url, attempt + 1, exc)
-                time.sleep(1)
+        norm = np.linalg.norm(vec)
+        if norm > 0:
+            vec = vec / norm
+        if len(vec) == EMBEDDING_DIM:
+            return vec.tolist()
+    except requests.exceptions.Timeout:
+        logger.warning(
+            "HF API timed out (>40s) — model cold-start or queue delay. "
+            "Using fast deterministic fallback so Celery worker does not stall."
+        )
+        return _deterministic_fallback_encode(text)
+    except Exception as exc:
+        logger.warning("HF API call failed (%s) — using deterministic fallback.", exc)
+        return _deterministic_fallback_encode(text)
 
-    logger.warning("All HuggingFace API attempts failed — using deterministic fallback.")
     return _deterministic_fallback_encode(text)
 
 
@@ -205,41 +204,37 @@ def _hf_api_encode_batch(texts: List[str]) -> List[List[float]]:
         "options": {"wait_for_model": True},
     }
 
-    for url in _HF_API_ENDPOINTS:
-        for attempt in range(2):
-            try:
-                resp = requests.post(
-                    url,
-                    headers=headers,
-                    json=payload,
-                    timeout=45,
-                )
-                if resp.status_code in (401, 403):
-                    return _deterministic_fallback_encode_batch(texts)
-                if resp.status_code == 404:
-                    break
-                if resp.status_code == 503:
-                    time.sleep(5)
-                    continue
-                resp.raise_for_status()
-                raw = resp.json()
-                result = []
-                for item in raw:
-                    vec = np.array(item, dtype=np.float32)
-                    if vec.ndim > 1:
-                        vec = np.mean(vec, axis=0)
-                    norm = np.linalg.norm(vec)
-                    if norm > 0:
-                        vec = vec / norm
-                    result.append(vec.tolist())
-                # Zero out placeholder slots
-                for idx in placeholders:
-                    result[idx] = [0.0] * EMBEDDING_DIM
-                if len(result) == len(texts):
-                    return result
-            except Exception as exc:
-                logger.warning("HF API batch (%s) attempt %d failed: %s", url, attempt + 1, exc)
-                time.sleep(1)
+    try:
+        resp = requests.post(
+            _HF_API_URL,
+            headers=headers,
+            json=payload,
+            timeout=(10, 60),
+        )
+        if resp.status_code in (400, 401, 403, 503):
+            return _deterministic_fallback_encode_batch(texts)
+        resp.raise_for_status()
+        raw = resp.json()
+        result = []
+        for item in raw:
+            vec = np.array(item, dtype=np.float32)
+            if vec.ndim > 1:
+                vec = np.mean(vec, axis=0)
+            norm = np.linalg.norm(vec)
+            if norm > 0:
+                vec = vec / norm
+            result.append(vec.tolist())
+        # Zero out placeholder slots
+        for idx in placeholders:
+            result[idx] = [0.0] * EMBEDDING_DIM
+        if len(result) == len(texts):
+            return result
+    except requests.exceptions.Timeout:
+        logger.warning("HF API batch timed out (>60s) — using deterministic batch fallback.")
+        return _deterministic_fallback_encode_batch(texts)
+    except Exception as exc:
+        logger.warning("HF API batch attempt failed: %s — using deterministic fallback.", exc)
+        return _deterministic_fallback_encode_batch(texts)
 
     return _deterministic_fallback_encode_batch(texts)
 
