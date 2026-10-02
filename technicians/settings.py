@@ -617,15 +617,6 @@ _default_cache = '/app/.fastembed_cache' if _platform.system() != 'Windows' else
 os.environ.setdefault('FASTEMBED_CACHE_PATH', _default_cache)
 os.environ.setdefault('ENABLE_CLIP', 'False')  # Keep False on 512MB RAM instances to prevent OOM SIGKILL
 
-# Tell huggingface_hub to work fully offline at runtime.
-# The model is pre-baked into the Docker image during the nixpacks build phase
-# (see nixpacks.toml), so no network calls are needed. This eliminates the
-# ~15 HTTP round-trips to HuggingFace that FastEmbed makes on every Celery
-# worker cold start (version checks, metadata validation, CDN redirects).
-# Set HF_HUB_OFFLINE=0 in your Railway env vars ONLY if you intentionally
-# want to switch to a different model at runtime without rebuilding.
-os.environ.setdefault('HF_HUB_OFFLINE', '1')
-
 # Disable symlinks — use real copies of files instead (required on Windows
 # unless Developer Mode / symlink privilege is enabled)
 os.environ.setdefault('HUGGINGFACE_HUB_SYMLINKS_MODE', 'copy')
