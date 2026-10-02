@@ -24,8 +24,9 @@ Why not icontains?
 
 Fallback
 ────────
-  If Celery is down or times out (5 s), we return None and the view
-  falls back to icontains transparently — the page never breaks.
+  If Celery is down or times out (4 s), we fall back to in-process
+  FastEmbed encoding so semantic search still works — the page never
+  breaks and results are still semantically ranked.
 
 Performance
 ───────────
@@ -78,20 +79,24 @@ def semantic_product_search(
         from marketplace.models import Product
 
         # ── Offload encoding to the Celery worker via RPC ────────────────
-        # Keeps PyTorch out of the web-server process (same pattern as jobs app).
+        # Keeps heavy model loading out of the web-server process.
+        # Falls back to in-process FastEmbed if Celery is unavailable.
         try:
             query_vec_list = encode_product_search_query_task.apply_async(
                 args=[query.strip()],
-                expires=5.0,
-            ).get(timeout=5.0)
+                expires=4.0,
+            ).get(timeout=4.0)
             query_vec = np.array(query_vec_list, dtype=np.float32)
         except Exception as exc:
-            logger.warning(
-                "semantic_product_search: Celery RPC failed/timed out (%s) "
-                "— using keyword fallback.",
+            logger.info(
+                "semantic_product_search: Celery RPC unavailable (%s) — encoding with in-process FastEmbed.",
                 exc,
             )
-            return None
+            try:
+                query_vec = np.array(text_encoder.encode(query.strip()), dtype=np.float32)
+            except Exception as encode_exc:
+                logger.warning("semantic_product_search: in-process encoding failed: %s", encode_exc)
+                return None
 
         # ── Fetch products with embeddings ───────────────────────────────
         qs = Product.objects.filter(

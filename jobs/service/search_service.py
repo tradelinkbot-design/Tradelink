@@ -84,14 +84,18 @@ def semantic_job_search(
         try:
             query_vec_list = encode_search_query_task.apply_async(
                 args=[query.strip()], 
-                expires=5.0
-            ).get(timeout=5.0)
+                expires=4.0
+            ).get(timeout=4.0)
             query_vec = np.array(query_vec_list, dtype=np.float32)
         except Exception as exc:
-            logger.warning(
-                "semantic_job_search: Celery RPC failed/timed out (%s) — using keyword fallback.", exc
+            logger.info(
+                "semantic_job_search: Celery RPC unavailable (%s) — encoding with in-process FastEmbed.", exc
             )
-            return None
+            try:
+                query_vec = np.array(text_encoder.encode(query.strip()), dtype=np.float32)
+            except Exception as encode_exc:
+                logger.warning("semantic_job_search: in-process encoding failed: %s", encode_exc)
+                return None
 
         # Fetch jobs with embeddings
         qs = Job.objects.filter(
