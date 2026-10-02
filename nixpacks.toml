@@ -11,7 +11,12 @@ cmds = [
 [phases.build]
 cmds = [
     "python manage.py collectstatic --no-input",
-    "python -c \"import os; from fastembed import TextEmbedding; cache = os.environ.get('FASTEMBED_CACHE_PATH', '.fastembed_cache'); TextEmbedding(model_name='BAAI/bge-base-en-v1.5', cache_dir=cache)\""
+    # Pre-cache the FastEmbed ONNX model into the Docker image at build time.
+    # HF_HUB_OFFLINE=0 is explicit so the download works even if Railway env vars
+    # have HF_HUB_OFFLINE=1 set for runtime. The model lands at /app/.fastembed_cache
+    # which matches BASE_DIR / '.fastembed_cache' at runtime (Railway app root = /app).
+    # Running embed(['warmup']) ensures the tokenizer is also fully initialized.
+    "HF_HUB_OFFLINE=0 FASTEMBED_CACHE_PATH=/app/.fastembed_cache python -c \"from fastembed import TextEmbedding; print('Pre-caching FastEmbed BAAI/bge-base-en-v1.5 ...'); list(TextEmbedding(model_name='BAAI/bge-base-en-v1.5', cache_dir='/app/.fastembed_cache').embed(['warmup'])); print('FastEmbed model cached OK.')\""
 ]
 
 [start]
