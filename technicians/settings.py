@@ -81,6 +81,12 @@ if railway_domain:
     if railway_origin not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(railway_origin)
 
+# Trust the X-Forwarded-Proto and X-Forwarded-Host headers from Railway/Render reverse proxies.
+# Without this, Django sees plain HTTP from the edge proxy and generates http:// URLs,
+# which causes Google OAuth to fail with redirect_uri_mismatch.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
 
 # ==================================
 # APPLICATIONS
@@ -316,6 +322,7 @@ SOCIALACCOUNT_STORE_TOKENS = True    # persist OAuth tokens in the DB (useful fo
 LOGIN_URL                  = 'signin'
 LOGIN_REDIRECT_URL         = 'marketplace:dashboard'
 ACCOUNT_LOGOUT_REDIRECT_URL = 'signin'
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https' if not DEBUG else 'http'
 
 # ==================================
 # INTERNATIONALISATION
