@@ -493,24 +493,48 @@
         <div class="content-card-title">
           <i class="fas fa-tools"></i> Skills & Endorsements
         </div>
-        {% if endorsements %}
+        {% if skills_with_counts %}
           <div class="skills-cluster">
-            {% for e in endorsements %}
-              <div class="endorse-chip">
-                <span>{{ e.skill__name }}</span>
-                <span class="endorse-count">×{{ e.count }}</span>
+            {% for item in skills_with_counts %}
+              <div class="endorse-chip" id="chip-{{ item.skill.pk }}">
+                <span>{{ item.skill.name }}</span>
+
+                {# Count badge — only show if at least 1 endorsement #}
+                {% if item.count > 0 %}
+                  <span class="endorse-count" id="ecount-{{ item.skill.pk }}">×{{ item.count }}</span>
+                {% else %}
+                  <span class="endorse-count" id="ecount-{{ item.skill.pk }}" style="display:none;">×0</span>
+                {% endif %}
+
+                {# Endorse button — visible to any logged-in user who isn't the worker #}
                 {% if request.user.is_authenticated and request.user != worker.user %}
-                  <button class="endorse-btn js-endorse-btn {% if e.skill__id in my_endorsed_skill_ids %}endorsed{% endif %}"
-                    data-url="{% url 'hiring:endorse_skill' worker.pk e.skill__id %}"
-                    title="{% if e.skill__id in my_endorsed_skill_ids %}Remove endorsement{% else %}Endorse this skill{% endif %}">
+                  <button
+                    class="endorse-btn js-endorse-btn {% if item.skill.pk in my_endorsed_skill_ids %}endorsed{% endif %}"
+                    data-url="{% url 'hiring:endorse_skill' worker.pk item.skill.pk %}"
+                    data-skill-id="{{ item.skill.pk }}"
+                    title="{% if item.skill.pk in my_endorsed_skill_ids %}Remove your endorsement{% else %}Endorse {{ item.skill.name }}{% endif %}"
+                  >
                     <i class="fas fa-thumbs-up"></i>
                   </button>
                 {% endif %}
               </div>
             {% endfor %}
           </div>
+
+          {% if request.user.is_authenticated and request.user != worker.user %}
+            <p style="font-size:0.78rem; color:var(--text-3); margin-top:14px;">
+              <i class="fas fa-info-circle" style="color:var(--amber);"></i>
+              Click <i class="fas fa-thumbs-up"></i> on any skill to endorse it.
+              Your endorsement is visible on this profile and notifies the worker.
+            </p>
+          {% endif %}
         {% else %}
-          <p style="color: var(--text-3); font-size: 0.9rem;">No skills or endorsements listed yet.</p>
+          <p style="color: var(--text-3); font-size: 0.9rem;">
+            <i class="fas fa-info-circle"></i> No skills listed yet.
+            {% if request.user == worker.user %}
+              <a href="{% url 'marketplace:worker_profile_edit' %}" style="color:var(--amber);">Add skills to your profile →</a>
+            {% endif %}
+          </p>
         {% endif %}
       </div>
 
@@ -651,6 +675,7 @@
   // Endorsement toggle
   document.querySelectorAll('.js-endorse-btn').forEach(btn => {
     btn.addEventListener('click', function() {
+      const skillId = this.dataset.skillId;
       fetch(this.dataset.url, {
         method: 'POST',
         headers: {
@@ -662,12 +687,20 @@
       .then(data => {
         if (data.action === 'added') {
           this.classList.add('endorsed');
+          this.title = 'Remove your endorsement';
         } else {
           this.classList.remove('endorsed');
+          this.title = 'Endorse this skill';
         }
-        const countSpan = this.closest('.endorse-chip').querySelector('.endorse-count');
-        if (countSpan) countSpan.textContent = `×${data.count}`;
-      });
+        // Update count badge
+        const countSpan = document.getElementById(`ecount-${skillId}`);
+        if (countSpan) {
+          countSpan.textContent = `×${data.count}`;
+          // Show badge if count > 0, hide if 0
+          countSpan.style.display = data.count > 0 ? '' : 'none';
+        }
+      })
+      .catch(err => console.error('Endorse error:', err));
     });
   });
 </script>

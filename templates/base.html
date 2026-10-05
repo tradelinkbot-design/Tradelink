@@ -374,8 +374,8 @@
       display: flex;
       flex-direction: column;
       border-radius: var(--r-md);
-      overflow: hidden;
-      transition: var(--t);
+      /* overflow: hidden removed — it was clipping expanded accordion content */
+      transition: background 0.22s var(--ease);
       margin-bottom: 2px;
     }
     .m-dropdown-btn {

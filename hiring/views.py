@@ -548,14 +548,27 @@ class WorkerDetailEnhancedView(LoginRequiredMixin, View):
             pk=pk,
         )
 
-        # Endorsements grouped by skill
-        endorsements = (
-            SkillEndorsement.objects
-            .filter(worker=worker)
-            .values('skill__name', 'skill__id')
-            .annotate(count=Count('id'))
-            .order_by('-count')
-        )
+        # All endorsement counts keyed by skill id
+        endorsement_counts = {
+            row['skill__id']: row['count']
+            for row in (
+                SkillEndorsement.objects
+                .filter(worker=worker)
+                .values('skill__id')
+                .annotate(count=Count('id'))
+            )
+        }
+
+        # All skills the worker has listed, merged with their endorsement counts.
+        # This ensures endorsement buttons appear even on skills with 0 endorsements.
+        all_skills = worker.skills.all()
+        skills_with_counts = [
+            {
+                'skill': skill,
+                'count': endorsement_counts.get(skill.pk, 0),
+            }
+            for skill in all_skills
+        ]
 
         # Did this user already endorse any skill?
         my_endorsed_skill_ids = set(
@@ -581,17 +594,17 @@ class WorkerDetailEnhancedView(LoginRequiredMixin, View):
         ).aggregate(avg=Avg('rating'))['avg']
 
         context = {
-            'worker':               worker,
-            'work_history':         worker.work_history.select_related('trade_category').all(),
-            'certifications':       worker.certifications.all(),
-            'portfolio':            worker.portfolio.all(),
-            'reviews':              worker.user.reviews_received.filter(is_visible=True).order_by('-created_at')[:5],
-            'endorsements':         endorsements,
+            'worker':                worker,
+            'skills_with_counts':    skills_with_counts,
+            'work_history':          worker.work_history.select_related('trade_category').all(),
+            'certifications':        worker.certifications.all(),
+            'portfolio':             worker.portfolio.all(),
+            'reviews':               worker.user.reviews_received.filter(is_visible=True).order_by('-created_at')[:5],
             'my_endorsed_skill_ids': my_endorsed_skill_ids,
-            'is_saved':             is_saved,
-            'existing_interest':    existing_interest,
-            'avg_rating':           round(avg_rating, 1) if avg_rating else None,
-            'page_title':           f'{worker.user.get_full_name() or worker.user.username} — Profile',
+            'is_saved':              is_saved,
+            'existing_interest':     existing_interest,
+            'avg_rating':            round(avg_rating, 1) if avg_rating else None,
+            'page_title':            f'{worker.user.get_full_name() or worker.user.username} — Profile',
         }
         return render(request, self.template_name, context)
 

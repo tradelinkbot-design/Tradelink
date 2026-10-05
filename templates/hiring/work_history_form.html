@@ -4,200 +4,411 @@
 
 {% block extra_head %}
 <style>
-  .form-page-container {
+  /* ── PAGE WRAPPER ── */
+  .wh-page {
     min-height: 100vh;
-    padding: calc(var(--nav-h) + 40px) clamp(16px, 5vw, 64px) 80px;
-    max-width: 760px;
+    padding: calc(var(--nav-h) + 48px) clamp(16px, 5vw, 64px) 80px;
+    max-width: 800px;
     margin: 0 auto;
     position: relative;
     z-index: 1;
   }
 
+  /* ── BREADCRUMB ── */
   .breadcrumb-nav {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 24px;
-    font-size: 0.85rem;
-    color: var(--text-3);
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 28px; font-size: 0.82rem; color: var(--text-3);
+    flex-wrap: wrap;
   }
-  .breadcrumb-nav a {
-    color: var(--text-2);
-    text-decoration: none;
-    transition: var(--t);
-  }
-  .breadcrumb-nav a:hover {
-    color: var(--amber);
-  }
+  .breadcrumb-nav a { color: var(--text-2); text-decoration: none; transition: var(--t); }
+  .breadcrumb-nav a:hover { color: var(--amber); }
+  .breadcrumb-nav .bc-sep { color: var(--text-3); font-size: 0.7rem; }
 
-  .entry-card {
+  /* ── CARD ── */
+  .wh-card {
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-radius: var(--r-xl);
-    padding: 36px clamp(20px, 4vw, 40px);
-    box-shadow: var(--shadow-md);
-  }
-  .entry-card h1 {
-    font-family: 'Fraunces', serif;
-    font-size: 1.8rem;
-    font-weight: 800;
-    margin-bottom: 8px;
-    color: var(--text-1);
-  }
-  .entry-card-sub {
-    color: var(--text-2);
-    font-size: 0.92rem;
-    margin-bottom: 28px;
+    padding: clamp(24px, 4vw, 44px);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.45), 0 0 0 1px rgba(245,158,11,0.06);
   }
 
-  .form-group-custom {
+  /* ── CARD HEADER ── */
+  .wh-card-eyebrow { margin-bottom: 10px; }
+  .wh-card-title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.5rem, 3.5vw, 2rem);
+    font-weight: 800; color: var(--text-1);
+    margin-bottom: 8px; line-height: 1.15;
+  }
+  .wh-card-sub {
+    color: var(--text-2); font-size: 0.9rem;
+    line-height: 1.65; margin-bottom: 28px;
+  }
+  .wh-divider {
+    height: 1px; background: var(--border-subtle); margin: 0 0 28px;
+  }
+
+  /* ── SECTION LABEL ── */
+  .wh-section-label {
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 1.6px;
+    text-transform: uppercase; color: var(--text-3);
+    margin-bottom: 16px; margin-top: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .wh-section-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--border-subtle);
+  }
+
+  /* ── FIELD GROUP ── */
+  .wh-field {
+    display: flex; flex-direction: column; gap: 7px;
     margin-bottom: 20px;
   }
-  .form-group-custom label {
-    display: block;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--text-2);
-    margin-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+  .wh-label {
+    font-size: 0.8rem; font-weight: 700;
+    color: var(--text-2); text-transform: uppercase; letter-spacing: 0.7px;
+    display: flex; align-items: center; gap: 7px;
   }
-  .form-group-row {
+  .wh-label i { color: var(--amber); font-size: 0.8rem; }
+  .wh-optional {
+    font-size: 0.72rem; font-weight: 500;
+    color: var(--text-3); text-transform: none;
+    letter-spacing: 0; margin-left: auto;
+  }
+
+  /* Input wrapper */
+  .wh-input-wrap { position: relative; display: flex; align-items: center; }
+  .wh-lead-icon {
+    position: absolute; left: 14px;
+    color: var(--text-3); font-size: 0.86rem;
+    pointer-events: none; z-index: 2;
+  }
+  .wh-select-arrow {
+    position: absolute; right: 14px;
+    color: var(--text-3); font-size: 0.72rem;
+    pointer-events: none; z-index: 2;
+  }
+
+  /* Shared styled input/select/textarea */
+  .wh-field input[type="text"],
+  .wh-field input[type="date"],
+  .wh-field input[type="number"],
+  .wh-field select,
+  .wh-field textarea {
+    width: 100%;
+    background: rgba(255,255,255,0.03) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: var(--r-lg) !important;
+    color: var(--text-1) !important;
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 0.93rem !important;
+    padding: 13px 16px !important;
+    outline: none !important;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s !important;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.25) !important;
+    -webkit-appearance: none; appearance: none;
+  }
+  /* icon-padded variants */
+  .wh-field .has-lead-icon { padding-left: 40px !important; }
+  .wh-field .has-trail-icon { padding-right: 38px !important; }
+
+  .wh-field input:focus,
+  .wh-field select:focus,
+  .wh-field textarea:focus {
+    border-color: var(--amber) !important;
+    background: rgba(245,158,11,0.04) !important;
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.14), inset 0 1px 3px rgba(0,0,0,0.2) !important;
+  }
+  .wh-field input:hover,
+  .wh-field select:hover,
+  .wh-field textarea:hover {
+    border-color: var(--border-strong) !important;
+  }
+  .wh-field select option {
+    background: #181410 !important; color: #FAF5EB !important;
+  }
+  .wh-field textarea { resize: vertical; min-height: 110px; line-height: 1.65 !important; }
+
+  /* Date input calendar icon colour in dark mode */
+  .wh-field input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.6);
+    cursor: pointer;
+  }
+
+  /* ── 2-COL ROW ── */
+  .wh-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
   }
-  @media (max-width: 600px) {
-    .form-group-row {
-      grid-template-columns: 1fr;
-    }
+  @media (max-width: 560px) {
+    .wh-row { grid-template-columns: 1fr; gap: 0; }
   }
 
-  .checkbox-wrap {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
-    background: rgba(255, 255, 255, 0.02);
-    padding: 12px 16px;
-    border-radius: var(--r-md);
+  /* ── CURRENT ROLE TOGGLE ── */
+  .wh-checkbox-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px;
+    background: rgba(255,255,255,0.02);
     border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
     cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 20px;
+    user-select: none;
   }
-  .checkbox-wrap input[type="checkbox"] {
+  .wh-checkbox-card:hover {
+    border-color: var(--border-strong);
+    background: var(--surface-1);
+  }
+  .wh-checkbox-card input[type="checkbox"] {
     accent-color: var(--amber);
-    transform: scale(1.2);
+    width: 18px; height: 18px;
+    cursor: pointer; flex-shrink: 0;
   }
-  .checkbox-wrap span {
-    font-size: 0.9rem;
-    color: var(--text-1);
-    font-weight: 600;
+  .wh-checkbox-card .cb-text strong {
+    display: block; font-size: 0.92rem; font-weight: 700; color: var(--text-1);
+  }
+  .wh-checkbox-card .cb-text span {
+    font-size: 0.8rem; color: var(--text-3);
   }
 
-  .btn-row {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    margin-top: 32px;
-    padding-top: 20px;
-    border-top: 1px solid var(--border-subtle);
+  /* End-date fade when "current" is ticked */
+  #wrap_end_date { transition: opacity 0.2s; }
+  #wrap_end_date.dimmed { opacity: 0.35; pointer-events: none; }
+
+  /* ── HELP TEXT ── */
+  .wh-help {
+    font-size: 0.78rem; color: var(--text-3);
+    display: flex; align-items: flex-start; gap: 5px; line-height: 1.5;
   }
+  .wh-help i { font-size: 0.72rem; color: var(--amber); margin-top: 2px; flex-shrink: 0; }
+
+  /* ── FIELD ERROR ── */
+  .wh-error {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.79rem; color: #FCA5A5;
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.18);
+    border-radius: var(--r-md); padding: 7px 10px;
+  }
+
+  /* ── NON-FIELD ERRORS ── */
+  .wh-nfe {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.22);
+    border-radius: var(--r-lg); padding: 14px 16px;
+    color: #FCA5A5; font-size: 0.86rem; margin-bottom: 20px;
+    display: flex; align-items: flex-start; gap: 10px; line-height: 1.5;
+  }
+  .wh-nfe i { flex-shrink: 0; margin-top: 2px; }
+
+  /* ── ACTIONS ── */
+  .wh-actions {
+    display: flex; gap: 12px; align-items: center;
+    margin-top: 32px; padding-top: 24px;
+    border-top: 1px solid var(--border-subtle);
+    flex-wrap: wrap;
+  }
+  .btn-save { min-width: 200px; padding: 15px 28px; font-size: 1rem; font-weight: 800; }
+  @media (max-width: 480px) {
+    .wh-actions { flex-direction: column; }
+    .wh-actions .btn { width: 100%; }
+    .btn-save { min-width: unset; }
+  }
+
+  /* ── TIP BOX ── */
+  .wh-tip {
+    background: rgba(245,158,11,0.05);
+    border: 1px solid rgba(245,158,11,0.18);
+    border-radius: var(--r-lg); padding: 14px 16px;
+    margin-bottom: 28px; font-size: 0.85rem;
+    color: var(--text-2); line-height: 1.55;
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .wh-tip i { color: var(--amber); font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="form-page-container">
+<div class="wh-page">
 
   {# ── Breadcrumb ── #}
-  <div class="breadcrumb-nav">
-    <a href="{% url 'home' %}">Home</a>
-    <span>/</span>
+  <nav class="breadcrumb-nav" aria-label="Breadcrumb">
+    <a href="{% url 'home' %}"><i class="fas fa-home"></i> Home</a>
+    <i class="fas fa-chevron-right bc-sep"></i>
     <a href="{% url 'hiring:worker_profile_enhanced' %}">My Profile</a>
-    <span>/</span>
+    <i class="fas fa-chevron-right bc-sep"></i>
     <span style="color: var(--text-1);">{{ action }} Work Experience</span>
-  </div>
+  </nav>
 
-  <div class="entry-card">
-    <div class="eyebrow"><i class="fas fa-briefcase"></i> Work History</div>
-    <h1>{{ page_title }}</h1>
-    <p class="entry-card-sub">
-      List previous projects, contractors, or companies you've worked with to establish credibility.
+  <div class="wh-card">
+
+    {# ── Header ── #}
+    <div class="eyebrow wh-card-eyebrow">
+      <i class="fas fa-briefcase"></i> Work History
+    </div>
+    <h1 class="wh-card-title">{{ page_title }}</h1>
+    <p class="wh-card-sub">
+      Add past employers, projects, and contracts to build your professional timeline.
+      Detailed work history boosts your profile's credibility with employers.
     </p>
 
-    <form method="post">
+    <div class="wh-tip">
+      <i class="fas fa-lightbulb"></i>
+      <div>
+        <strong>Tip:</strong> Include self-employment, contract work, and apprenticeships —
+        not just formal employment. The more complete your history, the more hireable you appear.
+      </div>
+    </div>
+
+    <div class="wh-divider"></div>
+
+    <form method="post" novalidate>
       {% csrf_token %}
 
-      <div class="form-group-custom">
-        <label for="id_role_title">Role / Position Title</label>
-        {{ form.role_title }}
-        {% for err in form.role_title.errors %}
-          <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ err }}</div>
-        {% endfor %}
-      </div>
-
-      <div class="form-group-row">
-        <div class="form-group-custom">
-          <label for="id_employer_name">Company / Client / Contractor</label>
-          {{ form.employer_name }}
-          {% for err in form.employer_name.errors %}
-            <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ err }}</div>
-          {% endfor %}
-        </div>
-
-        <div class="form-group-custom">
-          <label for="id_location_state">State / Location</label>
-          {{ form.location_state }}
-          {% for err in form.location_state.errors %}
-            <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ err }}</div>
-          {% endfor %}
-        </div>
-      </div>
-
-      <label class="checkbox-wrap" for="id_is_current">
-        {{ form.is_current }}
-        <span>I currently work here / ongoing engagement</span>
-      </label>
-
-      <div class="form-group-row">
-        <div class="form-group-custom">
-          <label for="id_start_date">Start Date</label>
-          {{ form.start_date }}
-          {% for err in form.start_date.errors %}
-            <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ err }}</div>
-          {% endfor %}
-        </div>
-
-        <div class="form-group-custom" id="wrap_end_date">
-          <label for="id_end_date">End Date</label>
-          {{ form.end_date }}
-          {% for err in form.end_date.errors %}
-            <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ err }}</div>
-          {% endfor %}
-        </div>
-      </div>
-
-      <div class="form-group-custom">
-        <label for="id_description">Description & Responsibilities</label>
-        {{ form.description }}
-        {% for err in form.description.errors %}
-          <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ err }}</div>
-        {% endfor %}
-      </div>
-
       {% if form.non_field_errors %}
-        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--r-md); padding: 12px; color: #EF4444; margin-bottom: 20px;">
-          {{ form.non_field_errors }}
+        <div class="wh-nfe">
+          <i class="fas fa-circle-exclamation"></i>
+          <div>{{ form.non_field_errors.0 }}</div>
         </div>
       {% endif %}
 
-      <div class="btn-row">
-        <button type="submit" class="btn btn-primary">
+      {# ── Section: Role Details ── #}
+      <div class="wh-section-label">Role Details</div>
+
+      {# Role Title #}
+      <div class="wh-field">
+        <label class="wh-label" for="{{ form.role_title.id_for_label }}">
+          <i class="fas fa-id-badge"></i> Role / Position Title
+        </label>
+        <div class="wh-input-wrap">
+          <i class="fas fa-hard-hat wh-lead-icon"></i>
+          {{ form.role_title }}
+        </div>
+        {% if form.role_title.errors %}
+          <div class="wh-error"><i class="fas fa-circle-exclamation"></i> {{ form.role_title.errors.0 }}</div>
+        {% endif %}
+      </div>
+
+      {# Employer + Trade Category row #}
+      <div class="wh-row">
+        <div class="wh-field">
+          <label class="wh-label" for="{{ form.employer_name.id_for_label }}">
+            <i class="fas fa-building"></i> Company / Client
+          </label>
+          <div class="wh-input-wrap">
+            <i class="fas fa-briefcase wh-lead-icon"></i>
+            {{ form.employer_name }}
+          </div>
+          {% if form.employer_name.errors %}
+            <div class="wh-error"><i class="fas fa-circle-exclamation"></i> {{ form.employer_name.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="wh-field">
+          <label class="wh-label" for="{{ form.trade_category.id_for_label }}">
+            <i class="fas fa-tools"></i> Trade Category
+            <span class="wh-optional">Optional</span>
+          </label>
+          <div class="wh-input-wrap">
+            <i class="fas fa-wrench wh-lead-icon"></i>
+            {{ form.trade_category }}
+            <i class="fas fa-chevron-down wh-select-arrow"></i>
+          </div>
+          {% if form.trade_category.errors %}
+            <div class="wh-error"><i class="fas fa-circle-exclamation"></i> {{ form.trade_category.errors.0 }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Location State #}
+      <div class="wh-field">
+        <label class="wh-label" for="{{ form.location_state.id_for_label }}">
+          <i class="fas fa-map-marker-alt"></i> State / Location
+          <span class="wh-optional">Optional</span>
+        </label>
+        <div class="wh-input-wrap">
+          <i class="fas fa-map-pin wh-lead-icon"></i>
+          {{ form.location_state }}
+          <i class="fas fa-chevron-down wh-select-arrow"></i>
+        </div>
+        {% if form.location_state.errors %}
+          <div class="wh-error"><i class="fas fa-circle-exclamation"></i> {{ form.location_state.errors.0 }}</div>
+        {% endif %}
+      </div>
+
+      {# ── Section: Duration ── #}
+      <div class="wh-section-label" style="margin-top: 8px;">Duration</div>
+
+      {# Current role toggle #}
+      <label class="wh-checkbox-card" for="{{ form.is_current.id_for_label }}">
+        {{ form.is_current }}
+        <div class="cb-text">
+          <strong>I currently work here</strong>
+          <span>Tick this if this is an ongoing role — no end date needed</span>
+        </div>
+      </label>
+
+      {# Start + End Date row #}
+      <div class="wh-row">
+        <div class="wh-field">
+          <label class="wh-label" for="{{ form.start_date.id_for_label }}">
+            <i class="fas fa-calendar-plus"></i> Start Date
+          </label>
+          <div class="wh-input-wrap">
+            {{ form.start_date }}
+          </div>
+          {% if form.start_date.errors %}
+            <div class="wh-error"><i class="fas fa-circle-exclamation"></i> {{ form.start_date.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="wh-field" id="wrap_end_date">
+          <label class="wh-label" for="{{ form.end_date.id_for_label }}">
+            <i class="fas fa-calendar-check"></i> End Date
+          </label>
+          <div class="wh-input-wrap">
+            {{ form.end_date }}
+          </div>
+          <div class="wh-help">
+            <i class="fas fa-circle-info"></i> Leave blank if you ticked "currently work here"
+          </div>
+          {% if form.end_date.errors %}
+            <div class="wh-error"><i class="fas fa-circle-exclamation"></i> {{ form.end_date.errors.0 }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      {# ── Section: Description ── #}
+      <div class="wh-section-label" style="margin-top: 8px;">Description</div>
+
+      <div class="wh-field">
+        <label class="wh-label" for="{{ form.description.id_for_label }}">
+          <i class="fas fa-align-left"></i> Responsibilities & Achievements
+          <span class="wh-optional">Optional</span>
+        </label>
+        {{ form.description }}
+        <div class="wh-help">
+          <i class="fas fa-circle-info"></i>
+          Describe tools used, project scale, team size, or standout achievements. This appears on your public profile and CV.
+        </div>
+        {% if form.description.errors %}
+          <div class="wh-error"><i class="fas fa-circle-exclamation"></i> {{ form.description.errors.0 }}</div>
+        {% endif %}
+      </div>
+
+      {# ── Actions ── #}
+      <div class="wh-actions">
+        <button type="submit" class="btn btn-primary btn-save">
           <i class="fas fa-save"></i> Save Work Experience
         </button>
         <a href="{% url 'hiring:worker_profile_enhanced' %}" class="btn btn-ghost">
-          Cancel
+          <i class="fas fa-arrow-left"></i> Cancel
         </a>
       </div>
+
     </form>
   </div>
 
@@ -205,21 +416,33 @@
 
 {% block extra_scripts %}
 <script>
-  // Hide end date when is_current is checked
-  const currentCheckbox = document.getElementById('id_is_current');
-  const endDateWrap = document.getElementById('wrap_end_date');
-  function toggleEndDate() {
-    if (currentCheckbox && currentCheckbox.checked) {
-      endDateWrap.style.opacity = '0.4';
-      endDateWrap.style.pointerEvents = 'none';
-    } else if (endDateWrap) {
-      endDateWrap.style.opacity = '1';
-      endDateWrap.style.pointerEvents = 'auto';
+  /* ── Apply icon padding class to inputs that have a leading icon ── */
+  ['id_role_title','id_employer_name'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('has-lead-icon');
+  });
+  ['id_trade_category','id_location_state'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.classList.add('has-lead-icon'); el.classList.add('has-trail-icon'); }
+  });
+
+  /* ── Toggle end-date field when "currently work here" is checked ── */
+  const isCurrentCb  = document.getElementById('{{ form.is_current.id_for_label }}');
+  const endDateWrap  = document.getElementById('wrap_end_date');
+  const endDateInput = document.getElementById('{{ form.end_date.id_for_label }}');
+
+  function syncEndDate() {
+    if (!isCurrentCb || !endDateWrap) return;
+    if (isCurrentCb.checked) {
+      endDateWrap.classList.add('dimmed');
+      if (endDateInput) endDateInput.value = '';
+    } else {
+      endDateWrap.classList.remove('dimmed');
     }
   }
-  if (currentCheckbox) {
-    currentCheckbox.addEventListener('change', toggleEndDate);
-    toggleEndDate();
+  if (isCurrentCb) {
+    isCurrentCb.addEventListener('change', syncEndDate);
+    syncEndDate(); // run on load
   }
 </script>
 {% endblock %}
