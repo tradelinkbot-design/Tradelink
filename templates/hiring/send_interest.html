@@ -5,162 +5,370 @@
 
 {% block extra_head %}
 <style>
+  /* ── PAGE WRAPPER ── */
   .outreach-page {
     min-height: 100vh;
-    padding: calc(var(--nav-h) + 40px) clamp(16px, 5vw, 64px) 80px;
-    max-width: 1060px;
+    padding: calc(var(--nav-h) + 48px) clamp(16px, 5vw, 64px) 80px;
+    max-width: 1080px;
     margin: 0 auto;
     position: relative;
     z-index: 1;
   }
 
-  /* Breadcrumb */
+  /* ── BREADCRUMB ── */
   .breadcrumb-nav {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 24px;
-    font-size: 0.85rem;
+    gap: 6px;
+    margin-bottom: 28px;
+    font-size: 0.82rem;
     color: var(--text-3);
+    flex-wrap: wrap;
   }
   .breadcrumb-nav a {
     color: var(--text-2);
     text-decoration: none;
     transition: var(--t);
   }
-  .breadcrumb-nav a:hover {
-    color: var(--amber);
+  .breadcrumb-nav a:hover { color: var(--amber); }
+  .breadcrumb-nav .bc-sep { color: var(--text-3); font-size: 0.7rem; }
+
+  /* ── PAGE HEADER ── */
+  .outreach-header {
+    margin-bottom: 36px;
+  }
+  .outreach-header .eyebrow { margin-bottom: 10px; }
+  .outreach-header h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.7rem, 4vw, 2.4rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.5px;
+    margin-bottom: 10px;
+  }
+  .outreach-header p {
+    color: var(--text-2);
+    font-size: 0.95rem;
+    max-width: 560px;
+    line-height: 1.65;
   }
 
+  /* ── MAIN GRID ── */
   .outreach-grid {
     display: grid;
-    grid-template-columns: 320px 1fr;
-    gap: 32px;
+    grid-template-columns: 300px 1fr;
+    gap: 28px;
     align-items: flex-start;
   }
-  @media (max-width: 860px) {
-    .outreach-grid {
-      grid-template-columns: 1fr;
-    }
+  @media (max-width: 900px) {
+    .outreach-grid { grid-template-columns: 1fr; }
   }
 
-  /* Worker Preview Card */
+  /* ═══════════════════════════════════════
+     LEFT: WORKER PREVIEW CARD
+  ═══════════════════════════════════════ */
   .preview-card {
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-radius: var(--r-xl);
-    padding: 28px 20px;
-    text-align: center;
+    padding: 28px 22px;
+    position: sticky;
+    top: calc(var(--nav-h) + 20px);
   }
+
   .preview-avatar {
-    width: 84px;
-    height: 84px;
+    width: 80px; height: 80px;
     border-radius: 50%;
-    margin: 0 auto 14px;
+    margin: 0 auto 16px;
     overflow: hidden;
     background: linear-gradient(135deg, var(--surface-2), var(--surface-1));
     border: 2px solid var(--amber);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: var(--amber);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.7rem; font-weight: 800; color: var(--amber);
+    box-shadow: 0 4px 18px rgba(245,158,11,0.18);
   }
-  .preview-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
+  .preview-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
   .preview-name {
     font-family: 'Fraunces', serif;
-    font-size: 1.25rem;
-    font-weight: 700;
+    font-size: 1.15rem; font-weight: 700;
     color: var(--text-1);
-    margin-bottom: 2px;
+    text-align: center; margin-bottom: 3px;
   }
   .preview-trade {
-    color: var(--amber);
-    font-size: 0.88rem;
-    font-weight: 600;
-    margin-bottom: 4px;
+    color: var(--amber); font-size: 0.85rem; font-weight: 600;
+    text-align: center; margin-bottom: 4px;
   }
   .preview-loc {
-    color: var(--text-3);
-    font-size: 0.82rem;
-    margin-bottom: 16px;
-  }
-  .preview-meta {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--r-lg);
-    padding: 12px;
-    font-size: 0.85rem;
-    text-align: left;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    color: var(--text-3); font-size: 0.8rem;
+    text-align: center; margin-bottom: 18px;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
   }
 
-  /* Form Card */
+  /* Badge row */
+  .preview-badges {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 6px; margin-bottom: 18px;
+  }
+
+  /* Stats strip */
+  .preview-stats {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+  }
+  .ps-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px;
+    font-size: 0.84rem;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .ps-row:last-child { border-bottom: none; }
+  .ps-row-label { color: var(--text-3); font-size: 0.8rem; }
+  .ps-row-val { font-weight: 600; color: var(--text-1); font-size: 0.88rem; }
+  .ps-row-val.amber { color: var(--amber); }
+
+  /* View profile link */
+  .preview-profile-link {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px;
+    margin-top: 16px;
+    font-size: 0.83rem; font-weight: 600;
+    color: var(--text-2);
+    text-decoration: none;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border-subtle);
+    transition: var(--t);
+  }
+  .preview-profile-link:hover {
+    color: var(--amber);
+    border-color: var(--border-strong);
+    background: var(--surface-1);
+  }
+
+  /* On mobile: preview card becomes horizontal */
+  @media (max-width: 900px) {
+    .preview-card {
+      position: static;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 20px;
+      align-items: center;
+      padding: 20px;
+    }
+    .preview-avatar {
+      width: 64px; height: 64px;
+      font-size: 1.3rem;
+      margin: 0;
+    }
+    .preview-name { text-align: left; font-size: 1.05rem; }
+    .preview-trade { text-align: left; }
+    .preview-loc   { justify-content: flex-start; }
+    .preview-badges { justify-content: flex-start; margin-bottom: 0; }
+    .preview-stats  { display: none; }           /* hide on mobile to save space */
+    .preview-profile-link { margin-top: 10px; justify-content: flex-start; }
+  }
+  @media (max-width: 480px) {
+    .preview-card {
+      grid-template-columns: 1fr;
+      text-align: center;
+    }
+    .preview-avatar { margin: 0 auto; }
+    .preview-name, .preview-trade { text-align: center; }
+    .preview-loc   { justify-content: center; }
+    .preview-badges { justify-content: center; }
+    .preview-profile-link { justify-content: center; }
+  }
+
+  /* ═══════════════════════════════════════
+     RIGHT: FORM CARD
+  ═══════════════════════════════════════ */
   .form-card {
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-radius: var(--r-xl);
-    padding: 36px;
-    box-shadow: var(--shadow-sm);
+    padding: clamp(22px, 4vw, 40px);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.4), 0 0 0 1px rgba(245,158,11,0.06);
   }
-  .form-card h2 {
+
+  .form-card-title {
     font-family: 'Fraunces', serif;
-    font-size: 1.5rem;
+    font-size: clamp(1.3rem, 3vw, 1.7rem);
     font-weight: 800;
-    margin-bottom: 8px;
     color: var(--text-1);
+    margin-bottom: 6px;
+    line-height: 1.2;
   }
   .form-card-sub {
-    color: var(--text-2);
-    font-size: 0.92rem;
-    margin-bottom: 24px;
+    color: var(--text-2); font-size: 0.9rem;
+    margin-bottom: 24px; line-height: 1.6;
   }
 
-  .form-field-group {
-    margin-bottom: 20px;
-  }
-  .field-label {
-    display: block;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--text-2);
-    margin-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
+  /* Notice banner */
   .notice-banner {
-    background: rgba(245, 158, 11, 0.06);
-    border: 1px solid rgba(245, 158, 11, 0.2);
+    background: rgba(245,158,11,0.06);
+    border: 1px solid rgba(245,158,11,0.2);
     border-radius: var(--r-lg);
-    padding: 14px 18px;
-    margin-bottom: 24px;
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    color: var(--text-2);
-    font-size: 0.86rem;
-    line-height: 1.5;
+    padding: 14px 16px;
+    margin-bottom: 28px;
+    display: flex; align-items: flex-start; gap: 12px;
+    font-size: 0.85rem; color: var(--text-2); line-height: 1.55;
   }
-  .notice-banner i {
-    color: var(--amber);
-    margin-top: 2px;
-    font-size: 1rem;
+  .notice-banner i { color: var(--amber); font-size: 1rem; margin-top: 1px; flex-shrink: 0; }
+
+  /* ── FORM FIELDS ── */
+  .si-field-group {
+    display: flex; flex-direction: column; gap: 7px;
+    margin-bottom: 22px;
+  }
+  .si-label {
+    font-size: 0.8rem; font-weight: 700;
+    color: var(--text-2);
+    text-transform: uppercase; letter-spacing: 0.7px;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .si-label i { color: var(--amber); font-size: 0.82rem; }
+  .si-optional {
+    font-size: 0.72rem; font-weight: 500;
+    color: var(--text-3); text-transform: none; letter-spacing: 0;
+    margin-left: auto;
   }
 
-  .form-actions {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    margin-top: 28px;
+  /* Input wrapper (for icon prefix) */
+  .si-input-wrap {
+    position: relative;
+    display: flex; align-items: center;
   }
+  .si-input-icon {
+    position: absolute; left: 14px;
+    color: var(--text-3); font-size: 0.88rem;
+    pointer-events: none; z-index: 2;
+  }
+
+  /* Shared input style — targets Django-rendered inputs */
+  .si-field-group select,
+  .si-field-group input[type="text"],
+  .si-field-group input[type="number"],
+  .si-field-group textarea {
+    width: 100%;
+    background: rgba(255,255,255,0.03) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: var(--r-lg) !important;
+    color: var(--text-1) !important;
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 0.93rem !important;
+    padding: 13px 16px !important;
+    outline: none !important;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s !important;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.25) !important;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .si-field-group select {
+    padding: 13px 40px 13px 42px !important;
+    cursor: pointer;
+    background-image: none !important;
+  }
+  .si-field-group input[type="number"] {
+    padding-left: 42px !important;
+  }
+  .si-field-group select:focus,
+  .si-field-group input[type="text"]:focus,
+  .si-field-group input[type="number"]:focus,
+  .si-field-group textarea:focus {
+    border-color: var(--amber) !important;
+    background: rgba(245,158,11,0.04) !important;
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.14), inset 0 1px 3px rgba(0,0,0,0.2) !important;
+  }
+  .si-field-group select:hover,
+  .si-field-group input:hover,
+  .si-field-group textarea:hover {
+    border-color: var(--border-strong) !important;
+  }
+  .si-field-group select option {
+    background: #181410 !important;
+    color: #FAF5EB !important;
+  }
+  .si-field-group textarea {
+    resize: vertical;
+    min-height: 130px;
+    line-height: 1.65 !important;
+  }
+
+  /* Dropdown arrow icon */
+  .si-select-arrow {
+    position: absolute; right: 14px;
+    color: var(--text-3); font-size: 0.72rem;
+    pointer-events: none; z-index: 2;
+  }
+
+  /* Char counter */
+  .si-char-counter {
+    font-size: 0.75rem; color: var(--text-3);
+    text-align: right; margin-top: 2px;
+  }
+  .si-char-counter.warn { color: var(--amber); }
+
+  /* Help text */
+  .si-help {
+    font-size: 0.78rem; color: var(--text-3);
+    line-height: 1.5; display: flex; align-items: flex-start; gap: 5px;
+  }
+  .si-help i { font-size: 0.72rem; margin-top: 2px; color: var(--amber); flex-shrink: 0; }
+
+  /* Field error */
+  .si-field-error {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.8rem; color: #FCA5A5;
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.18);
+    border-radius: var(--r-md); padding: 7px 10px;
+  }
+
+  /* Non-field errors */
+  .si-nfe {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.22);
+    border-radius: var(--r-lg); padding: 12px 16px;
+    color: #FCA5A5; font-size: 0.86rem;
+    margin-bottom: 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  /* Divider */
+  .form-divider {
+    height: 1px; background: var(--border-subtle); margin: 8px 0 26px;
+  }
+
+  /* ── FORM ACTIONS ── */
+  .form-actions {
+    display: flex; gap: 12px; align-items: center;
+    margin-top: 32px; flex-wrap: wrap;
+  }
+  .btn-send {
+    flex: 1; min-width: 180px;
+    padding: 15px 28px;
+    font-size: 1rem; font-weight: 800;
+  }
+  @media (max-width: 480px) {
+    .form-actions { flex-direction: column; }
+    .form-actions .btn { width: 100%; }
+    .btn-send { min-width: unset; }
+  }
+
+  /* ── SUCCESS/INFO BANNER (after send) ── */
+  .success-banner {
+    background: rgba(16,185,129,0.08);
+    border: 1px solid rgba(16,185,129,0.25);
+    border-radius: var(--r-xl);
+    padding: 40px 32px;
+    text-align: center;
+    animation: fadeUp 0.5s var(--ease) both;
+  }
+  .success-banner i { font-size: 2.5rem; color: var(--emerald); margin-bottom: 16px; }
+  .success-banner h3 { font-family: 'Fraunces', serif; font-size: 1.5rem; margin-bottom: 8px; }
+  .success-banner p { color: var(--text-2); font-size: 0.92rem; line-height: 1.65; }
 </style>
 {% endblock %}
 
@@ -168,101 +376,200 @@
 <div class="outreach-page">
 
   {# ── Breadcrumb ── #}
-  <div class="breadcrumb-nav">
-    <a href="{% url 'home' %}">Home</a>
-    <span>/</span>
+  <nav class="breadcrumb-nav" aria-label="Breadcrumb">
+    <a href="{% url 'home' %}"><i class="fas fa-home"></i> Home</a>
+    <i class="fas fa-chevron-right bc-sep"></i>
     <a href="{% url 'hiring:talent_search' %}">Talent Search</a>
-    <span>/</span>
+    <i class="fas fa-chevron-right bc-sep"></i>
     <a href="{% url 'hiring:worker_detail' worker.pk %}">{{ worker.user.get_full_name|default:worker.user.username }}</a>
-    <span>/</span>
-    <span style="color: var(--text-1);">Contact for Hire</span>
+    <i class="fas fa-chevron-right bc-sep"></i>
+    <span style="color: var(--text-1);">Contact</span>
+  </nav>
+
+  {# ── Page Header ── #}
+  <div class="outreach-header">
+    <div class="eyebrow"><i class="fas fa-paper-plane"></i> Direct Hiring Outreach</div>
+    <h1>Contact <span class="amber-text">{{ worker.user.get_full_name|default:worker.user.username }}</span></h1>
+    <p>Send a direct message. They'll be notified by SMS and in-app — most workers respond within 24 hours.</p>
   </div>
 
   <div class="outreach-grid">
 
-    {# ── Left: Candidate Preview ── #}
-    <div class="preview-card">
-      <div class="preview-avatar">
-        {% if worker.user.image %}
-          <img src="{{ worker.user.image.url }}" alt="{{ worker.user.username }}">
-        {% else %}
-          {{ worker.user.username|first|upper }}
-        {% endif %}
-      </div>
-      <div class="preview-name">{{ worker.user.get_full_name|default:worker.user.username }}</div>
-      <div class="preview-trade">{{ worker.trade_category.name|default:"Skilled Trades" }}</div>
-      <div class="preview-loc">
-        <i class="fas fa-map-marker-alt"></i> {{ worker.get_state_display|default:worker.state|title }}
-      </div>
-
-      <div class="preview-meta">
-        <div style="display: flex; justify-content: space-between;">
-          <span style="color: var(--text-3);">Experience</span>
-          <span style="font-weight: 600;">{{ worker.years_experience }} Years</span>
+    {# ══ LEFT: WORKER PREVIEW CARD ══ #}
+    <aside class="preview-card">
+      <div>
+        <div class="preview-avatar">
+          {% if worker.user.image %}
+            <img src="{{ worker.user.image.url }}" alt="{{ worker.user.username }}">
+          {% else %}
+            {{ worker.user.username|first|upper }}
+          {% endif %}
         </div>
-        {% if worker.expected_monthly_salary %}
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-3);">Target Salary</span>
-            <span style="font-weight: 600; color: var(--amber);">₦{{ worker.expected_monthly_salary|intcomma }}/mo</span>
-          </div>
-        {% endif %}
-        {% if worker.notice_period %}
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-3);">Notice Period</span>
-            <span style="font-weight: 600;">{{ worker.notice_period }}</span>
-          </div>
-        {% endif %}
-      </div>
-    </div>
+        <div class="preview-name">{{ worker.user.get_full_name|default:worker.user.username }}</div>
+        <div class="preview-trade">{{ worker.trade_category.name|default:"Skilled Trades" }}</div>
+        <div class="preview-loc">
+          <i class="fas fa-map-marker-alt"></i>
+          {{ worker.get_state_display|default:worker.state|title }}{% if worker.lga %}, {{ worker.lga }}{% endif %}
+        </div>
 
-    {# ── Right: Form Card ── #}
+        <div class="preview-badges">
+          {% if worker.is_verified %}
+            <span class="badge badge-sky"><i class="fas fa-check-circle"></i> Verified</span>
+          {% endif %}
+          {% if worker.open_to_employment %}
+            <span class="badge badge-green"><i class="fas fa-dot-circle"></i> Open to Work</span>
+          {% endif %}
+          {% if worker.get_experience_level_display %}
+            <span class="badge badge-amber">{{ worker.get_experience_level_display }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div>
+        <div class="preview-stats">
+          <div class="ps-row">
+            <span class="ps-row-label">Experience</span>
+            <span class="ps-row-val">{{ worker.years_experience }} yr{{ worker.years_experience|pluralize }}</span>
+          </div>
+          {% if worker.expected_monthly_salary %}
+            <div class="ps-row">
+              <span class="ps-row-label">Target Salary</span>
+              <span class="ps-row-val amber">₦{{ worker.expected_monthly_salary|intcomma }}/mo</span>
+            </div>
+          {% elif worker.daily_rate %}
+            <div class="ps-row">
+              <span class="ps-row-label">Day Rate</span>
+              <span class="ps-row-val amber">₦{{ worker.daily_rate|intcomma }}/day</span>
+            </div>
+          {% endif %}
+          {% if worker.notice_period %}
+            <div class="ps-row">
+              <span class="ps-row-label">Notice Period</span>
+              <span class="ps-row-val">{{ worker.notice_period }}</span>
+            </div>
+          {% endif %}
+          {% if worker.employment_preference %}
+            <div class="ps-row">
+              <span class="ps-row-label">Preference</span>
+              <span class="ps-row-val">{{ worker.get_employment_preference_display|default:worker.employment_preference }}</span>
+            </div>
+          {% endif %}
+        </div>
+
+        <a href="{% url 'hiring:worker_detail' worker.pk %}" class="preview-profile-link">
+          <i class="fas fa-user"></i> View Full Profile
+        </a>
+      </div>
+    </aside>
+
+    {# ══ RIGHT: FORM CARD ══ #}
     <div class="form-card">
-      <h2>Direct Hiring <span class="amber-text">Outreach</span></h2>
+      <h2 class="form-card-title">Send a Hiring Message</h2>
       <p class="form-card-sub">
-        Send a direct message to {{ worker.user.get_full_name|default:worker.user.username }}. They will be notified by SMS and in-app message.
+        Fill in the details below — be clear about the role and your expectations to get the best response.
       </p>
 
       <div class="notice-banner">
         <i class="fas fa-shield-alt"></i>
         <div>
-          <strong>No Escrow or Upfront Fee:</strong> This is a direct employment conversation. You negotiate terms, schedule interviews, and agree directly with the candidate.
+          <strong>Direct employment conversation.</strong>
+          No escrow or upfront fee. You negotiate terms, schedule interviews, and agree directly with the candidate.
         </div>
       </div>
 
-      <form method="post">
+      <div class="form-divider"></div>
+
+      <form method="post" novalidate>
         {% csrf_token %}
 
-        {% for field in form %}
-          <div class="form-field-group">
-            <label class="field-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.help_text %}
-              <div style="font-size: 0.78rem; color: var(--text-3); margin-top: 4px;">{{ field.help_text }}</div>
-            {% endif %}
-            {% for error in field.errors %}
-              <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ error }}</div>
-            {% endfor %}
-          </div>
-        {% endfor %}
-
         {% if form.non_field_errors %}
-          <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--r-md); padding: 12px; color: #EF4444; margin-bottom: 20px;">
-            {{ form.non_field_errors }}
+          <div class="si-nfe">
+            <i class="fas fa-circle-exclamation"></i>
+            {{ form.non_field_errors.0 }}
           </div>
         {% endif %}
 
+        {# ── Job Link field ── #}
+        <div class="si-field-group">
+          <label class="si-label" for="{{ form.job.id_for_label }}">
+            <i class="fas fa-briefcase"></i>
+            {{ form.job.label }}
+            <span class="si-optional">Optional</span>
+          </label>
+          <div class="si-input-wrap">
+            <i class="fas fa-link si-input-icon"></i>
+            {{ form.job }}
+            <i class="fas fa-chevron-down si-select-arrow"></i>
+          </div>
+          {% if form.job.help_text %}
+            <div class="si-help"><i class="fas fa-circle-info"></i> {{ form.job.help_text }}</div>
+          {% endif %}
+          {% if form.job.errors %}
+            <div class="si-field-error"><i class="fas fa-circle-exclamation"></i> {{ form.job.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        {# ── Message field ── #}
+        <div class="si-field-group">
+          <label class="si-label" for="{{ form.message.id_for_label }}">
+            <i class="fas fa-comment-dots"></i> Your Message
+          </label>
+          {{ form.message }}
+          <div class="si-char-counter" id="msgCounter">0 / 1000 characters</div>
+          {% if form.message.errors %}
+            <div class="si-field-error"><i class="fas fa-circle-exclamation"></i> {{ form.message.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        {# ── Salary Offer field ── #}
+        <div class="si-field-group">
+          <label class="si-label" for="{{ form.salary_offer.id_for_label }}">
+            <i class="fas fa-naira-sign"></i>
+            {{ form.salary_offer.label }}
+            <span class="si-optional">Optional</span>
+          </label>
+          <div class="si-input-wrap">
+            <i class="fas fa-coins si-input-icon"></i>
+            {{ form.salary_offer }}
+          </div>
+          {% if form.salary_offer.help_text %}
+            <div class="si-help"><i class="fas fa-circle-info"></i> {{ form.salary_offer.help_text }}</div>
+          {% endif %}
+          {% if form.salary_offer.errors %}
+            <div class="si-field-error"><i class="fas fa-circle-exclamation"></i> {{ form.salary_offer.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        {# ── Actions ── #}
         <div class="form-actions">
-          <button type="submit" class="btn btn-primary">
+          <button type="submit" class="btn btn-primary btn-send">
             <i class="fas fa-paper-plane"></i> Send Hiring Message
           </button>
           <a href="{% url 'hiring:worker_detail' worker.pk %}" class="btn btn-ghost">
-            Cancel
+            <i class="fas fa-arrow-left"></i> Cancel
           </a>
         </div>
       </form>
     </div>
 
   </div>
-
 </div>
+
+{% block extra_scripts %}
+<script>
+  /* ── Character counter for message ── */
+  const msgField   = document.getElementById('{{ form.message.id_for_label }}');
+  const msgCounter = document.getElementById('msgCounter');
+
+  if (msgField && msgCounter) {
+    function updateCounter() {
+      const len = msgField.value.length;
+      msgCounter.textContent = `${len} / 1000 characters`;
+      msgCounter.classList.toggle('warn', len > 900);
+    }
+    msgField.addEventListener('input', updateCounter);
+    updateCounter();
+  }
+</script>
+{% endblock %}
 {% endblock %}

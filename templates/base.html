@@ -19,11 +19,14 @@
 
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-    /* FIX: must set overflow-x on html, not just body.
-       body overflow-x alone doesn't prevent the root scroll container
-       from exposing a horizontal scrollbar on iOS/Android. */
+    /* FIX: overflow-x:hidden must NOT be on <html> — it creates a new
+       stacking/clipping context that cuts off position:absolute children
+       (e.g. nav dropdowns) when the navbar grows wider (logged-in state).
+       Set it only on body, which does not clip fixed/absolute descendants. */
     html {
       scroll-behavior: smooth;
+    }
+    body {
       overflow-x: hidden;
     }
 
@@ -71,7 +74,6 @@
       color: var(--text-1);
       background: var(--bg-base);
       min-height: 100vh;
-      overflow-x: hidden;
     }
 
     body::before {
@@ -97,6 +99,10 @@
       -webkit-backdrop-filter: blur(20px) saturate(160%);
       border-bottom: 1px solid var(--border-subtle);
       transition: var(--t);
+      /* FIX: overflow must be visible so position:absolute dropdown panels
+         are not clipped — this matters especially when the user is logged in
+         and the navbar has extra buttons making it feel "full" */
+      overflow: visible;
     }
     .navbar.scrolled {
       background: rgba(12,10,8,0.96);
@@ -130,6 +136,7 @@
 
     .nav-links {
       display: flex; align-items: center; gap: 2px; list-style: none;
+      overflow: visible; /* ensure dropdown panels aren't clipped */
     }
     .nav-links > li > a {
       font-size: 0.875rem; font-weight: 500; color: var(--text-2);

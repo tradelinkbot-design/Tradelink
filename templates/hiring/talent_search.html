@@ -162,11 +162,13 @@
   @media (max-width: 1024px) {
     .filter-grid-row {
       grid-template-columns: 1fr 1fr;
+      gap: 12px;
     }
   }
-  @media (max-width: 580px) {
+  @media (max-width: 480px) {
     .filter-grid-row {
       grid-template-columns: 1fr;
+      gap: 10px;
     }
   }
 
@@ -340,13 +342,8 @@
   /* ── TALENT CARDS GRID ─────────────────────────────────────────────────── */
   .talent-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
     gap: 24px;
-  }
-  @media (max-width: 500px) {
-    .talent-grid {
-      grid-template-columns: 1fr;
-    }
   }
 
   .talent-card {
@@ -508,6 +505,7 @@
     display: flex;
     justify-content: center;
     gap: 8px;
+    flex-wrap: wrap;
   }
 
   /* ── EMPTY STATE ───────────────────────────────────────────────────────── */
@@ -524,6 +522,143 @@
     font-size: 3.2rem;
     color: var(--amber);
     margin-bottom: 16px;
+  }
+
+  /* ── RESPONSIVE ─────────────────────────────────────────────────────────── */
+
+  /* ── 768px: tablets ── */
+  @media (max-width: 768px) {
+    .search-page {
+      padding-top: calc(var(--nav-h) + 20px);
+      padding-bottom: 60px;
+    }
+    .search-hero {
+      margin-bottom: 24px;
+    }
+    .search-form-card {
+      padding: 22px 18px;
+    }
+    .results-meta-bar {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .results-meta-bar > div:last-child {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+  }
+
+  /* ── 640px: large phones — keyword bar stacks ── */
+  @media (max-width: 640px) {
+    .keyword-input-container {
+      flex-direction: column;
+      align-items: stretch;
+      padding: 14px 16px;
+      gap: 10px;
+    }
+    .keyword-input-container .keyword-icon-box {
+      display: none; /* hide redundant icon when stacked */
+    }
+    .keyword-input-field {
+      font-size: 0.95rem !important;
+      padding: 6px 0 !important;
+    }
+    .btn-submit-search {
+      width: 100%;
+      padding: 13px;
+      border-radius: var(--r-md);
+      justify-content: center;
+    }
+    .filter-footer-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      padding-top: 16px;
+    }
+    .toggle-chips-wrap {
+      gap: 8px;
+    }
+    .filter-actions-wrap {
+      width: 100%;
+      justify-content: flex-end;
+    }
+    .popular-searches-bar {
+      gap: 6px;
+    }
+    .search-tag-chip {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+    }
+    .talent-grid {
+      grid-template-columns: 1fr;
+    }
+    .talent-card {
+      padding: 18px 16px;
+    }
+    .card-actions-row {
+      gap: 8px;
+    }
+  }
+
+  /* ── 480px: small phones ── */
+  @media (max-width: 480px) {
+    .search-form-card {
+      padding: 18px 14px;
+      border-radius: var(--r-lg);
+    }
+    .filter-pill-toggle {
+      padding: 7px 12px;
+      font-size: 0.8rem;
+    }
+    .candidate-avatar-box {
+      width: 52px;
+      height: 52px;
+      font-size: 1.15rem;
+    }
+    .candidate-name {
+      font-size: 1.05rem;
+    }
+    .card-stat-strip {
+      font-size: 0.8rem;
+      padding: 9px 10px;
+    }
+    .stat-col strong {
+      font-size: 0.85rem;
+    }
+    .empty-search-state {
+      padding: 48px 20px;
+      margin: 24px auto;
+    }
+  }
+
+  /* ── 380px: very small phones ── */
+  @media (max-width: 380px) {
+    .search-page {
+      padding-left: 12px;
+      padding-right: 12px;
+    }
+    .search-form-card {
+      padding: 16px 12px;
+    }
+    .card-top-row {
+      gap: 10px;
+    }
+    .card-stat-strip {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .stat-col {
+      flex: 1 1 auto;
+      min-width: 80px;
+    }
+    .card-actions-row {
+      grid-template-columns: 1fr;
+    }
+    .popular-searches-bar {
+      display: none; /* on very tiny screens hide the popular tag row to save space */
+    }
   }
 </style>
 {% endblock %}
