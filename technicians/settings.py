@@ -229,6 +229,15 @@ else:
                 ssl_require=True,
             )
         }
+        # CRITICAL: Disable PostgreSQL server-side cursors in production.
+        # Running sync views inside an ASGI server (via asgiref's thread pool)
+        # means the DB connection used to CREATE a cursor (during Paginator
+        # queryset iteration) can differ from the connection used to FETCH rows
+        # during template rendering — causing:
+        #   OperationalError: cursor "..." does not exist
+        # Setting this forces Django to use client-side cursors (fetchall)
+        # which are not tied to a single connection.
+        DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
     else:
         # Build-time or unconfigured fallback (allows collectstatic to succeed without DB connection)
         DATABASES = {

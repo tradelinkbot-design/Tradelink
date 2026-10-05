@@ -521,6 +521,13 @@ class TalentSearchView(EmployerRequiredMixin, View):
             .values_list('worker_id', flat=True)
         )
 
+        # Force-evaluate the page queryset NOW (in this thread/connection)
+        # before the template renderer touches it. Under ASGI, lazy queryset
+        # evaluation during template rendering can cross thread boundaries and
+        # invalidate the PostgreSQL server-side cursor, causing:
+        #   OperationalError: cursor "..." does not exist
+        _ = list(page_obj.object_list)
+
         return render(request, self.template_name, {
             'form':       form,
             'page_obj':   page_obj,
