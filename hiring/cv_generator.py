@@ -37,9 +37,27 @@ try:
     )
     from reportlab.platypus.flowables import Flowable
     from reportlab.pdfgen import canvas
+
+    # ── Color Palette ─────────────────────────────────────────────────────────
+    _NAVY_DARK   = colors.HexColor('#0b1f3a')   # Deep corporate navy (header top)
+    _NAVY_STRIP  = colors.HexColor('#132a4a')   # Mid-navy contact strip
+    _BLUE_ACCENT = colors.HexColor('#1d4ed8')   # Primary action blue
+    _BLUE_LIGHT  = colors.HexColor('#eff6ff')   # Stat card & chip fill
+    _BLUE_BORDER = colors.HexColor('#bfdbfe')   # Chip & card border
+    _TEXT_MAIN   = colors.HexColor('#1e293b')   # Dark slate for body text
+    _TEXT_MUTED  = colors.HexColor('#64748b')   # Slate 500 for subtext / metadata
+    _BORDER_LINE = colors.HexColor('#e2e8f0')   # Section dividers
+    _GREEN_BG    = colors.HexColor('#16a34a')   # Verified pill green
+    _WHITE       = colors.HexColor('#ffffff')
+
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
+    # Stub out colour names so any accidental module-level reference gives a
+    # clear AttributeError rather than a NameError on 'colors'.
+    _NAVY_DARK = _NAVY_STRIP = _BLUE_ACCENT = _BLUE_LIGHT = _BLUE_BORDER = None
+    _TEXT_MAIN = _TEXT_MUTED = _BORDER_LINE = _GREEN_BG = _WHITE = None
+
 
 try:
     import qrcode
@@ -53,19 +71,6 @@ try:
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
-
-
-# ── Color Palette ─────────────────────────────────────────────────────────────
-_NAVY_DARK   = colors.HexColor('#0b1f3a')   # Deep corporate navy (header top)
-_NAVY_STRIP  = colors.HexColor('#132a4a')   # Mid-navy contact strip
-_BLUE_ACCENT = colors.HexColor('#1d4ed8')   # Primary action blue
-_BLUE_LIGHT  = colors.HexColor('#eff6ff')   # Stat card & chip fill
-_BLUE_BORDER = colors.HexColor('#bfdbfe')   # Chip & card border
-_TEXT_MAIN   = colors.HexColor('#1e293b')   # Dark slate for body text
-_TEXT_MUTED  = colors.HexColor('#64748b')   # Slate 500 for subtext / metadata
-_BORDER_LINE = colors.HexColor('#e2e8f0')   # Section dividers
-_GREEN_BG    = colors.HexColor('#16a34a')   # Verified pill green
-_WHITE       = colors.HexColor('#ffffff')
 
 
 # ── Typography Sanitizer ──────────────────────────────────────────────────────

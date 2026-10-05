@@ -4,186 +4,560 @@
 
 {% block extra_head %}
 <style>
-  .prefs-page-container {
+  /* ── PAGE ── */
+  .ep-page {
     min-height: 100vh;
-    padding: calc(var(--nav-h) + 40px) clamp(16px, 5vw, 64px) 80px;
-    max-width: 700px;
+    padding: calc(var(--nav-h) + 48px) clamp(16px, 5vw, 64px) 80px;
+    max-width: 760px;
     margin: 0 auto;
     position: relative;
     z-index: 1;
   }
 
+  /* ── BREADCRUMB ── */
   .breadcrumb-nav {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 24px;
-    font-size: 0.85rem;
-    color: var(--text-3);
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 28px; font-size: 0.82rem;
+    color: var(--text-3); flex-wrap: wrap;
   }
-  .breadcrumb-nav a {
-    color: var(--text-2);
-    text-decoration: none;
-    transition: var(--t);
-  }
-  .breadcrumb-nav a:hover {
-    color: var(--amber);
-  }
+  .breadcrumb-nav a { color: var(--text-2); text-decoration: none; transition: var(--t); }
+  .breadcrumb-nav a:hover { color: var(--amber); }
+  .bc-sep { color: var(--text-3); font-size: 0.7rem; }
 
-  .prefs-card {
+  /* ── MAIN CARD ── */
+  .ep-card {
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-radius: var(--r-xl);
-    padding: 36px clamp(20px, 4vw, 40px);
-    box-shadow: var(--shadow-md);
+    padding: clamp(24px, 4vw, 44px);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.45), 0 0 0 1px rgba(245,158,11,0.06);
   }
-  .prefs-card h1 {
+  .ep-card-eyebrow { margin-bottom: 10px; }
+  .ep-card-title {
     font-family: 'Fraunces', serif;
-    font-size: 1.8rem;
-    font-weight: 800;
-    margin-bottom: 8px;
-    color: var(--text-1);
+    font-size: clamp(1.5rem, 3.5vw, 2rem);
+    font-weight: 800; color: var(--text-1);
+    margin-bottom: 8px; line-height: 1.15;
   }
-  .prefs-card-sub {
-    color: var(--text-2);
-    font-size: 0.92rem;
-    margin-bottom: 28px;
+  .ep-card-sub {
+    color: var(--text-2); font-size: 0.9rem;
+    line-height: 1.65; margin-bottom: 28px;
+  }
+  .ep-divider {
+    height: 1px; background: var(--border-subtle); margin: 0 0 28px;
   }
 
-  /* Open to work toggle card */
-  .toggle-banner {
-    background: rgba(16, 185, 129, 0.05);
-    border: 1px solid rgba(16, 185, 129, 0.25);
+  /* ── SECTION LABEL ── */
+  .ep-section-label {
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 1.6px;
+    text-transform: uppercase; color: var(--text-3);
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .ep-section-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--border-subtle);
+  }
+
+  /* ── OPEN TO WORK HERO TOGGLE ── */
+  .otw-banner {
+    border-radius: var(--r-xl);
+    padding: 24px 22px;
+    margin-bottom: 28px;
+    display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 20px;
+    position: relative; overflow: hidden;
+    transition: background 0.3s, border-color 0.3s;
+  }
+  .otw-banner.otw-on {
+    background: rgba(16,185,129,0.06);
+    border: 1.5px solid rgba(16,185,129,0.35);
+  }
+  .otw-banner.otw-off {
+    background: rgba(255,255,255,0.02);
+    border: 1.5px solid var(--border-subtle);
+  }
+  .otw-left { flex: 1; min-width: 0; }
+  .otw-status {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 4px 12px;
+    border-radius: var(--r-pill); margin-bottom: 10px;
+    transition: all 0.3s;
+  }
+  .otw-on .otw-status {
+    background: rgba(16,185,129,0.15);
+    color: #10b981; border: 1px solid rgba(16,185,129,0.3);
+  }
+  .otw-off .otw-status {
+    background: rgba(255,255,255,0.04);
+    color: var(--text-3); border: 1px solid var(--border-subtle);
+  }
+  .otw-status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    transition: background 0.3s;
+  }
+  .otw-on .otw-status-dot { background: #10b981; box-shadow: 0 0 0 2px rgba(16,185,129,0.3); }
+  .otw-off .otw-status-dot { background: var(--text-3); }
+
+  .otw-heading {
+    font-family: 'Fraunces', serif;
+    font-size: 1.1rem; font-weight: 800; color: var(--text-1);
+    margin-bottom: 6px; line-height: 1.2;
+  }
+  .otw-desc {
+    font-size: 0.84rem; color: var(--text-2); line-height: 1.6;
+  }
+  .otw-impact {
+    display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px;
+  }
+  .otw-impact-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 0.75rem; color: var(--text-3);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-subtle);
+    padding: 3px 10px; border-radius: var(--r-pill);
+  }
+  .otw-impact-chip i { font-size: 0.68rem; }
+  .otw-on .otw-impact-chip { color: #10b981; border-color: rgba(16,185,129,0.2); }
+
+  /* The actual toggle switch */
+  .toggle-switch-wrap {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 6px; flex-shrink: 0;
+  }
+  .toggle-switch {
+    position: relative; width: 56px; height: 30px;
+    cursor: pointer; flex-shrink: 0;
+  }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-track {
+    position: absolute; inset: 0;
+    border-radius: 30px; transition: background 0.3s;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-subtle);
+  }
+  .toggle-switch input:checked + .toggle-track {
+    background: #10b981; border-color: #10b981;
+  }
+  .toggle-thumb {
+    position: absolute; top: 4px; left: 4px;
+    width: 20px; height: 20px;
+    background: #fff; border-radius: 50%;
+    transition: transform 0.3s, box-shadow 0.3s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .toggle-switch input:checked ~ .toggle-track .toggle-thumb {
+    transform: translateX(26px);
+  }
+  .toggle-switch input:checked + .toggle-track .toggle-thumb {
+    transform: translateX(26px);
+    box-shadow: 0 2px 8px rgba(16,185,129,0.5);
+  }
+  .toggle-label {
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; transition: color 0.3s;
+    color: var(--text-3);
+  }
+  .otw-on .toggle-label { color: #10b981; }
+
+  /* ── EMPLOYMENT TYPE CARDS ── */
+  .ep-pref-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 520px) {
+    .ep-pref-grid { grid-template-columns: 1fr; }
+  }
+  .ep-pref-card {
+    position: relative; cursor: pointer;
+  }
+  .ep-pref-card input[type="radio"] {
+    position: absolute; opacity: 0; width: 0; height: 0;
+  }
+  .ep-pref-label {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 16px 16px;
     border-radius: var(--r-lg);
-    padding: 20px;
-    margin-bottom: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    border: 1.5px solid var(--border-subtle);
+    background: rgba(255,255,255,0.02);
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    cursor: pointer; height: 100%;
   }
-  .toggle-info h3 {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--text-1);
-    margin-bottom: 4px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  .ep-pref-card input:checked + .ep-pref-label {
+    border-color: var(--amber);
+    background: rgba(245,158,11,0.06);
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.12);
   }
-  .toggle-info p {
-    color: var(--text-2);
-    font-size: 0.84rem;
-    line-height: 1.5;
-    margin-bottom: 0;
+  .ep-pref-label:hover {
+    border-color: var(--border-strong);
+    background: var(--surface-1);
+  }
+  .ep-pref-icon {
+    width: 38px; height: 38px; border-radius: var(--r-md);
+    background: var(--surface-1); border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.95rem; color: var(--text-3); flex-shrink: 0;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+  }
+  .ep-pref-card input:checked + .ep-pref-label .ep-pref-icon {
+    background: rgba(245,158,11,0.15);
+    color: var(--amber);
+    border-color: rgba(245,158,11,0.3);
+  }
+  .ep-pref-text { flex: 1; min-width: 0; }
+  .ep-pref-name {
+    font-size: 0.88rem; font-weight: 700; color: var(--text-1);
+    margin-bottom: 2px; line-height: 1.25;
+  }
+  .ep-pref-desc {
+    font-size: 0.76rem; color: var(--text-3); line-height: 1.45;
+  }
+  .ep-pref-check {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 1.5px solid var(--border-subtle); flex-shrink: 0;
+    background: none; transition: all 0.2s; margin-top: 2px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ep-pref-card input:checked + .ep-pref-label .ep-pref-check {
+    background: var(--amber); border-color: var(--amber);
+  }
+  .ep-pref-check::after {
+    content: ''; width: 6px; height: 6px;
+    border-radius: 50%; background: #fff; opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .ep-pref-card input:checked + .ep-pref-label .ep-pref-check::after {
+    opacity: 1;
   }
 
-  .form-group-custom {
-    margin-bottom: 22px;
+  /* ── FIELD GROUP ── */
+  .ep-field {
+    display: flex; flex-direction: column; gap: 7px;
+    margin-bottom: 20px;
   }
-  .form-group-custom label {
-    display: block;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--text-2);
-    margin-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+  .ep-label {
+    font-size: 0.8rem; font-weight: 700;
+    color: var(--text-2); text-transform: uppercase; letter-spacing: 0.7px;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .ep-label i { color: var(--amber); font-size: 0.8rem; }
+  .ep-opt-tag {
+    font-size: 0.72rem; font-weight: 500;
+    color: var(--text-3); text-transform: none;
+    letter-spacing: 0; margin-left: auto;
+  }
+  .ep-input-wrap { position: relative; display: flex; align-items: center; }
+  .ep-lead-icon {
+    position: absolute; left: 14px;
+    color: var(--text-3); font-size: 0.86rem;
+    pointer-events: none; z-index: 2;
+  }
+  .ep-trail-text {
+    position: absolute; right: 14px;
+    color: var(--text-3); font-size: 0.8rem; font-weight: 600;
+    pointer-events: none; z-index: 2;
   }
 
-  .btn-row {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    margin-top: 32px;
-    padding-top: 20px;
+  /* Styled inputs */
+  .ep-field input[type="text"],
+  .ep-field input[type="number"] {
+    width: 100%;
+    background: rgba(255,255,255,0.03) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: var(--r-lg) !important;
+    color: var(--text-1) !important;
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 0.93rem !important;
+    padding: 13px 16px !important;
+    outline: none !important;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s !important;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.25) !important;
+    -webkit-appearance: none; appearance: none;
+  }
+  .ep-field .has-lead { padding-left: 40px !important; }
+  .ep-field .has-trail { padding-right: 52px !important; }
+  .ep-field input:focus {
+    border-color: var(--amber) !important;
+    background: rgba(245,158,11,0.04) !important;
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.14), inset 0 1px 3px rgba(0,0,0,0.2) !important;
+  }
+  .ep-field input:hover {
+    border-color: var(--border-strong) !important;
+  }
+  .ep-field input::placeholder { color: var(--text-3) !important; }
+
+  .ep-help {
+    font-size: 0.78rem; color: var(--text-3);
+    display: flex; align-items: flex-start; gap: 5px; line-height: 1.5;
+  }
+  .ep-help i { font-size: 0.72rem; color: var(--amber); margin-top: 2px; flex-shrink: 0; }
+
+  .ep-error {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.79rem; color: #FCA5A5;
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.18);
+    border-radius: var(--r-md); padding: 7px 10px;
+  }
+
+  /* ── NON-FIELD ERRORS ── */
+  .ep-nfe {
+    background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.22);
+    border-radius: var(--r-lg); padding: 14px 16px;
+    color: #FCA5A5; font-size: 0.86rem; margin-bottom: 20px;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+
+  /* ── ACTIONS ── */
+  .ep-actions {
+    display: flex; gap: 12px; align-items: center;
+    margin-top: 32px; padding-top: 24px;
     border-top: 1px solid var(--border-subtle);
+    flex-wrap: wrap;
   }
+  .ep-btn-save { min-width: 200px; padding: 15px 28px; font-size: 1rem; font-weight: 800; }
+
+  @media (max-width: 480px) {
+    .ep-actions { flex-direction: column; }
+    .ep-actions .btn, .ep-btn-save { width: 100%; min-width: unset; }
+  }
+
+  /* ── STATUS PREVIEW BOX ── */
+  .ep-status-preview {
+    margin-top: 20px;
+    padding: 14px 16px;
+    background: rgba(245,158,11,0.05);
+    border: 1px solid rgba(245,158,11,0.18);
+    border-radius: var(--r-lg);
+    font-size: 0.82rem; color: var(--text-2); line-height: 1.55;
+  }
+  .ep-status-preview strong { color: var(--amber); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="prefs-page-container">
+<div class="ep-page">
 
   {# ── Breadcrumb ── #}
-  <div class="breadcrumb-nav">
-    <a href="{% url 'home' %}">Home</a>
-    <span>/</span>
+  <nav class="breadcrumb-nav" aria-label="Breadcrumb">
+    <a href="{% url 'home' %}"><i class="fas fa-home"></i> Home</a>
+    <i class="fas fa-chevron-right bc-sep"></i>
     <a href="{% url 'hiring:worker_profile_enhanced' %}">My Profile</a>
-    <span>/</span>
-    <span style="color: var(--text-1);">Employment Preferences</span>
-  </div>
+    <i class="fas fa-chevron-right bc-sep"></i>
+    <span style="color:var(--text-1);">Employment Preferences</span>
+  </nav>
 
-  <div class="prefs-card">
-    <div class="eyebrow"><i class="fas fa-sliders-h"></i> Career Settings</div>
-    <h1>{{ page_title }}</h1>
-    <p class="prefs-card-sub">
-      Control how employers find you in the talent directory and communicate your hiring availability.
+  <div class="ep-card">
+
+    {# ── Header ── #}
+    <div class="eyebrow ep-card-eyebrow">
+      <i class="fas fa-sliders-h"></i> Career Settings
+    </div>
+    <h1 class="ep-card-title">Open to Work Settings</h1>
+    <p class="ep-card-sub">
+      Control who can find you and how you appear in the employer talent directory.
+      Your preferences are only visible to employers — never to the public.
     </p>
+    <div class="ep-divider"></div>
 
-    <form method="post">
+    <form method="post" id="empPrefsForm" novalidate>
       {% csrf_token %}
 
-      {# Open to Work Switch #}
-      <div class="toggle-banner">
-        <div class="toggle-info">
-          <h3><i class="fas fa-dot-circle" style="color: var(--emerald);"></i> Open to Permanent Work</h3>
-          <p>When turned on, your profile is indexed in the Talent Directory so businesses can contact you directly.</p>
-        </div>
-        <div>
-          <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
-            {{ form.open_to_employment }}
-            <span style="font-weight: 700; color: var(--emerald); font-size: 0.9rem;">Enable</span>
-          </label>
-        </div>
-      </div>
-
-      <div class="form-group-custom">
-        <label for="id_employment_preference">Employment Type Preference</label>
-        {{ form.employment_preference }}
-        {% for err in form.employment_preference.errors %}
-          <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ err }}</div>
-        {% endfor %}
-      </div>
-
-      <div class="form-group-custom">
-        <label for="id_expected_monthly_salary">Expected Monthly Salary (₦ NGN)</label>
-        {{ form.expected_monthly_salary }}
-        <div style="font-size: 0.78rem; color: var(--text-3); margin-top: 4px;">
-          Set your baseline monthly salary expectation for full-time permanent roles.
-        </div>
-        {% for err in form.expected_monthly_salary.errors %}
-          <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ err }}</div>
-        {% endfor %}
-      </div>
-
-      <div class="form-group-custom">
-        <label for="id_notice_period">Notice Period / Availability</label>
-        {{ form.notice_period }}
-        <div style="font-size: 0.78rem; color: var(--text-3); margin-top: 4px;">
-          e.g. "Available Immediately", "2 Weeks Notice", or "1 Month Notice".
-        </div>
-        {% for err in form.notice_period.errors %}
-          <div style="color: #EF4444; font-size: 0.8rem; margin-top: 4px;">{{ err }}</div>
-        {% endfor %}
-      </div>
-
       {% if form.non_field_errors %}
-        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--r-md); padding: 12px; color: #EF4444; margin-bottom: 20px;">
-          {{ form.non_field_errors }}
+        <div class="ep-nfe">
+          <i class="fas fa-circle-exclamation" style="flex-shrink:0;margin-top:2px;"></i>
+          <div>{{ form.non_field_errors.0 }}</div>
         </div>
       {% endif %}
 
-      <div class="btn-row">
-        <button type="submit" class="btn btn-primary">
+      {# ── Open-to-Work Toggle ── #}
+      <div class="ep-section-label">Availability Status</div>
+
+      <div class="otw-banner {% if form.open_to_employment.value %}otw-on{% else %}otw-off{% endif %}" id="otwBanner">
+        <div class="otw-left">
+          <div class="otw-status" id="otwStatusBadge">
+            <span class="otw-status-dot"></span>
+            <span id="otwStatusText">{% if form.open_to_employment.value %}Active — Visible to Employers{% else %}Inactive — Hidden from Search{% endif %}</span>
+          </div>
+          <h3 class="otw-heading">Open to Permanent Work</h3>
+          <p class="otw-desc">
+            When active, your profile is listed in the employer talent directory and
+            you receive an <strong style="color:#10b981;">Open to Work</strong> badge on your profile.
+            Turn it off to quietly stop receiving outreach without deleting your profile.
+          </p>
+          <div class="otw-impact">
+            <span class="otw-impact-chip"><i class="fas fa-search"></i> Appear in searches</span>
+            <span class="otw-impact-chip"><i class="fas fa-bell"></i> Receive outreach</span>
+            <span class="otw-impact-chip"><i class="fas fa-star"></i> Featured on Talent page</span>
+          </div>
+        </div>
+        <div class="toggle-switch-wrap">
+          <label class="toggle-switch" for="{{ form.open_to_employment.id_for_label }}" title="Toggle Open to Work">
+            {{ form.open_to_employment }}
+            <div class="toggle-track">
+              <div class="toggle-thumb"></div>
+            </div>
+          </label>
+          <span class="toggle-label" id="otwToggleLabel">{% if form.open_to_employment.value %}ON{% else %}OFF{% endif %}</span>
+        </div>
+      </div>
+
+      {# ── Employment Type — visual radio cards ── #}
+      <div class="ep-section-label" style="margin-top:8px;">Preferred Work Type</div>
+
+      <div class="ep-pref-grid">
+
+        <label class="ep-pref-card">
+          <input type="radio" name="employment_preference" value="full_time"
+            {% if form.employment_preference.value == 'full_time' %}checked{% endif %}>
+          <div class="ep-pref-label">
+            <div class="ep-pref-icon"><i class="fas fa-briefcase"></i></div>
+            <div class="ep-pref-text">
+              <div class="ep-pref-name">Full-Time Only</div>
+              <div class="ep-pref-desc">Seeking a permanent, full-time position with salary</div>
+            </div>
+            <div class="ep-pref-check"></div>
+          </div>
+        </label>
+
+        <label class="ep-pref-card">
+          <input type="radio" name="employment_preference" value="part_time"
+            {% if form.employment_preference.value == 'part_time' %}checked{% endif %}>
+          <div class="ep-pref-label">
+            <div class="ep-pref-icon"><i class="fas fa-clock"></i></div>
+            <div class="ep-pref-text">
+              <div class="ep-pref-name">Part-Time Only</div>
+              <div class="ep-pref-desc">Looking for flexible, part-time arrangements</div>
+            </div>
+            <div class="ep-pref-check"></div>
+          </div>
+        </label>
+
+        <label class="ep-pref-card">
+          <input type="radio" name="employment_preference" value="either"
+            {% if form.employment_preference.value == 'either' %}checked{% endif %}>
+          <div class="ep-pref-label">
+            <div class="ep-pref-icon"><i class="fas fa-expand-arrows-alt"></i></div>
+            <div class="ep-pref-text">
+              <div class="ep-pref-name">Full or Part-Time</div>
+              <div class="ep-pref-desc">Open to either — willing to negotiate hours</div>
+            </div>
+            <div class="ep-pref-check"></div>
+          </div>
+        </label>
+
+        <label class="ep-pref-card">
+          <input type="radio" name="employment_preference" value="gig_only"
+            {% if form.employment_preference.value == 'gig_only' or not form.employment_preference.value %}checked{% endif %}>
+          <div class="ep-pref-label">
+            <div class="ep-pref-icon"><i class="fas fa-bolt"></i></div>
+            <div class="ep-pref-text">
+              <div class="ep-pref-name">Gig / Contract</div>
+              <div class="ep-pref-desc">Project-based and contract work only</div>
+            </div>
+            <div class="ep-pref-check"></div>
+          </div>
+        </label>
+
+      </div>
+      
+
+      {# ── Salary ── #}
+      <div class="ep-section-label" style="margin-top:8px;">Salary & Availability</div>
+
+      <div class="ep-field">
+        <label class="ep-label" for="{{ form.expected_monthly_salary.id_for_label }}">
+          <i class="fas fa-coins"></i> Expected Monthly Salary
+          <span class="ep-opt-tag">Optional</span>
+        </label>
+        <div class="ep-input-wrap">
+          <i class="fas fa-naira-sign ep-lead-icon"></i>
+          {{ form.expected_monthly_salary }}
+          <span class="ep-trail-text">NGN/mo</span>
+        </div>
+        <div class="ep-help">
+          <i class="fas fa-circle-info"></i>
+          Set your baseline expectation for full-time roles. Visible to employers as a salary indication.
+        </div>
+        {% for err in form.expected_monthly_salary.errors %}
+          <div class="ep-error"><i class="fas fa-circle-exclamation"></i> {{ err }}</div>
+        {% endfor %}
+      </div>
+
+      {# ── Notice Period ── #}
+      <div class="ep-field">
+        <label class="ep-label" for="{{ form.notice_period.id_for_label }}">
+          <i class="fas fa-calendar-check"></i> Notice Period / Availability
+          <span class="ep-opt-tag">Optional</span>
+        </label>
+        <div class="ep-input-wrap">
+          <i class="fas fa-hourglass-half ep-lead-icon"></i>
+          {{ form.notice_period }}
+        </div>
+        <div class="ep-help">
+          <i class="fas fa-circle-info"></i>
+          e.g. "Available immediately", "2 weeks notice", or "1 month notice". Shown to employers on your profile card.
+        </div>
+        {% for err in form.notice_period.errors %}
+          <div class="ep-error"><i class="fas fa-circle-exclamation"></i> {{ err }}</div>
+        {% endfor %}
+      </div>
+
+      {# ── Profile impact summary ── #}
+      <div class="ep-status-preview" id="otwSummary">
+        <i class="fas fa-info-circle" style="color:var(--amber);"></i>
+        <strong>Profile impact:</strong>
+        When <strong>Open to Work</strong> is active, employers searching for your trade can
+        send you direct outreach, and your profile card will display an amber badge.
+        Adjust your salary and availability to help employers find the right match.
+      </div>
+
+      {# ── Actions ── #}
+      <div class="ep-actions">
+        <button type="submit" class="btn btn-primary ep-btn-save">
           <i class="fas fa-save"></i> Save Preferences
         </button>
         <a href="{% url 'hiring:worker_profile_enhanced' %}" class="btn btn-ghost">
-          Cancel
+          <i class="fas fa-arrow-left"></i> Cancel
         </a>
       </div>
+
     </form>
   </div>
 
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  /* ── Icon padding on inputs ── */
+  const salaryInput  = document.getElementById('{{ form.expected_monthly_salary.id_for_label }}');
+  const noticeInput  = document.getElementById('{{ form.notice_period.id_for_label }}');
+  if (salaryInput) { salaryInput.classList.add('has-lead', 'has-trail'); }
+  if (noticeInput) { noticeInput.classList.add('has-lead'); }
+
+  /* ── Open to Work toggle live UX ── */
+  const otwCheckbox    = document.getElementById('{{ form.open_to_employment.id_for_label }}');
+  const otwBanner      = document.getElementById('otwBanner');
+  const otwStatusBadge = document.getElementById('otwStatusBadge');
+  const otwStatusText  = document.getElementById('otwStatusText');
+  const otwToggleLabel = document.getElementById('otwToggleLabel');
+
+  function syncOtwUI() {
+    if (!otwCheckbox) return;
+    const on = otwCheckbox.checked;
+
+    otwBanner.classList.toggle('otw-on', on);
+    otwBanner.classList.toggle('otw-off', !on);
+    otwStatusText.textContent  = on ? 'Active — Visible to Employers' : 'Inactive — Hidden from Search';
+    otwToggleLabel.textContent = on ? 'ON' : 'OFF';
+  }
+
+  if (otwCheckbox) {
+    otwCheckbox.addEventListener('change', syncOtwUI);
+    syncOtwUI(); // run on load to sync with server state
+  }
+</script>
 {% endblock %}

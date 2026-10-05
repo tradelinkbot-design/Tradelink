@@ -7,7 +7,6 @@ Jobs, WorkerProfiles, and Products via Celery tasks.
 Usage (Railway "Run Command" or local shell):
     python manage.py recompute_embeddings
     python manage.py recompute_embeddings --jobs-only
-    python manage.py recompute_embeddings --products-only
     python manage.py recompute_embeddings --dry-run
 
 This is needed after switching embedding models (e.g. from

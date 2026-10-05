@@ -127,8 +127,17 @@ class WorkerEmploymentPrefForm(forms.ModelForm):
             'notice_period',
         ]
         widgets = {
+            'open_to_employment': forms.CheckboxInput(attrs={
+                'id': 'id_open_to_employment',
+                'class': 'otw-checkbox',
+            }),
+            'employment_preference': forms.Select(attrs={
+                'id': 'id_employment_preference',
+            }),
             'expected_monthly_salary': forms.NumberInput(attrs={
                 'placeholder': 'e.g. 150000',
+                'min': '0',
+                'step': '1000',
             }),
             'notice_period': forms.TextInput(attrs={
                 'placeholder': 'e.g. Available immediately, 2 weeks, 1 month',
