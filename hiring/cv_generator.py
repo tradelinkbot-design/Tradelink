@@ -53,10 +53,13 @@ try:
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
-    # Stub out colour names so any accidental module-level reference gives a
-    # clear AttributeError rather than a NameError on 'colors'.
+    # Stub out colour names and classes so importing the module never crashes
     _NAVY_DARK = _NAVY_STRIP = _BLUE_ACCENT = _BLUE_LIGHT = _BLUE_BORDER = None
     _TEXT_MAIN = _TEXT_MUTED = _BORDER_LINE = _GREEN_BG = _WHITE = None
+    Flowable = object
+    class _DummyCanvas:
+        Canvas = object
+    canvas = _DummyCanvas()
 
 
 try:

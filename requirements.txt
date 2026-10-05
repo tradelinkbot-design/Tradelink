@@ -112,3 +112,4 @@ annotated-types==0.7.0
 typing_extensions==4.15.0
 uvicorn[standard]
 qrcode[pil]==8.0
+reportlab==5.0.1

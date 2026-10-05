@@ -341,7 +341,14 @@ class CVDownloadView(WorkerRequiredMixin, View):
         except Exception:
             profile_url = ''
 
-        pdf_bytes = generate_cv_pdf(worker, profile_url=profile_url)
+        try:
+            pdf_bytes = generate_cv_pdf(worker, profile_url=profile_url)
+        except Exception as e:
+            logger = logging.getLogger('technicians')
+            logger.error("CV generation failed for worker %s: %s", worker.pk, e, exc_info=True)
+            messages.error(request, 'Unable to generate CV at this time. Please try again later.')
+            return redirect('hiring:worker_profile_enhanced')
+
         name = (
             worker.user.get_full_name().replace(' ', '_')
             or worker.user.username
