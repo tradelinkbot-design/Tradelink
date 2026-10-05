@@ -195,6 +195,37 @@
   @media (max-width: 480px) {
     .trades-grid { grid-template-columns: 1fr; }
   }
+
+  /* ===== PAGINATION ===== */
+  .pagination-wrap {
+    display: flex; justify-content: center; align-items: center;
+    gap: 8px; padding: 48px 0 0; flex-wrap: wrap;
+  }
+  .pg-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 40px; height: 40px; padding: 0 14px;
+    border-radius: var(--r-md);
+    font-size: 0.88rem; font-weight: 600;
+    text-decoration: none; transition: var(--t);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-2); background: rgba(255,255,255,0.02);
+  }
+  .pg-btn:hover {
+    border-color: var(--border-strong);
+    color: var(--text-1); background: var(--surface-1);
+  }
+  .pg-btn.active {
+    background: var(--amber); border-color: var(--amber);
+    color: #0C0A08; font-weight: 800;
+    box-shadow: 0 4px 16px rgba(245,158,11,0.3);
+  }
+  .pg-btn.disabled {
+    opacity: 0.3; pointer-events: none;
+  }
+  .pg-info {
+    font-size: 0.82rem; color: var(--text-3);
+    padding: 0 8px; white-space: nowrap;
+  }
 </style>
 {% endblock %}
 
@@ -213,12 +244,12 @@
 <div class="stats-bar">
   <div class="stats-bar-inner">
     <div class="stat-item">
-      <div class="stat-num">{{ categories.count }}</div>
+      <div class="stat-num">{{ page_obj.paginator.count }}</div>
       <div class="stat-lbl">Active Trades</div>
     </div>
     <div class="stat-divider"></div>
     <div class="stat-item">
-      <div class="stat-num">{{ categories|length }}+</div>
+      <div class="stat-num">{{ page_obj.paginator.count }}+</div>
       <div class="stat-lbl">Disciplines</div>
     </div>
     <div class="stat-divider"></div>
@@ -246,8 +277,7 @@
       <div class="trades-grid">
         {% for category in categories %}
           <a href="{% url 'marketplace:trade_detail' slug=category.slug %}"
-             class="card trade-card fade-up"
-             style="animation-delay: {{ forloop.counter0|divisibleby:4|yesno:'0ms,' }}{% cycle '0ms' '80ms' '160ms' '240ms' %}">
+             class="card trade-card fade-up">
 
             <div class="trade-icon-wrap">
               {% if category.icon_class %}
@@ -282,6 +312,47 @@
           </a>
         {% endfor %}
       </div>
+
+      {# ── Pagination ── #}
+      {% if page_obj.paginator.num_pages > 1 %}
+        <div class="pagination-wrap">
+
+          {# Previous #}
+          {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}" class="pg-btn">
+              <i class="fas fa-chevron-left"></i>
+            </a>
+          {% else %}
+            <span class="pg-btn disabled"><i class="fas fa-chevron-left"></i></span>
+          {% endif %}
+
+          {# Page numbers (show window around current page) #}
+          {% for num in page_obj.paginator.page_range %}
+            {% if num == page_obj.number %}
+              <span class="pg-btn active">{{ num }}</span>
+            {% elif num == 1 or num == page_obj.paginator.num_pages %}
+              <a href="?page={{ num }}" class="pg-btn">{{ num }}</a>
+            {% elif num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+              <a href="?page={{ num }}" class="pg-btn">{{ num }}</a>
+            {% elif num == page_obj.number|add:"-3" or num == page_obj.number|add:"3" %}
+              <span class="pg-info">…</span>
+            {% endif %}
+          {% endfor %}
+
+          {# Next #}
+          {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}" class="pg-btn">
+              <i class="fas fa-chevron-right"></i>
+            </a>
+          {% else %}
+            <span class="pg-btn disabled"><i class="fas fa-chevron-right"></i></span>
+          {% endif %}
+
+          <span class="pg-info">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+          </span>
+        </div>
+      {% endif %}
 
     {% else %}
       <div class="empty-state">

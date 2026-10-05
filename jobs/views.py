@@ -161,6 +161,7 @@ class TradeCategoryListView(ListView):
     model               = TradeCategory
     template_name       = 'marketplace/trades/list.html'
     context_object_name = 'categories'
+    paginate_by         = 20
 
     def get_queryset(self):
         return (
@@ -370,11 +371,24 @@ class JobListView(View):
                 .values_list('job_id', flat=True)
             )
  
+        # ── Categories annotated with active job count (trades with jobs first) ──
+        categories = (
+            TradeCategory.objects.filter(is_active=True)
+            .annotate(
+                job_count=Count(
+                    'jobs',
+                    filter=Q(jobs__status=Job.Status.ACTIVE, jobs__deadline__gte=timezone.now().date()),
+                    distinct=True,
+                )
+            )
+            .order_by('-job_count', 'name')
+        )
+
         return render(request, self.template_name, {
             'form':          form,
             'jobs':          jobs,
             'saved_ids':     saved_ids,
-            'categories':    TradeCategory.objects.filter(is_active=True),
+            'categories':    categories,
             'total_count':   qs.count(),
             'unread_count':  _unread_notification_count(request.user),
             'used_semantic': used_semantic,   # lets template show "AI search" badge

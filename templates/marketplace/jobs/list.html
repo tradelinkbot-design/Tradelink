@@ -181,28 +181,130 @@
   .cat-sidebar {
     background: var(--bg-card); border: 1px solid var(--border-subtle);
     border-radius: var(--r-xl); overflow: hidden;
+    box-shadow: var(--shadow-sm);
   }
   .cat-sidebar-head {
-    padding: 18px 20px 14px;
+    padding: 16px 18px 12px;
     border-bottom: 1px solid var(--border-subtle);
-    font-family: 'Fraunces', serif; font-size: 0.88rem; font-weight: 800;
-    color: var(--text-3); letter-spacing: 1px; text-transform: uppercase;
+    display: flex; align-items: center; justify-content: space-between;
   }
-  .cat-list { padding: 8px 0; list-style: none; }
+  .cat-sidebar-title {
+    font-family: 'Fraunces', serif; font-size: 0.86rem; font-weight: 800;
+    color: var(--text-2); letter-spacing: 1px; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .cat-sidebar-title i { color: var(--amber); font-size: 0.8rem; }
+  .cat-head-count {
+    font-size: 0.7rem; font-weight: 700;
+    color: var(--text-3); background: var(--surface-1);
+    padding: 2px 8px; border-radius: var(--r-pill);
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* Quick filter input inside sidebar */
+  .cat-search-box {
+    position: relative;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(255,255,255,0.015);
+  }
+  .cat-search-icon {
+    position: absolute; left: 24px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.76rem; color: var(--text-3);
+    pointer-events: none;
+  }
+  .cat-search-input {
+    width: 100%;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    padding: 7px 28px 7px 30px;
+    font-size: 0.82rem; color: var(--text-1);
+    font-family: 'Outfit', sans-serif;
+    outline: none; transition: var(--t);
+  }
+  .cat-search-input:focus {
+    border-color: var(--amber);
+    background: rgba(245,158,11,0.04);
+    box-shadow: 0 0 0 2px rgba(245,158,11,0.12);
+  }
+  .cat-search-input::placeholder { color: var(--text-3); }
+  .cat-search-clear {
+    position: absolute; right: 22px; top: 50%;
+    transform: translateY(-50%);
+    background: none; border: none;
+    color: var(--text-3); cursor: pointer;
+    font-size: 0.75rem; padding: 4px; line-height: 1;
+  }
+  .cat-search-clear:hover { color: var(--text-1); }
+
+  /* Pinned All Trades button */
+  .cat-all-item {
+    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(255,255,255,0.01);
+  }
+  .cat-all-item a {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 18px; font-size: 0.86rem; font-weight: 600;
+    color: var(--text-2); text-decoration: none; transition: var(--t);
+  }
+  .cat-all-item a:hover { background: var(--surface-1); color: var(--text-1); }
+  .cat-all-item a.active {
+    background: var(--surface-1); color: var(--amber); font-weight: 700;
+  }
+
+  /* Scrollable Category List with constrained height */
+  .cat-list-scroll {
+    max-height: 400px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 4px 0;
+  }
+  .cat-list-scroll::-webkit-scrollbar { width: 5px; }
+  .cat-list-scroll::-webkit-scrollbar-track { background: transparent; }
+  .cat-list-scroll::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 4px;
+  }
+  .cat-list-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--amber);
+  }
+
+  .cat-list { list-style: none; margin: 0; padding: 0; }
   .cat-list li a {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 20px; font-size: 0.88rem; color: var(--text-2);
+    padding: 9px 18px; font-size: 0.84rem; color: var(--text-2);
     text-decoration: none; transition: var(--t); gap: 8px;
   }
   .cat-list li a:hover { background: var(--surface-1); color: var(--text-1); }
-  .cat-list li a.active { background: var(--surface-1); color: var(--amber); }
-  .cat-list li a .cat-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cat-list li a.active {
+    background: var(--surface-1); color: var(--amber); font-weight: 600;
+  }
+  .cat-item-icon {
+    width: 16px; text-align: center; color: var(--text-3);
+    font-size: 0.76rem; flex-shrink: 0; transition: var(--t);
+  }
+  .cat-list li a:hover .cat-item-icon,
+  .cat-list li a.active .cat-item-icon { color: var(--amber); }
+  .cat-list li a .cat-name {
+    flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .cat-badge {
     font-size: 0.7rem; font-weight: 700; padding: 2px 7px;
     border-radius: var(--r-pill); background: var(--surface-2);
     color: var(--text-3); flex-shrink: 0;
   }
-  .cat-list li a.active .cat-badge { background: rgba(245,158,11,0.15); color: var(--amber); }
+  .cat-list li a.active .cat-badge,
+  .cat-all-item a.active .cat-badge {
+    background: rgba(245,158,11,0.18); color: var(--amber);
+  }
+
+  .cat-no-match {
+    padding: 24px 16px; text-align: center;
+    color: var(--text-3); font-size: 0.82rem;
+  }
+  .cat-no-match i { font-size: 1.2rem; margin-bottom: 6px; display: block; opacity: 0.5; }
 
   /* ===== JOB RESULTS ===== */
   .results-header {
@@ -488,28 +590,55 @@
     <aside>
       <div class="sidebar-sticky">
         <div class="cat-sidebar">
-          <div class="cat-sidebar-head">By Trade</div>
-          <ul class="cat-list">
-            <li>
-              <a href="{% url 'marketplace:job_list' %}"
-                 class="{% if not request.GET.trade %}active{% endif %}">
-                <span class="cat-name">All Trades</span>
-                <span class="cat-badge">{{ total_count }}</span>
-              </a>
-            </li>
-            {% for cat in categories %}
-              <li>
-                <a href="?trade={{ cat.pk }}"
-                   class="{% if request.GET.trade == cat.pk|stringformat:'s' %}active{% endif %}">
-                  {% if cat.icon_class %}
-                    <i class="{{ cat.icon_class }}"
-                       style="width:16px;text-align:center;color:var(--text-3);font-size:0.8rem;flex-shrink:0;"></i>
-                  {% endif %}
-                  <span class="cat-name">{{ cat.name }}</span>
-                </a>
-              </li>
-            {% endfor %}
-          </ul>
+          <div class="cat-sidebar-head">
+            <span class="cat-sidebar-title">
+              <i class="fas fa-tools"></i> By Trade
+            </span>
+            <span class="cat-head-count" title="{{ categories|length }} trade disciplines">{{ categories|length }}</span>
+          </div>
+
+          <!-- Quick Search Filter -->
+          <div class="cat-search-box">
+            <i class="fas fa-search cat-search-icon"></i>
+            <input type="text" id="catSidebarSearch" class="cat-search-input" placeholder="Search trades..." autocomplete="off" spellcheck="false">
+            <button type="button" id="catSidebarClear" class="cat-search-clear" style="display:none;" title="Clear search">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <!-- Pinned All Trades -->
+          <div class="cat-all-item">
+            <a href="{% url 'marketplace:job_list' %}"
+               class="{% if not request.GET.trade %}active{% endif %}">
+              <span class="cat-name">
+                <i class="fas fa-border-all" style="width:16px;text-align:center;font-size:0.8rem;margin-right:6px;color:var(--amber);"></i>All Trades
+              </span>
+              <span class="cat-badge">{{ total_count }}</span>
+            </a>
+          </div>
+
+          <!-- Scrollable Category List -->
+          <div class="cat-list-scroll" id="catListScroll">
+            <ul class="cat-list" id="catListUl">
+              {% for cat in categories %}
+                <li data-name="{{ cat.name|lower }}">
+                  <a href="?trade={{ cat.pk }}"
+                     class="{% if request.GET.trade == cat.pk|stringformat:'s' %}active{% endif %}"
+                     title="{{ cat.name }} ({{ cat.job_count|default:0 }} active job{{ cat.job_count|default:0|pluralize }})">
+                    <i class="{% if cat.icon_class %}{{ cat.icon_class }}{% else %}fas fa-wrench{% endif %} cat-item-icon"></i>
+                    <span class="cat-name">{{ cat.name }}</span>
+                    {% if cat.job_count %}
+                      <span class="cat-badge">{{ cat.job_count }}</span>
+                    {% endif %}
+                  </a>
+                </li>
+              {% endfor %}
+            </ul>
+            <div id="catNoMatch" class="cat-no-match" style="display:none;">
+              <i class="fas fa-search"></i>
+              <p>No trades match your search</p>
+            </div>
+          </div>
         </div>
       </div>
     </aside>
@@ -942,5 +1071,57 @@ function toggleSave(btn) {
     icon.classList.toggle('far');
   });
 }
+
+/* ─────────────────────────────────────────────────────────────────────
+   SIDEBAR TRADE QUICK FILTER
+───────────────────────────────────────────────────────────────────── */
+(function() {
+  const catSearch  = document.getElementById('catSidebarSearch');
+  const catClear   = document.getElementById('catSidebarClear');
+  const catListUl  = document.getElementById('catListUl');
+  const catNoMatch = document.getElementById('catNoMatch');
+  const catScroll  = document.getElementById('catListScroll');
+
+  if (catSearch && catListUl) {
+    const items = catListUl.querySelectorAll('li');
+
+    catSearch.addEventListener('input', function() {
+      const q = this.value.trim().toLowerCase();
+      let visibleCount = 0;
+
+      items.forEach(li => {
+        const name = li.dataset.name || '';
+        const match = !q || name.includes(q);
+        li.style.display = match ? '' : 'none';
+        if (match) visibleCount++;
+      });
+
+      if (catNoMatch) {
+        catNoMatch.style.display = (visibleCount === 0 && q.length > 0) ? 'block' : 'none';
+      }
+      if (catClear) {
+        catClear.style.display = q.length > 0 ? 'block' : 'none';
+      }
+    });
+
+    if (catClear) {
+      catClear.addEventListener('click', function() {
+        catSearch.value = '';
+        items.forEach(li => li.style.display = '');
+        if (catNoMatch) catNoMatch.style.display = 'none';
+        catClear.style.display = 'none';
+        catSearch.focus();
+      });
+    }
+
+    // Auto-scroll active trade category into view within the sidebar container
+    const activeItem = catListUl.querySelector('li a.active');
+    if (activeItem && catScroll) {
+      setTimeout(() => {
+        activeItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }, 150);
+    }
+  }
+})();
 </script>
 {% endblock %}
