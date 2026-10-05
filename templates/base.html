@@ -19,14 +19,8 @@
 
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-    /* FIX: overflow-x:hidden must NOT be on <html> — it creates a new
-       stacking/clipping context that cuts off position:absolute children
-       (e.g. nav dropdowns) when the navbar grows wider (logged-in state).
-       Set it only on body, which does not clip fixed/absolute descendants. */
     html {
       scroll-behavior: smooth;
-    }
-    body {
       overflow-x: hidden;
     }
 
@@ -74,6 +68,7 @@
       color: var(--text-1);
       background: var(--bg-base);
       min-height: 100vh;
+      overflow-x: hidden;
     }
 
     body::before {
@@ -87,27 +82,49 @@
     }
 
     /* ========== NAVBAR ========== */
+    /*
+     * ROOT FIX FOR DROPDOWN CLIPPING:
+     * backdrop-filter on a position:fixed element creates a new stacking /
+     * compositing layer in Blink & WebKit.  Even with overflow:visible that
+     * layer clips absolutely-positioned children that overflow the navbar
+     * height — which is exactly why the nd-panel items disappear when the
+     * user is logged in (more buttons → tighter layout → clip kicks in).
+     *
+     * Solution: strip backdrop-filter / background from .navbar itself and
+     * move them onto a ::before pseudo-element.  The navbar element keeps
+     * NO context-creating properties, so .nd-panel can freely overflow it.
+     */
     .navbar {
       position: fixed; top: 0; left: 0; right: 0;
       height: var(--nav-h); z-index: 1000;
       display: flex; align-items: center;
       justify-content: space-between;
-      /* FIX: tighter min padding so logo + hamburger fit on 360px phones */
       padding: 0 clamp(16px,5vw,64px);
-      background: rgba(12,10,8,0.75);
-      backdrop-filter: blur(20px) saturate(160%);
-      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      /* NO background / backdrop-filter here — moved to ::before */
       border-bottom: 1px solid var(--border-subtle);
-      transition: var(--t);
-      /* FIX: overflow must be visible so position:absolute dropdown panels
-         are not clipped — this matters especially when the user is logged in
-         and the navbar has extra buttons making it feel "full" */
-      overflow: visible;
+      transition: border-color 0.28s var(--ease);
+      overflow: visible; /* never clip dropdown children */
     }
+    /* Glassmorphism blur on a pseudo-element — keeps the navbar element itself
+       free of context-creating properties so .nd-panel can overflow freely */
+    .navbar::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: rgba(12,10,8,0.78);
+      backdrop-filter: blur(22px) saturate(160%);
+      -webkit-backdrop-filter: blur(22px) saturate(160%);
+      z-index: 0; /* above body::before glow (z:0), below nav content */
+      transition: background 0.28s var(--ease);
+      pointer-events: none;
+    }
+    /* Lift all direct nav children above the ::before layer */
+    .navbar > * { position: relative; z-index: 1; }
     .navbar.scrolled {
-      background: rgba(12,10,8,0.96);
       border-bottom-color: var(--border-strong);
       box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    }
+    .navbar.scrolled::before {
+      background: rgba(12,10,8,0.97);
     }
 
     .nav-logo {
