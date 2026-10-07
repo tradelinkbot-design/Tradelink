@@ -696,10 +696,17 @@
 
           {# Status + verified row #}
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+            {% if slots_full or job.status == 'filled' %}
+            <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:var(--r-pill);background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.28);color:#f87171;font-size:0.72rem;font-weight:700;">
+              <span style="width:6px;height:6px;border-radius:50%;background:#f87171;display:inline-block;"></span>
+              Full • No Vacancy
+            </span>
+            {% else %}
             <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:var(--r-pill);background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.22);color:var(--emerald);font-size:0.72rem;font-weight:700;">
               <span style="width:6px;height:6px;border-radius:50%;background:var(--emerald);display:inline-block;animation:pulseDot 2s ease-in-out infinite;"></span>
               Active
             </span>
+            {% endif %}
             {% if job.employer.is_verified %}
             <span class="jd-verified"><i class="fas fa-circle-check"></i> Verified Employer</span>
             {% endif %}
@@ -775,10 +782,15 @@
                 {{ job.get_pay_type_display }}
               {% endif %}
             </span>
-            {% if job.slots > 1 %}
+            {% if slots_full or job.status == 'filled' %}
+            <span class="jd-tag" style="background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);color:#fca5a5;">
+              <i class="fas fa-user-check" style="font-size:0.65rem;"></i>
+              All {{ job.slots }} slot{{ job.slots|pluralize }} filled (No vacancy)
+            </span>
+            {% elif job.slots > 1 %}
             <span class="jd-tag">
               <i class="fas fa-users" style="font-size:0.65rem;color:var(--amber);"></i>
-              {{ job.slots }} position{{ job.slots|pluralize }} available
+              {{ slots_remaining }} of {{ job.slots }} position{{ job.slots|pluralize }} available
             </span>
             {% endif %}
             {% for skill in job.required_skills.all|slice:":3" %}
@@ -897,7 +909,7 @@
           {% endif %}
 
           {# Inline apply section (shown/hidden by JS) #}
-          {% if request.user.is_authenticated and not has_applied %}
+          {% if request.user.is_authenticated and not has_applied and not slots_full and job.status != 'filled' %}
           <div class="jd-apply-inline fade-up d2" id="applySection">
             <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:800;margin-bottom:6px;">
               Apply for this Job
@@ -1017,7 +1029,6 @@
         </div>{# /jd-content #}
 
 
-        
         <div>
           <div class="jd-action-card fade-in d1">
 
@@ -1058,8 +1069,14 @@
                 <div class="jd-info-row">
                   <div class="jd-info-icon"><i class="fas fa-users"></i></div>
                   <div>
-                    <div class="jd-info-label">Positions</div>
-                    <div class="jd-info-val">{{ job.slots }} worker{{ job.slots|pluralize }} needed</div>
+                    <div class="jd-info-label">Positions & Vacancy</div>
+                    <div class="jd-info-val">
+                      {% if slots_full or job.status == 'filled' %}
+                        <span style="color:#f87171;font-weight:700;">Full (0 of {{ job.slots }} open)</span>
+                      {% else %}
+                        {{ slots_remaining }} of {{ job.slots }} open
+                      {% endif %}
+                    </div>
                   </div>
                 </div>
                 {% if job.deadline %}
@@ -1097,6 +1114,16 @@
                      class="jd-btn-save" style="margin-top:2px;">
                     <i class="fas fa-list"></i> View My Applications
                   </a>
+
+                {% elif slots_full or job.status == 'filled' %}
+                  {# Slots are full / no vacancy #}
+                  <div style="padding:16px;border-radius:var(--r-lg);text-align:center;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.22);">
+                    <i class="fas fa-ban" style="display:block;font-size:1.4rem;color:#f87171;margin-bottom:6px;"></i>
+                    <strong style="display:block;color:#f87171;font-size:0.95rem;margin-bottom:2px;">All Positions Filled</strong>
+                    <span style="font-size:0.8rem;color:var(--text-3);line-height:1.4;display:block;">
+                      This job has filled all {{ job.slots }} position{{ job.slots|pluralize }}. No vacancy remains.
+                    </span>
+                  </div>
 
                 {% elif request.user.workerprofile %}
                   {# Worker — not yet applied — show apply button #}

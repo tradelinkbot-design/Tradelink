@@ -556,6 +556,18 @@
               </div>
             </div>
 
+            {% if job.status == 'filled' %}
+            <div style="padding:28px 24px;text-align:center;background:rgba(239,68,68,0.06);border-bottom:1px solid rgba(239,68,68,0.2);">
+              <i class="fas fa-ban" style="font-size:2rem;color:#f87171;margin-bottom:10px;display:block;"></i>
+              <h3 style="font-family:'Fraunces',serif;color:#f87171;font-size:1.25rem;margin-bottom:6px;">All Positions Filled (No Vacancy)</h3>
+              <p style="color:var(--text-2);font-size:0.88rem;max-width:440px;margin:0 auto 18px;line-height:1.6;">
+                This job required {{ job.slots }} worker{{ job.slots|pluralize }} and all positions have been filled. No further applications can be accepted.
+              </p>
+              <a href="{% url 'marketplace:job_list' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-briefcase"></i> Browse Other Jobs
+              </a>
+            </div>
+            {% else %}
             {# Form body #}
             <form method="POST" id="applyForm"
                   action="{% url 'marketplace:job_apply' pk=job.pk %}">
@@ -637,6 +649,7 @@
               </div>
 
             </form>{# /applyForm #}
+            {% endif %}
 
           </div>{# /form-card #}
 

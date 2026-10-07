@@ -707,7 +707,11 @@
                       <i class="far fa-clock"></i>
                       {{ job.created|timesince }} ago
                     </span>
-                    {% if job.slots > 1 %}
+                    {% if job.status == 'filled' %}
+                      <span class="job-meta-item" style="color:#f87171;font-weight:700;">
+                        <i class="fas fa-ban"></i> Full (No vacancy)
+                      </span>
+                    {% elif job.slots > 1 %}
                       <span class="job-meta-item" style="color:var(--emerald);">
                         <i class="fas fa-users"></i>
                         {{ job.slots }} slots
@@ -715,6 +719,11 @@
                     {% endif %}
                   </div>
                   <div class="job-tags-row">
+                    {% if job.status == 'filled' %}
+                      <span class="job-tag" style="color:#f87171;border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.08);font-weight:700;">
+                        <i class="fas fa-lock" style="font-size:0.65rem;"></i> Full • No Vacancy
+                      </span>
+                    {% endif %}
                     <span class="job-tag {% if job.job_type == 'full_time' %}ft{% elif job.job_type == 'contract' %}ct{% elif job.job_type == 'once_off' %}oo{% elif job.job_type == 'part_time' %}pt{% endif %}">
                       {{ job.get_job_type_display }}
                     </span>

@@ -574,7 +574,13 @@ if not DEBUG:
 
 PAYSTACK_SECRET_KEY     = os.environ.get('PAYSTACK_SECRET_KEY', 'sk_test_166306c4fa6512b95030917dbcfaaa25866d2ff0')
 PAYSTACK_PUBLIC_KEY     = os.environ.get('PAYSTACK_PUBLIC_KEY', 'pk_test_d487748abaabb52e28f3c13481053902f78f0e1d')
-PAYSTACK_CALLBACK_URL   = os.environ.get('PAYSTACK_CALLBACK_URL', 'http://127.0.0.1:8000/escrow/paystack/callback/')
+_railway_host = os.environ.get('RAILWAY_PUBLIC_DOMAIN') or os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+_default_callback = (
+    f'https://{_railway_host}/escrow/paystack/callback/'
+    if _railway_host
+    else 'http://127.0.0.1:8000/escrow/paystack/callback/'
+)
+PAYSTACK_CALLBACK_URL   = os.environ.get('PAYSTACK_CALLBACK_URL', _default_callback)
 PAYSTACK_WEBHOOK_SECRET = os.environ.get('PAYSTACK_WEBHOOK_SECRET', PAYSTACK_SECRET_KEY)  # Falls back to secret key if not separately set
 # ==================================
 # DOJAH (KYC / VERIFICATION)

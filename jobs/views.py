@@ -201,7 +201,7 @@ class TradeCategoryDetailView(DetailView):
         jobs = (
             Job.objects.filter(
                 trade_category=self.object,
-                status=Job.Status.ACTIVE,
+                status__in=[Job.Status.ACTIVE, Job.Status.FILLED],
                 deadline__gte=timezone.now().date(),
             )
             .select_related('employer', 'trade_category')
@@ -256,10 +256,10 @@ class JobListView(View):
  
         form = JobFilterForm(request.GET or None)
  
-        # Base queryset — always active, always select_related
+        # Base queryset — active or filled, always select_related
         base_qs = (
             Job.objects.filter(
-                status=Job.Status.ACTIVE,
+                status__in=[Job.Status.ACTIVE, Job.Status.FILLED],
                 deadline__gte=timezone.now().date()
             )
             .select_related('employer', 'trade_category')
@@ -411,7 +411,7 @@ class JobDetailView(View):
             Job.objects.select_related('employer', 'trade_category')
             .prefetch_related('required_skills', 'reviews'),
             pk=pk,
-            status=Job.Status.ACTIVE,
+            status__in=[Job.Status.ACTIVE, Job.Status.FILLED],
             deadline__gte=timezone.now().date(),
         )
 
@@ -420,6 +420,11 @@ class JobDetailView(View):
         if not request.session.get(session_key):
             Job.objects.filter(pk=pk).update(views_count=job.views_count + 1)
             request.session[session_key] = True
+
+        # ── Slot fill status ─────────────────────────────────────────────────
+        accepted_count  = Contract.objects.filter(job=job).count()
+        slots_remaining = max(job.slots - accepted_count, 0)
+        slots_full      = accepted_count >= job.slots
 
         # Worker-specific context
         worker         = _get_worker_profile_or_none(request.user)
@@ -449,15 +454,19 @@ class JobDetailView(View):
         )
 
         return render(request, self.template_name, {
-            'job':          job,
-            'form':         JobApplicationForm(),
-            'has_applied':  has_applied,
-            'application':  application,
-            'is_saved':     is_saved,
-            'clip_score':   clip_score,
-            'similar_jobs': similar_jobs,
-            'unread_count': _unread_notification_count(request.user),
+            'job':             job,
+            'form':            JobApplicationForm(),
+            'has_applied':     has_applied,
+            'application':     application,
+            'is_saved':        is_saved,
+            'clip_score':      clip_score,
+            'similar_jobs':    similar_jobs,
+            'accepted_count':  accepted_count,
+            'slots_remaining': slots_remaining,
+            'slots_full':      slots_full,
+            'unread_count':    _unread_notification_count(request.user),
         })
+
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -815,7 +824,13 @@ class JobApplyView(WorkerRequiredMixin, View):
     template_name = 'marketplace/jobs/apply.html'
 
     def _get_job(self, pk):
-        return get_object_or_404(Job, pk=pk, status=Job.Status.ACTIVE, deadline__gte=timezone.now().date())
+        # Accept ACTIVE or FILLED so workers can still view the detail page.
+        return get_object_or_404(
+            Job,
+            pk=pk,
+            status__in=[Job.Status.ACTIVE, Job.Status.FILLED],
+            deadline__gte=timezone.now().date(),
+        )
 
     def get(self, request, pk):
         job = self._get_job(pk)
@@ -833,6 +848,11 @@ class JobApplyView(WorkerRequiredMixin, View):
     def post(self, request, pk):
         job  = self._get_job(pk)
         form = JobApplicationForm(request.POST)
+
+        # Reject applications once all slots are taken
+        if job.status == Job.Status.FILLED:
+            messages.error(request, 'Sorry, all positions for this job have been filled.')
+            return redirect('marketplace:job_detail', pk=pk)
 
         if JobApplication.objects.filter(job=job, worker=self.worker_profile).exists():
             messages.info(request, 'You have already applied for this job.')
@@ -1251,11 +1271,17 @@ class JobApplicationsView(EmployerRequiredMixin, View):
 
         paginator = Paginator(apps, self.per_page)
 
+        accepted_count  = Contract.objects.filter(job=job).count()
+        slots_remaining = max(job.slots - accepted_count, 0)
+
         return render(request, self.template_name, {
             'job':            job,
             'applications':   paginator.get_page(request.GET.get('page')),
             'status_choices': JobApplication.Status.choices,
             'status_filter':  status_filter,
+            'accepted_count': accepted_count,
+            'slots_remaining': slots_remaining,
+            'slots_full':     accepted_count >= job.slots,
             'unread_count':   _unread_notification_count(request.user),
         })
 
@@ -1283,38 +1309,72 @@ class UpdateApplicationStatusView(EmployerRequiredMixin, View):
             messages.error(request, 'Invalid status.')
             return redirect('marketplace:job_applications', pk=application.job.pk)
 
+        job = application.job
+
+        # ── Slots enforcement ────────────────────────────────────────────────
+        if new_status == JobApplication.Status.ACCEPTED:
+            # Count existing accepted contracts (exclude current application in case
+            # it's being re-accepted after being set to another status)
+            accepted_count = Contract.objects.filter(job=job).count()
+            already_has_contract = Contract.objects.filter(application=application).exists()
+            # If this application doesn't have a contract yet, check capacity
+            if not already_has_contract and accepted_count >= job.slots:
+                messages.error(
+                    request,
+                    f'Cannot accept: this job only has {job.slots} position'
+                    f'{"s" if job.slots != 1 else ""} and all '
+                    f'{"are" if job.slots != 1 else "is"} already filled.'
+                )
+                return redirect('marketplace:job_applications', pk=job.pk)
+
+        # ── Persist status change ────────────────────────────────────────────
+        old_status               = application.status
         application.status       = new_status
         application.employer_note = request.POST.get('employer_note', '')
         application.save(update_fields=['status', 'employer_note', 'updated_at'])
 
-        # Create contract if application was accepted
+        # ── Create contract when accepted ────────────────────────────────────
         if new_status == JobApplication.Status.ACCEPTED:
             Contract.objects.get_or_create(
                 application=application,
                 defaults={
-                    'job': application.job,
-                    'employer': application.job.employer,
+                    'job': job,
+                    'employer': job.employer,
                     'worker': application.worker,
                     'status': Contract.Status.PENDING,
                 }
             )
 
-        # Notify the worker
+        # ── Auto-update job status based on slot fill level ──────────────────
+        accepted_contracts = Contract.objects.filter(job=job).count()
+        if accepted_contracts >= job.slots and job.status == Job.Status.ACTIVE:
+            # All slots taken → mark job as FILLED
+            Job.objects.filter(pk=job.pk).update(status=Job.Status.FILLED)
+        elif (
+            new_status == JobApplication.Status.REJECTED
+            and old_status == JobApplication.Status.ACCEPTED
+            and job.status == Job.Status.FILLED
+        ):
+            # A slot was freed by rejecting a previously-accepted application
+            Job.objects.filter(pk=job.pk).update(status=Job.Status.ACTIVE)
+
+        # ── Notify the worker ────────────────────────────────────────────────
         status_label = dict(JobApplication.Status.choices).get(new_status, new_status)
         Notification.objects.create(
             user=application.worker.user,
             notif_type=Notification.NotifType.APPLICATION_UPDATE,
-            title=f'Application update: {application.job.title}',
+            title=f'Application update: {job.title}',
             body=f'Your application status is now: {status_label}.',
             data={
-                'job_id':         str(application.job.pk),
+                'job_id':         str(job.pk),
                 'application_id': str(application.pk),
                 'new_status':     new_status,
             },
         )
 
         messages.success(request, f'Application status updated to {status_label}.')
-        return redirect('marketplace:job_applications', pk=application.job.pk)
+        return redirect('marketplace:job_applications', pk=job.pk)
+
 
 
 # ──────────────────────────────────────────────────────────────────────────────

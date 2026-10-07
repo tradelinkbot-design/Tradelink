@@ -365,6 +365,11 @@
             <span><i class="fas fa-map-pin"></i> {{ job.get_state_display|default:"Location not set" }}{% if job.lga %}, {{ job.lga }}{% endif %}</span>
             <span><i class="fas fa-briefcase"></i> {{ job.get_job_type_display }}</span>
             <span><i class="fas fa-users"></i> {{ applications.count }} applicant{{ applications.count|pluralize }}</span>
+            <span>
+              <i class="fas fa-user-check" style="color:{% if slots_full %}#f87171{% else %}var(--emerald){% endif %};"></i>
+              <strong>{{ accepted_count }}/{{ job.slots }}</strong> hired
+              {% if slots_full %}<span style="color:#f87171;font-weight:700;">(Full)</span>{% endif %}
+            </span>
             <span><i class="fas fa-calendar"></i> Posted {{ job.created|timesince }} ago</span>
             {% if job.deadline %}
             <span><i class="fas fa-hourglass-half"></i> Deadline {{ job.deadline|date:"d M Y" }}</span>
@@ -398,6 +403,41 @@
         {{ msg }}
       </div>
       {% endfor %}
+    </div>
+    {% endif %}
+
+    {# ── SLOTS QUOTA BANNER ── #}
+    {% if slots_full %}
+    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:var(--r-xl);padding:16px 20px;margin-bottom:28px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:38px;height:38px;border-radius:10px;background:rgba(239,68,68,0.15);display:flex;align-items:center;justify-content:center;color:#f87171;font-size:1.1rem;flex-shrink:0;">
+          <i class="fas fa-lock"></i>
+        </div>
+        <div>
+          <strong style="color:#f87171;font-size:0.95rem;display:block;">All {{ job.slots }} Positions Filled (No Vacancy)</strong>
+          <span style="font-size:0.83rem;color:var(--text-2);">This job has reached maximum capacity. New applications cannot be accepted unless you reject a previously accepted applicant.</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:0.82rem;font-weight:700;color:#f87171;background:rgba(239,68,68,0.12);padding:5px 14px;border-radius:var(--r-pill);">
+          {{ accepted_count }} / {{ job.slots }} Hired
+        </span>
+        <a href="{% url 'marketplace:contract_list' %}" class="btn btn-ghost btn-sm">
+          <i class="fas fa-file-contract"></i> View Contracts
+        </a>
+      </div>
+    </div>
+    {% else %}
+    <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--r-xl);padding:14px 20px;margin-bottom:28px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <i class="fas fa-users" style="color:var(--amber);"></i>
+        <span style="font-size:0.88rem;color:var(--text-1);">
+          Positions: <strong>{{ accepted_count }}</strong> of <strong>{{ job.slots }}</strong> filled (<strong>{{ slots_remaining }}</strong> vacancy remaining)
+        </span>
+      </div>
+      <div style="flex:1;max-width:240px;background:var(--surface-1);border-radius:99px;height:8px;overflow:hidden;">
+        <div style="width:{% widthratio accepted_count job.slots 100 %}%;background:linear-gradient(90deg,var(--amber),var(--emerald));height:100%;border-radius:99px;"></div>
+      </div>
     </div>
     {% endif %}
 
@@ -586,10 +626,16 @@
                 {% for val, label in status_choices %}
                   {# Only allow actionable statuses for employer — exclude withdrawn #}
                   {% if val != 'withdrawn' %}
-                  <option value="{{ val }}"
-                    {% if app.status == val %}selected{% endif %}>
-                    {{ label }}
-                  </option>
+                    {% if slots_full and val == 'accepted' and app.status != 'accepted' %}
+                    <option value="{{ val }}" disabled style="color:var(--text-3);background:rgba(239,68,68,0.1);">
+                      {{ label }} (Positions Full)
+                    </option>
+                    {% else %}
+                    <option value="{{ val }}"
+                      {% if app.status == val %}selected{% endif %}>
+                      {{ label }}
+                    </option>
+                    {% endif %}
                   {% endif %}
                 {% endfor %}
               </select>
