@@ -417,7 +417,7 @@ def handle_my_job_matches(
 
         matches = (
             CLIPMatch.objects
-            .filter(worker=worker, job__status='active')
+            .filter(worker=worker, job__status='active', score__gte=0.60)
             .select_related(
                 'job',
                 'job__trade_category',
@@ -431,7 +431,7 @@ def handle_my_job_matches(
                 provider, session, to,
                 "📭 *No Job Matches Yet*\n\n"
                 "We haven't computed your matches yet, or no active jobs match "
-                "your trade right now.\n\n"
+                "your trade with at least 60% similarity right now.\n\n"
                 "💡 Make sure your worker profile is complete:\n"
                 "*tradelinkng.com/profile*\n\n"
                 "New matches are computed automatically when jobs are posted.",
@@ -442,11 +442,9 @@ def handle_my_job_matches(
         def _tier(score: float) -> str:
             if score >= 0.80:
                 return "🔥"   # Excellent
-            if score >= 0.65:
+            if score >= 0.70:
                 return "⭐"   # Strong
-            if score >= 0.50:
-                return "👍"   # Good
-            return "🔎"       # Possible
+            return "👍"       # Good (60–69%)
 
         lines = [
             f"💼 *Your Top Job Matches*\n",
@@ -480,7 +478,7 @@ def handle_my_job_matches(
 
         lines.append(
             "─────────────────\n"
-            "🔥 Excellent  ⭐ Strong  👍 Good  🔎 Possible\n\n"
+            "🔥 Excellent (80%+)  ⭐ Strong (70–79%)  👍 Good (60–69%)\n\n"
             "Apply at: *tradelinkng.com/jobs*"
         )
 

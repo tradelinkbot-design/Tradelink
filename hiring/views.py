@@ -471,12 +471,20 @@ class TalentSearchView(EmployerRequiredMixin, View):
                     semantic_qs = reorder_workers_by_scores(workers, ranked)
 
                     # Workers WITHOUT embeddings yet (newly updated) — append
-                    # at the end so they are never hidden from the employer
+                    # at the end if they match the keyword textually
                     no_embed_qs = (
                         workers
                         .filter(pk__in=filtered_pks)
                         .exclude(pk__in=ranked_pks)
                         .filter(text_embedding__isnull=True)
+                        .filter(
+                            Q(user__first_name__icontains=keyword) |
+                            Q(user__last_name__icontains=keyword) |
+                            Q(user__username__icontains=keyword) |
+                            Q(trade_category__name__icontains=keyword) |
+                            Q(bio__icontains=keyword) |
+                            Q(skills__name__icontains=keyword)
+                        )
                         .order_by('-profile_completion', '-is_featured')
                     )
 

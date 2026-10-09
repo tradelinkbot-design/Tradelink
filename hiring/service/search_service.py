@@ -52,9 +52,8 @@ logger = logging.getLogger(__name__)
 MIN_QUERY_LEN = 2
 
 # Minimum cosine similarity to include a result (0–1).
-# 0.15 is deliberately conservative — sentence-transformer trade queries
-# rarely fall below 0.2 for genuinely relevant results.
-MIN_SCORE_THRESHOLD = 0.15
+# 0.60 = 60% — only return workers with at least 60% semantic match.
+MIN_SCORE_THRESHOLD = 0.60
 
 # Celery RPC timeout (seconds).  If the worker doesn't respond in time we
 # fall back gracefully rather than leaving the employer waiting forever.

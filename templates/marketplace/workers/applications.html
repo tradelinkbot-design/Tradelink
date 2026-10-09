@@ -843,7 +843,7 @@
                     <i class="fas fa-ban" style="font-size:0.62rem;"></i> Withdrawn
                   {% endif %}
                 </span>
-                {% if app.clip_match_score %}
+                {% if app.clip_match_score and app.clip_match_score >= 0.60 %}
                 <span class="wa-ai-score">
                   <i class="fas fa-brain"></i>
                   {% widthratio app.clip_match_score 1 100 %}% match

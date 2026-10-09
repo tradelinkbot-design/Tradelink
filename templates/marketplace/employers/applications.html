@@ -9,7 +9,13 @@
             status_choices, unread_count
 ===================================================== */
 
-.ja-page { padding-top: var(--nav-h); min-height: 100vh; }
+.ja-page {
+  padding-top: var(--nav-h); min-height: 100vh;
+  overflow-x: hidden; max-width: 100%; box-sizing: border-box;
+}
+.ja-page *, .ja-page *::before, .ja-page *::after {
+  box-sizing: border-box;
+}
 
 /* ── PAGE HEADER ── */
 .ja-header {
@@ -329,21 +335,35 @@
 @media (max-width: 900px) {
   .ja-stats { grid-template-columns: repeat(3, 1fr); }
   .ja-card-top { grid-template-columns: auto 1fr; }
-  .ja-card-right { flex-direction: row; align-items: center; grid-column: 1 / -1; }
+  .ja-card-right {
+    flex-direction: row; align-items: center; justify-content: space-between;
+    grid-column: 1 / -1; flex-wrap: wrap; gap: 10px; width: 100%;
+  }
 }
 @media (max-width: 640px) {
   .ja-stats { grid-template-columns: repeat(2, 1fr); }
+  .ja-stats > :last-child:nth-child(odd) { grid-column: 1 / -1; }
   .ja-card-top { padding: 16px; gap: 12px; }
   .ja-cover { margin: 0 16px; }
   .ja-employer-note { margin: 0 16px 12px; }
-  .ja-card-actions { padding: 12px 16px; }
-  .ja-status-form { flex-direction: column; align-items: stretch; }
-  .ja-note-input { min-width: unset; }
+  .ja-card-actions { padding: 12px 16px; flex-direction: column; align-items: stretch; gap: 12px; }
+  .ja-action-left { width: 100%; }
+  .ja-status-form { width: 100%; flex-direction: column; align-items: stretch; gap: 8px; }
+  .ja-status-select { width: 100%; }
+  .ja-note-input { width: 100%; min-width: 0; }
+  .ja-btn-update { width: 100%; justify-content: center; }
+  .ja-btn-view { width: 100%; justify-content: center; }
 }
 @media (max-width: 480px) {
-  .ja-stats { grid-template-columns: 1fr 1fr; }
+  .ja-header-inner { padding: 0 16px; }
+  .ja-body { padding: 24px 16px 60px; }
   .ja-header-actions { width: 100%; }
   .ja-header-actions .btn { flex: 1; justify-content: center; }
+  .ja-card-top { grid-template-columns: 1fr; }
+  .ja-avatar { width: 44px; height: 44px; font-size: 1rem; }
+  .ja-header-left { gap: 12px; }
+  .ja-header-icon { width: 44px; height: 44px; font-size: 1rem; }
+  .ja-header-title { font-size: 1.25rem; }
 }
 </style>
 {% endblock %}
@@ -566,19 +586,14 @@
 
           {# Right — Score + Status + Date #}
           <div class="ja-card-right">
-            {# CLIP match score #}
-            {% if app.clip_match_score is not None %}
+            {# CLIP match score — only show if >= 60% #}
+            {% if app.clip_match_score is not None and app.clip_match_score >= 0.60 %}
               {% with score_pct=app.clip_match_score|floatformat:0 %}
-              <div class="ja-match-score {% if app.clip_match_score >= 0.75 %}score-high{% elif app.clip_match_score >= 0.50 %}score-mid{% else %}score-low{% endif %}">
+              <div class="ja-match-score {% if app.clip_match_score >= 0.75 %}score-high{% else %}score-mid{% endif %}">
                 <span class="ja-score-num">{{ app.clip_match_score|floatformat:"0" }}%</span>
                 <span class="ja-score-lbl">AI Match</span>
               </div>
               {% endwith %}
-            {% else %}
-              <div class="ja-match-score score-low">
-                <span class="ja-score-num" style="font-size:0.85rem;">N/A</span>
-                <span class="ja-score-lbl">AI Match</span>
-              </div>
             {% endif %}
 
             {# Status badge #}

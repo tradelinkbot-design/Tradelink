@@ -839,7 +839,7 @@
               <div class="jd-applied-title">Application Submitted</div>
               <div class="jd-applied-sub" style="margin-bottom:14px;">
                 You applied on {{ application.applied_at|date:"d M Y" }}.
-                {% if application.clip_match_score %}
+                {% if application.clip_match_score and application.clip_match_score >= 0.60 %}
                   Your AI match score at time of application was
                   <strong style="color:var(--amber);">{{ application.clip_match_score|floatformat:0|add:"0" }}%</strong>.
                 {% endif %}

@@ -251,7 +251,7 @@ class ProductListView(View):
             # Read pre-computed personal recs (zero extra ML work at page load)
             personalised_products = list(
                 ProductRecommendation.objects
-                .filter(user=request.user, rec_type='personal')
+                .filter(user=request.user, rec_type='personal', score__gte=0.60)
                 .select_related('recommended__seller__user', 'recommended__category')
                 .prefetch_related('recommended__images')
                 .order_by('-score')[:12]
@@ -367,7 +367,7 @@ class ProductDetailView(View):
         # Engine 1: similar products (cosine similarity, pre-computed)
         similar_products = list(
             ProductRecommendation.objects
-            .filter(source_product=product, rec_type='similar')
+            .filter(source_product=product, rec_type='similar', score__gte=0.60)
             .select_related('recommended__seller__user', 'recommended__category')
             .prefetch_related('recommended__images')
             .order_by('-score')[:8]
@@ -376,7 +376,7 @@ class ProductDetailView(View):
         # Engine 5: cross-sell recommendations
         cross_sell_products = list(
             ProductRecommendation.objects
-            .filter(source_product=product, rec_type='cross_sell')
+            .filter(source_product=product, rec_type='cross_sell', score__gte=0.60)
             .select_related('recommended__seller__user')
             .prefetch_related('recommended__images')
             .order_by('-score')[:6]

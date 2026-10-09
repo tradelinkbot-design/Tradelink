@@ -762,7 +762,7 @@ def compute_matches_for_worker(worker_profile_id: str) -> int:
 def get_top_jobs_for_worker(
     worker_profile_id: str,
     limit: int = 20,
-    min_score: float = 0.45,
+    min_score: float = 0.60,
 ) -> list:
     from jobs.models import CLIPMatch, Job
     return (
@@ -781,7 +781,7 @@ def get_top_jobs_for_worker(
 def get_top_workers_for_job(
     job_id: str,
     limit: int = 20,
-    min_score: float = 0.45,
+    min_score: float = 0.60,
 ) -> list:
     from jobs.models import CLIPMatch
     return (

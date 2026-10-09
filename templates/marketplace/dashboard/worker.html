@@ -782,10 +782,8 @@
                 </div>
                 {% if match.score >= 0.75 %}
                   <span class="match-score-pill high"><i class="fas fa-fire"></i> {{ match.score|floatformat:"0" }}%</span>
-                {% elif match.score >= 0.55 %}
-                  <span class="match-score-pill mid"><i class="fas fa-bolt"></i> {{ match.score|floatformat:"0" }}%</span>
                 {% else %}
-                  <span class="match-score-pill low"><i class="fas fa-circle"></i> {{ match.score|floatformat:"0" }}%</span>
+                  <span class="match-score-pill mid"><i class="fas fa-bolt"></i> {{ match.score|floatformat:"0" }}%</span>
                 {% endif %}
               </div>
 

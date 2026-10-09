@@ -46,9 +46,8 @@ logger = logging.getLogger(__name__)
 MIN_QUERY_LEN = 2
 
 # Minimum semantic score to include a result (0–1).
-# 0.15 is deliberately low — sentence-transformer scores for trade queries
-# rarely fall below 0.2 for relevant results, but we don't want to over-filter.
-MIN_SCORE_THRESHOLD = 0.15
+# 0.60 = 60% — only return products with at least 60% semantic similarity.
+MIN_SCORE_THRESHOLD = 0.60
 
 
 def semantic_product_search(

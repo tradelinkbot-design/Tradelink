@@ -1426,7 +1426,7 @@
             <div class="emp-app-time">Applied {{ app.applied_at|timesince }} ago</div>
           </div>
           <div class="emp-app-right">
-            {% if app.clip_match_score %}
+            {% if app.clip_match_score and app.clip_match_score >= 0.60 %}
             <div class="emp-score">
               {{ app.clip_match_score|floatformat:0 }}<span>% match</span>
             </div>

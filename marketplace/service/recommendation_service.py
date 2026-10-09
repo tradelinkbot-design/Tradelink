@@ -56,8 +56,8 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-# Similarity threshold: products below this cosine similarity are ignored
-SIMILARITY_THRESHOLD = 0.45
+# Similarity threshold: products below 60% (0.60) cosine similarity are ignored
+SIMILARITY_THRESHOLD = 0.60
 PRICE_SIMILARITY_THRESHOLD = 0.70
 TOP_K_SIMILAR = 8
 TOP_K_PERSONAL = 12

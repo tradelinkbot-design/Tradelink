@@ -311,12 +311,18 @@ class JobListView(View):
                 # Jobs WITH embeddings, ranked
                 semantic_qs = reorder_queryset_by_scores(filtered_qs, ranked)
  
-                # Jobs WITHOUT embeddings yet — append at end (never hide them)
+                # Jobs WITHOUT embeddings yet — append at end if they match keyword textually
                 no_embedding_qs = (
                     filtered_qs
                     .filter(pk__in=filtered_pks)
                     .exclude(pk__in=ranked_pks)
                     .filter(text_embedding__isnull=True)
+                    .filter(
+                        Q(title__icontains=q) |
+                        Q(description__icontains=q) |
+                        Q(trade_category__name__icontains=q) |
+                        Q(required_skills__name__icontains=q)
+                    )
                     .order_by('-created')
                 )
  
@@ -440,7 +446,7 @@ class JobDetailView(View):
             has_applied = application is not None
             is_saved    = SavedJob.objects.filter(job=job, worker=worker).exists()
             match       = CLIPMatch.objects.filter(job=job, worker=worker).first()
-            clip_score  = round(match.score * 100) if match else None
+            clip_score  = round(match.score * 100) if (match and match.score >= 0.60) else None
 
         # Similar jobs (same trade category, excluding this one)
         similar_jobs = (
@@ -619,6 +625,7 @@ class WorkerDashboardView(WorkerRequiredMixin, View):
                 worker=worker,
                 job__status=Job.Status.ACTIVE,
                 is_applied=False,
+                score__gte=0.60,
             )
             .select_related('job__employer', 'job__trade_category')
             .order_by('-score')[:5]
@@ -979,6 +986,7 @@ class WorkerMatchesView(WorkerRequiredMixin, View):
                 worker=worker,
                 job__status=Job.Status.ACTIVE,
                 is_applied=False,
+                score__gte=0.60,          # Only show matches ≥ 60%
             )
             .select_related('job__employer', 'job__trade_category')
             .prefetch_related('job__required_skills')
@@ -1393,7 +1401,7 @@ class JobMatchesView(EmployerRequiredMixin, View):
     def get(self, request, pk):
         job = get_object_or_404(Job, pk=pk, employer=self.employer_profile)
         matches = (
-            CLIPMatch.objects.filter(job=job, score__gte=0.50)
+            CLIPMatch.objects.filter(job=job, score__gte=0.60)
             .select_related(
                 'worker__user',
                 'worker__trade_category',
