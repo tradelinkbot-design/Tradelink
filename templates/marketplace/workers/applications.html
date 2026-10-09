@@ -29,17 +29,26 @@
 ===================================================== */
 
 /* ── PAGE SHELL ── */
-.wa-page { padding-top: var(--nav-h); position: relative; z-index: 1; }
+.wa-page,
+.wa-hero,
+.wa-crumb,
+.wa-body {
+  overflow-x: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
+}
 
 /* ── BREADCRUMB ── */
 .wa-crumb {
-  padding: 20px 0;
+  padding: 18px 0;
   background: var(--bg-raised);
   border-bottom: 1px solid var(--border-subtle);
 }
 .wa-crumb-inner {
   display: flex; align-items: center; gap: 8px;
   font-size: 0.82rem; color: var(--text-3);
+  flex-wrap: wrap;
+  overflow: hidden;
 }
 .wa-crumb a {
   color: var(--text-3); text-decoration: none; transition: var(--t);
@@ -50,7 +59,7 @@
 
 /* ── HERO ── */
 .wa-hero {
-  padding: 48px 0 44px;
+  padding: 40px 0 36px;
   background: linear-gradient(
     160deg,
     rgba(245,158,11,0.05) 0%,
@@ -70,19 +79,20 @@
 
 /* ── STATS ROW ── */
 .wa-stats {
-  display: flex; gap: 0; flex-wrap: wrap;
-  margin-top: 28px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  margin-top: 24px;
   background: var(--bg-card); border: 1px solid var(--border-subtle);
   border-radius: var(--r-xl); overflow: hidden;
 }
 .wa-stat-item {
-  flex: 1; min-width: 110px; padding: 18px 22px;
+  min-width: 0; padding: 16px 18px;
   border-right: 1px solid var(--border-subtle);
   display: flex; flex-direction: column; gap: 4px;
 }
 .wa-stat-item:last-child { border-right: none; }
 .wa-stat-val {
-  font-family: 'Fraunces', serif; font-size: 1.7rem; font-weight: 900;
+  font-family: 'Fraunces', serif; font-size: 1.6rem; font-weight: 900;
   line-height: 1;
 }
 .wa-stat-val.amber  {
@@ -95,21 +105,27 @@
 .wa-stat-val.muted   { color: var(--text-3); }
 .wa-stat-val.red     { color: #F87171; }
 .wa-stat-lbl {
-  font-size: 0.75rem; font-weight: 600; color: var(--text-3);
+  font-size: 0.72rem; font-weight: 600; color: var(--text-3);
   text-transform: uppercase; letter-spacing: 0.8px;
 }
 
 /* ── FILTER TABS ── */
 .wa-tabs {
-  display: flex; gap: 4px; flex-wrap: wrap;
-  padding: 24px 0 0;
+  display: flex; gap: 6px;
+  padding: 20px 0 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  flex-wrap: nowrap;
 }
+.wa-tabs::-webkit-scrollbar { display: none; }
 .wa-tab {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 16px; border-radius: var(--r-md);
-  font-size: 0.83rem; font-weight: 600; cursor: pointer;
+  padding: 7px 14px; border-radius: var(--r-md);
+  font-size: 0.82rem; font-weight: 600; cursor: pointer;
   border: 1px solid var(--border-subtle); background: transparent;
   color: var(--text-3); transition: var(--t); font-family: 'Outfit', sans-serif;
+  flex-shrink: 0; white-space: nowrap;
 }
 .wa-tab:hover { background: var(--surface-1); color: var(--text-2); border-color: var(--border-strong); }
 .wa-tab.active {
@@ -126,7 +142,7 @@
 .wa-tab.active .wa-tab-count { background: rgba(245,158,11,0.25); }
 
 /* ── MAIN BODY ── */
-.wa-body { padding: 40px 0 80px; }
+.wa-body { padding: 36px 0 80px; }
 .wa-layout {
   display: grid;
   grid-template-columns: 1fr 268px;
@@ -138,6 +154,7 @@
   background: var(--bg-card); border: 1px solid var(--border-subtle);
   border-radius: var(--r-xl); overflow: hidden;
   transition: var(--t); margin-bottom: 14px; position: relative;
+  max-width: 100%; box-sizing: border-box;
 }
 .wa-card:hover {
   border-color: var(--border-strong);
@@ -158,7 +175,7 @@
 
 /* Card header */
 .wa-card-header {
-  padding: 20px 24px 16px;
+  padding: 18px 22px 14px;
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 16px; align-items: flex-start;
@@ -166,10 +183,10 @@
 }
 
 .wa-employer-logo {
-  width: 50px; height: 50px; border-radius: 13px; flex-shrink: 0;
+  width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
   background: var(--surface-1); border: 1px solid var(--border-subtle);
   display: flex; align-items: center; justify-content: center;
-  font-size: 1.2rem; overflow: hidden;
+  font-size: 1.15rem; overflow: hidden;
 }
 .wa-employer-logo img { width: 100%; height: 100%; object-fit: cover; }
 
@@ -177,13 +194,16 @@
 .wa-job-title {
   font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 800;
   color: var(--text-1); margin-bottom: 4px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  line-height: 1.35;
+  word-break: break-word;
+  overflow-wrap: break-word;
   transition: var(--t);
 }
 .wa-card:hover .wa-job-title { color: var(--amber); }
 .wa-employer-name {
   font-size: 0.81rem; color: var(--text-3);
   display: flex; align-items: center; gap: 5px; margin-bottom: 8px;
+  word-break: break-word;
 }
 .wa-card-meta {
   display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
@@ -194,7 +214,11 @@
 }
 .wa-meta-item i { font-size: 0.66rem; }
 
-/* Status badge */
+/* Status badge column */
+.wa-card-badges {
+  display: flex; flex-direction: column; align-items: flex-end;
+  gap: 7px; flex-shrink: 0;
+}
 .wa-status-badge {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 4px 12px; border-radius: var(--r-pill);
@@ -212,21 +236,23 @@
   padding: 3px 10px; border-radius: var(--r-pill);
   background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2);
   font-size: 0.73rem; font-weight: 700; color: var(--amber);
+  white-space: nowrap; flex-shrink: 0;
 }
 .wa-ai-score i { font-size: 0.62rem; }
 
 /* Card body */
-.wa-card-body { padding: 16px 24px; }
+.wa-card-body { padding: 16px 22px; }
 
 /* Status timeline */
 .wa-timeline {
   display: flex; align-items: flex-start;
   gap: 0; margin-bottom: 14px;
+  width: 100%; max-width: 100%;
 }
 .wa-tl-step {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; gap: 5px; position: relative;
-  min-width: 56px;
+  min-width: 0;
 }
 /* connector line between steps */
 .wa-tl-step:not(:last-child)::after {
@@ -249,7 +275,8 @@
 
 .wa-tl-label {
   font-size: 0.66rem; font-weight: 600; color: var(--text-3);
-  text-align: center; white-space: nowrap; line-height: 1.3;
+  text-align: center; line-height: 1.25;
+  word-break: break-word; overflow-wrap: break-word; max-width: 100%;
 }
 .wa-tl-step.tl-done .wa-tl-label   { color: var(--emerald); }
 .wa-tl-step.tl-active .wa-tl-label { color: var(--amber); }
@@ -264,6 +291,7 @@
   border-radius: 0 var(--r-md) var(--r-md) 0;
   font-size: 0.85rem; color: var(--text-2); line-height: 1.7;
   font-style: italic; margin-bottom: 12px;
+  word-break: break-word; overflow-wrap: break-word;
 }
 .wa-cover-note-label {
   font-size: 0.68rem; font-weight: 700; color: var(--text-3);
@@ -276,6 +304,7 @@
   padding: 12px 14px;
   border-radius: var(--r-md);
   font-size: 0.85rem; line-height: 1.7; margin-bottom: 12px;
+  word-break: break-word; overflow-wrap: break-word;
 }
 .wa-employer-note.note-positive {
   background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.18);
@@ -294,9 +323,41 @@
   text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-bottom: 4px;
 }
 
+/* Accepted Call-out Banner */
+.wa-accepted-banner {
+  padding: 14px 16px;
+  border-radius: var(--r-lg);
+  background: rgba(16,185,129,0.07);
+  border: 1px solid rgba(16,185,129,0.2);
+  display: flex; align-items: center; gap: 12px;
+  flex-wrap: wrap; margin-bottom: 0;
+}
+.wa-accepted-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: rgba(16,185,129,0.15); display: flex;
+  align-items: center; justify-content: center;
+  font-size: 1rem; color: var(--emerald); flex-shrink: 0;
+}
+.wa-accepted-text {
+  flex: 1 1 200px; min-width: 0;
+}
+.wa-accepted-title {
+  font-weight: 700; font-size: 0.88rem; color: var(--emerald); margin-bottom: 2px;
+}
+.wa-accepted-sub {
+  font-size: 0.8rem; color: var(--text-2); line-height: 1.4;
+}
+.wa-accepted-btn {
+  background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3);
+  color: var(--amber); text-decoration: none; flex-shrink: 0;
+  padding: 7px 14px; border-radius: var(--r-md); font-weight: 600; font-size: 0.8rem;
+  display: inline-flex; align-items: center; gap: 5px; transition: var(--t);
+}
+.wa-accepted-btn:hover { background: rgba(245,158,11,0.25); color: var(--amber-light); }
+
 /* Card footer */
 .wa-card-footer {
-  padding: 12px 24px;
+  padding: 12px 22px;
   border-top: 1px solid var(--border-subtle);
   display: flex; align-items: center; justify-content: space-between;
   flex-wrap: wrap; gap: 10px;
@@ -305,17 +366,21 @@
 .wa-footer-dates { font-size: 0.76rem; color: var(--text-3); display: flex; gap: 14px; flex-wrap: wrap; }
 .wa-footer-dates span { display: flex; align-items: center; gap: 5px; }
 .wa-footer-dates i   { font-size: 0.65rem; color: var(--text-3); }
-.wa-footer-actions   { display: flex; align-items: center; gap: 8px; }
+.wa-footer-actions   { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
 /* Withdraw confirm overlay */
 .wa-withdraw-confirm {
   display: none; padding: 14px 16px;
   background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
-  border-radius: var(--r-md); margin: 0 24px 14px;
+  border-radius: var(--r-md); margin: 0 22px 14px;
 }
 .wa-withdraw-confirm.open { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .wa-withdraw-confirm p {
-  flex: 1; font-size: 0.83rem; color: var(--text-2); line-height: 1.55;
+  flex: 1 1 200px; font-size: 0.83rem; color: var(--text-2); line-height: 1.55;
+  margin: 0;
+}
+.wa-withdraw-btns {
+  display: flex; gap: 8px; flex-shrink: 0;
 }
 
 /* ── SIDEBAR ── */
@@ -369,21 +434,21 @@
 
 /* ── EMPTY STATE ── */
 .wa-empty {
-  padding: 80px 24px; text-align: center;
+  padding: 64px 20px; text-align: center;
   display: flex; flex-direction: column; align-items: center; gap: 16px;
 }
 .wa-empty-icon {
-  width: 80px; height: 80px; border-radius: 22px;
+  width: 72px; height: 72px; border-radius: 20px;
   background: var(--surface-1); border: 1px solid var(--border-subtle);
   display: flex; align-items: center; justify-content: center;
-  font-size: 2rem; color: var(--text-3);
+  font-size: 1.8rem; color: var(--text-3);
 }
 .wa-empty-title {
-  font-family: 'Fraunces', serif; font-size: 1.4rem; font-weight: 800;
+  font-family: 'Fraunces', serif; font-size: 1.35rem; font-weight: 800;
 }
 .wa-empty-sub {
-  font-size: 0.92rem; color: var(--text-2); max-width: 380px;
-  line-height: 1.75;
+  font-size: 0.9rem; color: var(--text-2); max-width: 380px;
+  line-height: 1.7;
 }
 
 /* ── MESSAGES ── */
@@ -409,18 +474,160 @@
   .wa-layout { grid-template-columns: 1fr; }
   .wa-sidebar { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 }
-@media (max-width: 768px) {
-  .wa-stats { border-radius: var(--r-lg); }
-  .wa-stat-item { min-width: 90px; padding: 14px 16px; }
-  .wa-stat-val  { font-size: 1.4rem; }
-  .wa-card-header { grid-template-columns: auto 1fr; }
+
+@media (max-width: 860px) {
+  .wa-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .wa-stat-item:nth-child(3) { border-right: none; }
+  .wa-stat-item:nth-child(n+4) { border-top: 1px solid var(--border-subtle); }
 }
+
+@media (max-width: 768px) {
+  .wa-card-header {
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+    padding: 16px;
+  }
+  .wa-card-badges {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+  }
+}
+
 @media (max-width: 560px) {
-  .wa-sidebar    { grid-template-columns: 1fr; }
-  .wa-tabs       { gap: 6px; }
-  .wa-tab        { font-size: 0.78rem; padding: 6px 12px; }
-  .wa-timeline   { gap: 0; }
-  .wa-footer-dates { gap: 8px; }
+  .wa-hero { padding: 28px 0 24px; }
+  .wa-body { padding: 24px 0 60px; }
+  .wa-sidebar { grid-template-columns: 1fr; }
+  
+  .wa-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .wa-stat-item {
+    padding: 12px 14px;
+  }
+  .wa-stat-item:nth-child(odd) { border-right: 1px solid var(--border-subtle); }
+  .wa-stat-item:nth-child(even) { border-right: none; }
+  .wa-stat-item:nth-child(n+3) { border-top: 1px solid var(--border-subtle); }
+  .wa-stat-item:last-child:nth-child(odd) {
+    grid-column: span 2;
+    border-right: none;
+  }
+  .wa-stat-val { font-size: 1.35rem; }
+  .wa-stat-lbl { font-size: 0.68rem; }
+
+  .wa-card-body { padding: 14px 16px; }
+  .wa-card-footer {
+    padding: 12px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .wa-footer-dates {
+    width: 100%;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.74rem;
+  }
+  .wa-footer-actions {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .wa-footer-actions .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+    font-size: 0.8rem;
+    padding: 7px 12px;
+  }
+  
+  .wa-withdraw-confirm {
+    margin: 0 14px 12px;
+    padding: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .wa-withdraw-btns {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .wa-messages {
+    left: 12px;
+    right: 12px;
+    max-width: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .wa-card-header {
+    padding: 14px 12px;
+    gap: 10px;
+  }
+  .wa-employer-logo {
+    width: 40px; height: 40px;
+    border-radius: 10px; font-size: 1rem;
+  }
+  .wa-job-title {
+    font-size: 0.92rem;
+  }
+  .wa-card-meta { gap: 6px; }
+  .wa-meta-item { font-size: 0.72rem; }
+
+  .wa-card-body { padding: 12px; }
+  .wa-tl-dot {
+    width: 18px; height: 18px;
+    font-size: 0.52rem;
+  }
+  .wa-tl-step:not(:last-child)::after {
+    top: 8px;
+  }
+  .wa-tl-label {
+    font-size: 0.58rem;
+  }
+  
+  .wa-accepted-banner {
+    padding: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .wa-accepted-text {
+    width: 100%;
+    flex: none;
+  }
+  .wa-accepted-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .wa-sidebar-card {
+    padding: 16px;
+  }
+  .wa-empty {
+    padding: 40px 14px;
+  }
+  .wa-empty-title {
+    font-size: 1.2rem;
+  }
+  .wa-empty-sub {
+    font-size: 0.85rem;
+  }
+  .wa-empty > div {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .wa-empty .btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>
 {% endblock %}
@@ -617,7 +824,7 @@
               </div>
 
               {# Status badge #}
-              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex-shrink:0;">
+              <div class="wa-card-badges">
                 <span class="wa-status-badge
                   {% if app.status == 'pending' %}wa-s-pending
                   {% elif app.status == 'shortlisted' %}wa-s-shortlisted
@@ -728,15 +935,15 @@
 
               {# Accepted — congratulations call-out #}
               {% if app.status == 'accepted' %}
-              <div style="padding:14px 16px;border-radius:var(--r-lg);background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);display:flex;align-items:center;gap:12px;margin-bottom:0;">
-                <div style="width:36px;height:36px;border-radius:10px;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;font-size:1rem;color:var(--emerald);flex-shrink:0;">
+              <div class="wa-accepted-banner">
+                <div class="wa-accepted-icon">
                   <i class="fas fa-party-horn"></i>
                 </div>
-                <div style="flex-grow: 1;">
-                  <div style="font-weight:700;font-size:0.9rem;color:var(--emerald);margin-bottom:2px;">Congratulations — you were accepted!</div>
-                  <div style="font-size:0.8rem;color:var(--text-2);">The employer has accepted your application. Expect them to contact you soon.</div>
+                <div class="wa-accepted-text">
+                  <div class="wa-accepted-title">Congratulations — you were accepted!</div>
+                  <div class="wa-accepted-sub">The employer has accepted your application. Expect them to contact you soon.</div>
                 </div>
-                <a href="{% url 'marketplace:review_submit' pk=app.job.pk %}" class="btn btn-sm" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:var(--amber);text-decoration:none;flex-shrink:0;padding:6px 12px;border-radius:var(--r-md);font-weight:600;font-size:0.8rem;">
+                <a href="{% url 'marketplace:review_submit' pk=app.job.pk %}" class="wa-accepted-btn">
                   <i class="fas fa-star"></i> Leave Review
                 </a>
               </div>
@@ -748,7 +955,7 @@
             {% if app.status == 'pending' %}
             <div class="wa-withdraw-confirm" id="confirm-{{ app.pk }}">
               <p>Are you sure you want to withdraw your application for <strong>{{ app.job.title }}</strong>? This cannot be undone.</p>
-              <div style="display:flex;gap:8px;flex-shrink:0;">
+              <div class="wa-withdraw-btns">
                 <button type="button"
                         class="btn btn-ghost btn-sm"
                         onclick="cancelWithdraw('{{ app.pk }}')">Cancel</button>
