@@ -151,20 +151,24 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 logger.warning('ChatConsumer: group_discard failed: %s', exc)
 
         if hasattr(self, 'user') and self.user.is_authenticated:
+            now_dt = timezone.now()
             try:
                 await self._set_online_status(False)
             except Exception as exc:
                 logger.warning('ChatConsumer: set_online_status offline failed: %s', exc)
 
-            # Broadcast offline status — group_send still works after discard
-            # because the sender is identified by channel_name, not group membership
+            # Broadcast offline status with last_seen timestamp
             try:
+                from chats.utils import format_last_seen
+                friendly_last_seen = format_last_seen(now_dt)
                 await self.channel_layer.group_send(
                     self.group_name,
                     {
-                        'type':    'user_status',
-                        'user_id': str(self.user.pk),
-                        'status':  'offline',
+                        'type':              'user_status',
+                        'user_id':           str(self.user.pk),
+                        'status':            'offline',
+                        'last_seen':         now_dt.isoformat(),
+                        'last_seen_display': friendly_last_seen,
                     },
                 )
             except Exception:
@@ -186,6 +190,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         msg_type = data.get('type')
         if msg_type == 'ping':
+            try:
+                await self._touch_presence()
+            except Exception:
+                pass
             await self.send(text_data=json.dumps({'type': 'pong'}))
             return
 
@@ -395,13 +403,23 @@ class ChatConsumer(AsyncWebsocketConsumer):
         }))
 
     async def user_status(self, event: dict):
-        await self.send(text_data=json.dumps({
+        payload = {
             'type':    'user_status',
             'user_id': event['user_id'],
             'status':  event['status'],   # 'online' | 'offline'
-        }))
+        }
+        if 'last_seen' in event:
+            payload['last_seen'] = event['last_seen']
+        if 'last_seen_display' in event:
+            payload['last_seen_display'] = event['last_seen_display']
+        await self.send(text_data=json.dumps(payload))
 
     # ── Database helpers (wrapped for async) ──────────────────────────────────
+
+    @database_sync_to_async
+    def _touch_presence(self) -> None:
+        from chats.utils import touch_user_presence
+        touch_user_presence(self.user, is_online=True)
 
     @database_sync_to_async
     def _is_participant(self) -> bool:
@@ -414,9 +432,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def _set_online_status(self, is_online: bool) -> None:
         from chats.models import UserOnlineStatus
+        from django.utils import timezone
         UserOnlineStatus.objects.update_or_create(
             user=self.user,
-            defaults={'is_online': is_online},
+            defaults={'is_online': is_online, 'last_seen': timezone.now()},
         )
 
     @database_sync_to_async

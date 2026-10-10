@@ -25,26 +25,47 @@ Handlers
 
 import logging
 
-from django.contrib.auth.signals import user_logged_out
+from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-#  PRESENCE: mark offline on logout
+#  PRESENCE: login / logout tracking
 # ──────────────────────────────────────────────────────────────────────────────
 
-@receiver(user_logged_out)
-def on_user_logout(sender, request, user, **kwargs):
-    """Mark the user offline when they explicitly log out."""
+@receiver(user_logged_in)
+def on_user_login(sender, request, user, **kwargs):
+    """Mark the user online when they log in."""
     if user is None:
         return
     from chats.models import UserOnlineStatus
     try:
-        UserOnlineStatus.objects.filter(user=user).update(is_online=False)
-        logger.debug('chats.signals: user %s marked offline on logout.', user.pk)
+        UserOnlineStatus.objects.update_or_create(
+            user=user,
+            defaults={'is_online': True},
+        )
+        logger.debug('chats.signals: user %s marked online on login.', user.pk)
+    except Exception:
+        logger.exception('chats.signals: failed to mark user %s online on login.', user.pk)
+
+
+@receiver(user_logged_out)
+def on_user_logout(sender, request, user, **kwargs):
+    """Mark the user offline and set last_seen when they explicitly log out."""
+    if user is None:
+        return
+    from chats.models import UserOnlineStatus
+    try:
+        now = timezone.now()
+        UserOnlineStatus.objects.filter(user=user).update(
+            is_online=False,
+            last_seen=now,
+        )
+        logger.debug('chats.signals: user %s marked offline on logout at %s.', user.pk, now)
     except Exception:
         logger.exception('chats.signals: failed to mark user %s offline.', user.pk)
 

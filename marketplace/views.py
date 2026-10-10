@@ -399,20 +399,28 @@ class ProductDetailView(View):
                 from marketplace.tasks import compute_personalised_feed_task
                 compute_personalised_feed_task.delay(request.user.pk)
 
+        # Seller presence / last-seen online
+        from chats.utils import get_user_presence
+        seller_user = product.seller.user if product.seller else None
+        seller_online, seller_last_seen, seller_last_seen_display = get_user_presence(seller_user)
+
         return render(request, self.template_name, {
-            'product':           product,
-            'is_seller':         is_seller,
-            'pending_offers':    pending_offers,
-            'buyer_offer':       buyer_offer,
-            'active_order':      active_order,
-            'is_saved':          _is_saved(request.user, product),
-            'avg_rating':        round(avg_rating, 1) if avg_rating else None,
-            'reviews':           product.reviews.all()[:10],
-            'unread_count':      _unread_count(request.user),
+            'product':                  product,
+            'is_seller':                is_seller,
+            'seller_online':            seller_online,
+            'seller_last_seen':         seller_last_seen,
+            'seller_last_seen_display': seller_last_seen_display,
+            'pending_offers':           pending_offers,
+            'buyer_offer':              buyer_offer,
+            'active_order':             active_order,
+            'is_saved':                 _is_saved(request.user, product),
+            'avg_rating':               round(avg_rating, 1) if avg_rating else None,
+            'reviews':                  product.reviews.all()[:10],
+            'unread_count':             _unread_count(request.user),
             # AI recommendation context
-            'similar_products':   similar_products,
-            'cross_sell_products': cross_sell_products,
-            'price_label':        price_label,
+            'similar_products':         similar_products,
+            'cross_sell_products':      cross_sell_products,
+            'price_label':              price_label,
         })
 
 

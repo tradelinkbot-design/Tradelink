@@ -913,6 +913,19 @@
                 {{ product.seller.user.get_full_name|default:product.seller.user.username }}
               </p>
               <div class="seller-meta">
+                {% if seller_online %}
+                <span class="seller-presence-badge online" style="color:var(--emerald);font-size:0.75rem;font-weight:600;display:inline-flex;align-items:center;gap:5px;">
+                  <span style="width:7px;height:7px;border-radius:50%;background:var(--emerald);display:inline-block;box-shadow:0 0 0 2px rgba(16,185,129,0.25);"></span>
+                  Online now
+                </span>
+                <span>·</span>
+                {% elif seller_last_seen_display %}
+                <span class="seller-presence-badge offline" style="color:var(--text-3);font-size:0.75rem;display:inline-flex;align-items:center;gap:5px;">
+                  <span style="width:7px;height:7px;border-radius:50%;background:rgba(250,245,235,0.25);display:inline-block;"></span>
+                  {{ seller_last_seen_display }}
+                </span>
+                <span>·</span>
+                {% endif %}
                 {% if avg_rating %}
                 <span class="seller-rating"><i class="fas fa-star"></i> {{ avg_rating }}</span>
                 <span>·</span>

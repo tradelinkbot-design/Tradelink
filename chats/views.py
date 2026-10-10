@@ -58,16 +58,16 @@ ALLOWED_MIME_TYPES = {
 MESSAGES_PER_PAGE = 40
 
 
+from .utils import format_last_seen, get_user_presence
+
 # ──────────────────────────────────────────────────────────────────────────────
 #  HELPERS
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _online(user) -> bool:
     """Returns True if the given user is currently marked online."""
-    try:
-        return user.online_status.is_online
-    except UserOnlineStatus.DoesNotExist:
-        return False
+    is_online, _, _ = get_user_presence(user)
+    return is_online
 
 
 def _serialise_message(msg: Message, current_user) -> dict:
@@ -129,13 +129,16 @@ class ConversationListView(LoginRequiredMixin, View):
             other        = conv.get_other_participant(request.user)
             last_msg     = conv.messages.filter(is_deleted=False).last()
             unread_count = conv.get_unread_count(request.user)
+            other_online, other_last_seen, other_last_seen_display = get_user_presence(other)
 
             conv_data.append({
-                'conversation': conv,
-                'other_user':   other,
-                'other_online': _online(other) if other else False,
-                'last_message': last_msg,
-                'unread_count': unread_count,
+                'conversation':            conv,
+                'other_user':              other,
+                'other_online':            other_online,
+                'other_last_seen':         other_last_seen,
+                'other_last_seen_display': other_last_seen_display,
+                'last_message':            last_msg,
+                'unread_count':            unread_count,
             })
 
         return render(request, self.template_name, {
@@ -171,7 +174,7 @@ class ConversationDetailView(LoginRequiredMixin, View):
         )
 
         other_user   = conversation.get_other_participant(request.user)
-        other_online = _online(other_user) if other_user else False
+        other_online, other_last_seen, other_last_seen_display = get_user_presence(other_user)
 
         # Fetch most recent messages (reversed for display order)
         messages_qs = (
@@ -198,13 +201,16 @@ class ConversationDetailView(LoginRequiredMixin, View):
             MessageReadReceipt.objects.bulk_create(receipts, ignore_conflicts=True)
 
         return render(request, self.template_name, {
-            'conversation': conversation,
-            'other_user':   other_user,
-            'other_online': other_online,
-            'messages':     messages,
-            'has_older':    total_count > MESSAGES_PER_PAGE,
+            'conversation':            conversation,
+            'other_user':              other_user,
+            'other_online':            other_online,
+            'other_last_seen':         other_last_seen,
+            'other_last_seen_display': other_last_seen_display,
+            'other_last_seen_iso':     other_last_seen.isoformat() if other_last_seen else None,
+            'messages':                messages,
+            'has_older':               total_count > MESSAGES_PER_PAGE,
             # oldest_message_id is the anchor for load-more requests
-            'oldest_message_id': str(messages[0].pk) if messages else None,
+            'oldest_message_id':       str(messages[0].pk) if messages else None,
         })
 
 
