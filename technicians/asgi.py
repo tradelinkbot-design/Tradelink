@@ -1,7 +1,14 @@
 
 import os
+import sys
 import asyncio
 import logging
+
+# ── pgvector Python package path ──────────────────────────────────────────────
+_EXTRA_PKGS = r'C:\Users\hp\py_extra_pkgs'
+if _EXTRA_PKGS not in sys.path:
+    sys.path.insert(0, _EXTRA_PKGS)
+# ─────────────────────────────────────────────────────────────────────────────
 
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter

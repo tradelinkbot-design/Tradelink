@@ -4,6 +4,13 @@ Django settings for technicians project.
 
 from pathlib import Path
 import os
+import sys
+
+# ── Extra packages path (for Windows local environment where site-packages is admin-owned) ──
+_EXTRA_PKGS = r'C:\Users\hp\py_extra_pkgs'
+if os.path.exists(_EXTRA_PKGS) and _EXTRA_PKGS not in sys.path:
+    sys.path.insert(0, _EXTRA_PKGS)
+
 import dj_database_url
 from celery.schedules import crontab
 from dotenv import load_dotenv

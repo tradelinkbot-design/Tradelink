@@ -3,42 +3,17 @@ hiring/service/search_service.py
 ==================================
 Semantic worker-search service — powers the `keyword` field on TalentSearchView.
 
-Architecture (mirrors jobs/service/search_service.py exactly)
-──────────────────────────────────────────────────────────────
+Performance tiers
+─────────────────
+  TIER 1 — pgvector (production / NeonDB):
+    Cosine similarity runs entirely inside Postgres via the `<=>` operator.
+    Only (pk, score) pairs are returned — no bulk embedding transfer.
 
-  1. Employer types a keyword — e.g. "solar panel installer Lagos" or
-     "plumber who can fix burst pipes".
+  TIER 2 — Celery RPC + NumPy (local dev / PG 12):
+    Original approach — encode query via Celery, fetch all embeddings to
+    Python, run NumPy matrix multiply.
 
-  2. We collect the PKs of WorkerProfile rows that passed the hard filters
-     (trade, state, experience level, open-to-work, verified, etc.).
-
-  3. The query is encoded on the CELERY WORKER process via an RPC call
-     to ``jobs.tasks.encode_search_query_task``.  This keeps PyTorch
-     completely out of the Daphne/ASGI web-server process — the same
-     reason the jobs and marketplace apps use this pattern.
-
-  4. Batch cosine similarity is computed here (in the web process) using
-     the pre-stored ``WorkerProfile.text_embedding`` vectors (numpy,
-     fast — no model loading).
-
-  5. Workers with a score >= MIN_SCORE_THRESHOLD are returned as a ranked
-     list of (pk, score) pairs.  The caller re-orders the Django queryset
-     using a CASE WHEN SQL expression so Pagination still works normally.
-
-  6. Workers WITHOUT an embedding (profile newly updated, Celery not yet
-     processed) are appended at the END so they're never hidden.
-
-Fallback
-────────
-  • If Celery times out or is unavailable → fall back to icontains keyword
-    search on name, trade, bio, skills.
-  • If the query is shorter than 2 chars → skip semantic search entirely.
-
-Performance
-───────────
-  Encoding one query via RPC:  ~30–80 ms on CPU.
-  Batch cosine on 5,000 workers: < 10 ms (NumPy matrix-multiply).
-  Total overhead vs a plain DB query: ~40–90 ms — acceptable.
+Both tiers keep PyTorch off the Daphne/ASGI web-server process.
 """
 
 import logging
@@ -55,9 +30,11 @@ MIN_QUERY_LEN = 2
 # 0.60 = 60% — only return workers with at least 60% semantic match.
 MIN_SCORE_THRESHOLD = 0.60
 
-# Celery RPC timeout (seconds).  If the worker doesn't respond in time we
-# fall back gracefully rather than leaving the employer waiting forever.
+# Celery RPC timeout (seconds)
 CELERY_ENCODE_TIMEOUT = 5.0
+
+# Text embedding dimension
+EMBEDDING_DIM = 768
 
 
 def semantic_worker_search(
@@ -65,8 +42,8 @@ def semantic_worker_search(
     worker_pks: Optional[List] = None,
 ) -> Optional[List[Tuple]]:
     """
-    Encode ``query`` via Celery RPC (no PyTorch in the web process!) and
-    return a ranked list of (worker_pk, score) tuples, highest score first.
+    Encode ``query`` and return a ranked list of (worker_pk, score) tuples,
+    highest score first.
 
     Args:
         query:       The employer's natural-language search string.
@@ -87,9 +64,7 @@ def semantic_worker_search(
         from jobs.service.text_encoder import text_encoder
         from jobs.models import WorkerProfile
 
-        # ── Step 1: encode the query ON THE CELERY WORKER via RPC ───────────
-        # apply_async().get() is a synchronous RPC — the web process blocks
-        # for at most CELERY_ENCODE_TIMEOUT seconds, then falls back.
+        # ── Encode the query (on Celery worker to keep PyTorch off ASGI) ──────
         try:
             query_vec_list = encode_search_query_task.apply_async(
                 args=[query.strip()],
@@ -99,36 +74,57 @@ def semantic_worker_search(
         except Exception as exc:
             logger.warning(
                 "semantic_worker_search: Celery RPC failed/timed out (%s) "
-                "— using keyword fallback.",
-                exc,
+                "— trying in-process encoding.", exc,
             )
-            return None
+            try:
+                query_vec = np.array(
+                    text_encoder.encode(query.strip()), dtype=np.float32
+                )
+            except Exception as encode_exc:
+                logger.warning(
+                    "semantic_worker_search: in-process encoding failed: %s",
+                    encode_exc,
+                )
+                return None
 
-        # ── Step 2: fetch worker embeddings from the DB ──────────────────────
-        qs = WorkerProfile.objects.filter(
-            text_embedding__isnull=False,
-        ).values('pk', 'text_embedding')
-
+        # ── Base queryset ──────────────────────────────────────────────────────
+        qs = WorkerProfile.objects.filter(text_embedding__isnull=False)
         if worker_pks is not None:
             qs = qs.filter(pk__in=worker_pks)
 
-        rows = list(qs)
+        # ── TIER 1: pgvector (production) ─────────────────────────────────────
+        from jobs.service.pgvector_utils import pgvector_cosine_search
+
+        ranked = pgvector_cosine_search(
+            qs=qs,
+            field='text_embedding',
+            dim=EMBEDDING_DIM,
+            query_vec=query_vec,
+            threshold=MIN_SCORE_THRESHOLD,
+            limit=100,            # cap at 100 to keep CASE WHEN manageable
+        )
+
+        if ranked is not None:
+            logger.debug(
+                "semantic_worker_search [pgvector]: query=%r → %d results",
+                query, len(ranked),
+            )
+            return ranked or None
+
+        # ── TIER 2: NumPy fallback ─────────────────────────────────────────────
+        rows = list(qs.values('pk', 'text_embedding'))
         if not rows:
             logger.debug(
-                "semantic_worker_search: no workers with embeddings (pks=%s).",
-                len(worker_pks) if worker_pks else 'all',
+                "semantic_worker_search: no workers with embeddings "
+                "(pks=%s).", len(worker_pks) if worker_pks else 'all',
             )
             return None
 
         pks        = [r['pk'] for r in rows]
         embeddings = [r['text_embedding'] for r in rows]
 
-        # ── Step 3: vectorised cosine similarity (one query vs N workers) ────
-        # text_encoder.batch_cosine_similarity uses a single NumPy matrix-
-        # multiply — O(N·D) — no PyTorch needed.
         scores = text_encoder.batch_cosine_similarity(query_vec, embeddings)
 
-        # ── Step 4: filter & rank ────────────────────────────────────────────
         ranked = sorted(
             [
                 (pk, score)
@@ -137,20 +133,19 @@ def semantic_worker_search(
             ],
             key=lambda x: x[1],
             reverse=True,
-        )[:100]  # cap at 100 to keep CASE WHEN expression manageable
+        )[:100]
 
         logger.debug(
-            "semantic_worker_search: query=%r → %d results (from %d candidates)",
+            "semantic_worker_search [numpy]: query=%r → %d results "
+            "(from %d candidates)",
             query, len(ranked), len(rows),
         )
         return ranked or None
 
     except Exception as exc:
-        # Never crash the talent search page — fall back gracefully
         logger.warning(
             "semantic_worker_search failed for query %r — "
-            "falling back to icontains. Error: %s",
-            query, exc,
+            "falling back to icontains. Error: %s", query, exc,
         )
         return None
 

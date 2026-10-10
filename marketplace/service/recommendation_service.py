@@ -105,20 +105,36 @@ def compute_similar_products(product_id: str, top_k: int = TOP_K_SIMILAR) -> int
     same_cat_qs = base_qs.filter(category=product.category) if product.category else base_qs
     candidates_qs = same_cat_qs if same_cat_qs.count() >= 5 else base_qs
 
-    candidates = list(candidates_qs.values('id', 'text_embedding'))
-    if not candidates:
-        return 0
+    # ── TIER 1: pgvector (production / NeonDB) ────────────────────────────────
+    from jobs.service.pgvector_utils import pgvector_cosine_search
 
-    # Vectorised batch cosine similarity
-    query_vec = product.text_embedding
-    candidate_vecs = [c['text_embedding'] for c in candidates]
-    scores = text_encoder.batch_cosine_similarity(query_vec, candidate_vecs)
+    ranked_pgv = pgvector_cosine_search(
+        qs=candidates_qs,
+        field='text_embedding',
+        dim=768,
+        query_vec=product.text_embedding,
+        threshold=SIMILARITY_THRESHOLD,
+        limit=top_k,
+    )
 
-    # Filter + rank
-    ranked: List[Tuple[str, float]] = sorted(
-        [(str(c['id']), s) for c, s in zip(candidates, scores) if s >= SIMILARITY_THRESHOLD],
-        key=lambda x: -x[1],
-    )[:top_k]
+    if ranked_pgv is not None:
+        ranked: List[Tuple[str, float]] = [(str(pk), score) for pk, score in ranked_pgv]
+    else:
+        # ── TIER 2: NumPy fallback (local dev) ────────────────────────────────
+        candidates = list(candidates_qs.values('id', 'text_embedding'))
+        if not candidates:
+            return 0
+
+        # Vectorised batch cosine similarity
+        query_vec = product.text_embedding
+        candidate_vecs = [c['text_embedding'] for c in candidates]
+        scores = text_encoder.batch_cosine_similarity(query_vec, candidate_vecs)
+
+        # Filter + rank
+        ranked: List[Tuple[str, float]] = sorted(
+            [(str(c['id']), s) for c, s in zip(candidates, scores) if s >= SIMILARITY_THRESHOLD],
+            key=lambda x: -x[1],
+        )[:top_k]
 
     if not ranked:
         return 0
@@ -201,24 +217,40 @@ def compute_personalised_feed(user_id: int, top_k: int = TOP_K_PERSONAL) -> int:
         taste_profile = taste_profile / norm
 
     # Candidates: active products NOT already interacted with
-    candidates = list(
+    candidate_qs = (
         Product.objects
         .filter(status=Product.Status.ACTIVE)
         .exclude(pk__in=interacted_ids)
         .exclude(text_embedding__isnull=True)
-        .values('id', 'text_embedding')
     )
 
-    if not candidates:
-        return 0
+    # ── TIER 1: pgvector (production / NeonDB) ────────────────────────────────
+    from jobs.service.pgvector_utils import pgvector_cosine_search
 
-    candidate_vecs = [c['text_embedding'] for c in candidates]
-    scores = text_encoder.batch_cosine_similarity(taste_profile.tolist(), candidate_vecs)
+    ranked_pgv = pgvector_cosine_search(
+        qs=candidate_qs,
+        field='text_embedding',
+        dim=768,
+        query_vec=taste_profile.tolist(),
+        threshold=SIMILARITY_THRESHOLD,
+        limit=top_k,
+    )
 
-    ranked: List[Tuple[str, float]] = sorted(
-        [(str(c['id']), s) for c, s in zip(candidates, scores) if s >= SIMILARITY_THRESHOLD],
-        key=lambda x: -x[1],
-    )[:top_k]
+    if ranked_pgv is not None:
+        ranked: List[Tuple[str, float]] = [(str(pk), score) for pk, score in ranked_pgv]
+    else:
+        # ── TIER 2: NumPy fallback (local dev) ────────────────────────────────
+        candidates = list(candidate_qs.values('id', 'text_embedding'))
+        if not candidates:
+            return 0
+
+        candidate_vecs = [c['text_embedding'] for c in candidates]
+        scores = text_encoder.batch_cosine_similarity(taste_profile.tolist(), candidate_vecs)
+
+        ranked: List[Tuple[str, float]] = sorted(
+            [(str(c['id']), s) for c, s in zip(candidates, scores) if s >= SIMILARITY_THRESHOLD],
+            key=lambda x: -x[1],
+        )[:top_k]
 
     if not ranked:
         return 0

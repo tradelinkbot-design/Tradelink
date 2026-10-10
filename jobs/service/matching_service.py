@@ -488,10 +488,31 @@ def compute_matches_for_job(job_id: str) -> int:
         return 0
 
     worker_ids = [str(w['id']) for w in workers]
-    embeddings = [w['text_embedding'] for w in workers]
 
-    # ── 3. Vectorised text similarity (sentence-transformers) ────────────────
-    text_scores = text_encoder.batch_cosine_similarity(job.text_embedding, embeddings)
+    # ── 3. Vectorised text similarity ────────────────────────────────────────
+    # TIER 1: pgvector — compute cosine similarity in Postgres (no bulk transfer)
+    # TIER 2: NumPy    — fetch all embeddings, matrix multiply in Python
+    from jobs.service.pgvector_utils import pgvector_batch_text_scores
+
+    pgv_scores = pgvector_batch_text_scores(
+        qs=WorkerProfile.objects.filter(
+            trade_category=job.trade_category,
+            text_embedding__isnull=False,
+        ),
+        field='text_embedding',
+        dim=768,
+        query_vec=job.text_embedding,
+    )
+
+    if pgv_scores is not None:
+        # pgvector path: scores keyed by worker pk string
+        text_scores = [pgv_scores.get(wid, 0.0) for wid in worker_ids]
+    else:
+        # NumPy fallback: embeddings already loaded in `workers`
+        embeddings  = [w['text_embedding'] for w in workers]
+        text_scores = text_encoder.batch_cosine_similarity(
+            job.text_embedding, embeddings
+        )
 
     # ── 4. Portfolio image scores (CLIP cross-modal) ─────────────────────────
     image_scores_map = _get_worker_portfolio_image_scores(worker_ids, job_clip_emb)
@@ -635,11 +656,31 @@ def compute_matches_for_worker(worker_profile_id: str) -> int:
         )
         return 0
 
-    job_ids    = [str(j['id']) for j in jobs]
-    embeddings = [j['text_embedding'] for j in jobs]
+    job_ids = [str(j['id']) for j in jobs]
 
-    # ── 3. Vectorised text similarity (sentence-transformers) ────────────────
-    text_scores = text_encoder.batch_cosine_similarity(worker.text_embedding, embeddings)
+    # ── 3. Vectorised text similarity ────────────────────────────────────────
+    # TIER 1: pgvector — compute cosine similarity in Postgres (no bulk transfer)
+    # TIER 2: NumPy    — fetch all embeddings, matrix multiply in Python
+    from jobs.service.pgvector_utils import pgvector_batch_text_scores
+
+    pgv_scores = pgvector_batch_text_scores(
+        qs=Job.objects.filter(
+            trade_category=worker.trade_category,
+            status=Job.Status.ACTIVE,
+            text_embedding__isnull=False,
+        ),
+        field='text_embedding',
+        dim=768,
+        query_vec=worker.text_embedding,
+    )
+
+    if pgv_scores is not None:
+        text_scores = [pgv_scores.get(jid, 0.0) for jid in job_ids]
+    else:
+        embeddings  = [j['text_embedding'] for j in jobs]
+        text_scores = text_encoder.batch_cosine_similarity(
+            worker.text_embedding, embeddings
+        )
 
     # ── 4. Worker avg rating (single value — reused across all jobs) ─────────
     avg_rating_row = (

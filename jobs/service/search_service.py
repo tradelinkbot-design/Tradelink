@@ -7,32 +7,36 @@ How it works
 ────────────
   1. The user types a query — e.g. "fix my generator" or "solar wiring Lagos".
   2. We encode the query with the same sentence-transformer used for jobs.
-  3. We pull all active jobs that have a text_embedding computed.
-  4. Batch cosine similarity → ranked list of (job_pk, score) pairs.
-  5. We re-order the Django queryset to match that ranked order.
-  6. Jobs without an embedding (newly posted, worker not yet processed) fall
-     to the end of the results so they're never hidden — just not ranked.
+  3. We run cosine similarity against all active jobs with embeddings.
+  4. Jobs that score ≥ 60% are returned ranked by score.
+  5. Jobs without an embedding fall to the end of results.
+
+Performance tiers
+─────────────────
+  TIER 1 — pgvector (production / NeonDB):
+    • The `vector` extension is installed on Neon.
+    • We annotate the queryset with a RawSQL cosine distance expression that
+      runs entirely in Postgres (C / SIMD kernels).
+    • Only (pk, score) pairs are transferred back — ~375× less data than
+      shipping full embedding arrays to Python.
+
+  TIER 2 — NumPy (local dev / PG 12 without pgvector):
+    • Falls back to the original approach: fetch all active job embeddings
+      (as JSON arrays) and compute cosine similarity in Python.
+    • Overhead: ~3–5 ms for 1,000 jobs on CPU.
+
+  Both tiers share the same Celery RPC for query encoding — PyTorch stays
+  off the web-server process on Windows to avoid the ASGI crash.
 
 Why not icontains?
 ──────────────────
-  icontains("generator") won't match a job titled
-  "Diesel Engine & ATS Maintenance Technician" even though the job is
-  directly relevant.  The sentence-transformer understands synonyms and
-  semantic intent — the same model that powered the worker↔job matching.
+  icontains("generator") won't match "Diesel Engine & ATS Maintenance
+  Technician" even though it's directly relevant.  The sentence-transformer
+  understands synonyms and semantic intent.
 
 Fallback
 ────────
-  If the model isn't loaded yet (cold start) or the query is too short,
-  we fall back to the original icontains filter so the page never breaks.
-
-Performance
-───────────
-  Encoding one query:  ~30–80 ms on CPU.
-  Cosine similarity against 1,000 jobs: < 5 ms (NumPy vectorised).
-  Total overhead vs a plain DB query: ~35–85 ms — acceptable for a search.
-
-  At very large scale (10,000+ jobs) consider caching embeddings in Redis
-  or using pgvector for native DB similarity search.
+  Any exception drops through to None so the view falls back to icontains.
 """
 
 import logging
@@ -47,8 +51,10 @@ MIN_QUERY_LEN = 2
 
 # Minimum semantic score to include a result (0–1).
 # 0.60 = 60% — only show results the AI is genuinely confident about.
-# Results below this threshold are suppressed across all AI surfaces.
 MIN_SCORE_THRESHOLD = 0.60
+
+# Text embedding dimension (must match the model used to generate embeddings)
+EMBEDDING_DIM = 768
 
 
 def semantic_job_search(
@@ -78,62 +84,85 @@ def semantic_job_search(
         from jobs.service.text_encoder import text_encoder
         from jobs.models import Job
 
-        # Offload encoding to the Celery worker via RPC.
-        # This completely prevents PyTorch from loading in the web server process,
-        # avoiding the Windows ASGI crash. If Celery is down, it falls back after 5s.
+        # ── Encode query (offloaded to Celery worker to keep PyTorch off ASGI) ──
         try:
             query_vec_list = encode_search_query_task.apply_async(
-                args=[query.strip()], 
+                args=[query.strip()],
                 expires=4.0
             ).get(timeout=4.0)
             query_vec = np.array(query_vec_list, dtype=np.float32)
         except Exception as exc:
             logger.info(
-                "semantic_job_search: Celery RPC unavailable (%s) — encoding with in-process FastEmbed.", exc
+                "semantic_job_search: Celery RPC unavailable (%s) — encoding "
+                "with in-process FastEmbed.", exc
             )
             try:
-                query_vec = np.array(text_encoder.encode(query.strip()), dtype=np.float32)
+                query_vec = np.array(
+                    text_encoder.encode(query.strip()), dtype=np.float32
+                )
             except Exception as encode_exc:
-                logger.warning("semantic_job_search: in-process encoding failed: %s", encode_exc)
+                logger.warning(
+                    "semantic_job_search: in-process encoding failed: %s",
+                    encode_exc,
+                )
                 return None
 
-        # Fetch jobs with embeddings
+        # ── Base queryset ──────────────────────────────────────────────────────
         qs = Job.objects.filter(
             status=Job.Status.ACTIVE,
             text_embedding__isnull=False,
-        ).values('pk', 'text_embedding')
-
+        )
         if job_pks is not None:
             qs = qs.filter(pk__in=job_pks)
 
-        rows = list(qs)
+        # ── TIER 1: pgvector (production) ─────────────────────────────────────
+        from jobs.service.pgvector_utils import pgvector_cosine_search
+
+        ranked = pgvector_cosine_search(
+            qs=qs,
+            field='text_embedding',
+            dim=EMBEDDING_DIM,
+            query_vec=query_vec,
+            threshold=MIN_SCORE_THRESHOLD,
+            limit=50,
+        )
+
+        if ranked is not None:
+            # pgvector succeeded
+            logger.debug(
+                "semantic_job_search [pgvector]: query=%r → %d results",
+                query, len(ranked),
+            )
+            return ranked
+
+        # ── TIER 2: NumPy fallback (local dev / no pgvector) ──────────────────
+        rows = list(qs.values('pk', 'text_embedding'))
         if not rows:
             return None
 
         pks        = [r['pk'] for r in rows]
         embeddings = [r['text_embedding'] for r in rows]
 
-        # Vectorised cosine similarity (one query vs N job embeddings)
         scores = text_encoder.batch_cosine_similarity(query_vec, embeddings)
 
-        # Zip, filter below threshold, sort descending
         ranked = sorted(
-            [(pk, score) for pk, score in zip(pks, scores) if score >= MIN_SCORE_THRESHOLD],
+            [(pk, score) for pk, score in zip(pks, scores)
+             if score >= MIN_SCORE_THRESHOLD],
             key=lambda x: x[1],
             reverse=True,
         )[:50]
 
         logger.debug(
-            "semantic_job_search: query=%r → %d results (from %d candidates)",
+            "semantic_job_search [numpy]: query=%r → %d results "
+            "(from %d candidates)",
             query, len(ranked), len(rows),
         )
         return ranked
 
     except Exception as exc:
-        # Never crash the search page — fall back gracefully
         logger.warning(
-            "semantic_job_search failed for query %r — falling back to icontains. Error: %s",
-            query, exc,
+            "semantic_job_search failed for query %r — falling back to "
+            "icontains. Error: %s", query, exc,
         )
         return None
 

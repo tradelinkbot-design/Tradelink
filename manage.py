@@ -3,6 +3,16 @@
 import os
 import sys
 
+# ── pgvector Python package path ─────────────────────────────────────────────
+# The pgvector package was installed to a user-writable directory because the
+# shared venv's site-packages is owned by BUILTIN\Administrators.
+# This path is added early so all management commands, migrations and Celery
+# tasks can `import pgvector` without any extra setup.
+_EXTRA_PKGS = r'C:\Users\hp\py_extra_pkgs'
+if _EXTRA_PKGS not in sys.path:
+    sys.path.insert(0, _EXTRA_PKGS)
+# ─────────────────────────────────────────────────────────────────────────────
+
 
 def main():
     """Run administrative tasks."""
