@@ -30,19 +30,18 @@ def format_last_seen(dt, now=None) -> str:
         return ''
 
     now = now or timezone.now()
-    # Ensure dt is in local timezone
     local_dt = timezone.localtime(dt)
     local_now = timezone.localtime(now)
 
     diff = now - dt
 
-    # Clock skew / just now
+    # Clock skew / just now (< 2 mins)
     if diff.total_seconds() < 120:
         return 'just now'
 
     # Minutes ago (< 1 hour)
     if diff.total_seconds() < 3600:
-        mins = int(diff.total_seconds() // 60)
+        mins = max(1, int(diff.total_seconds() // 60))
         return f'{mins}m ago'
 
     # Same calendar day
@@ -76,19 +75,37 @@ def get_user_presence(user) -> Tuple[bool, Optional[object], str]:
 
     from chats.models import UserOnlineStatus
 
+    user_pk = getattr(user, 'pk', None) or getattr(user, 'id', None)
+    if not user_pk:
+        return False, None, 'Offline'
+
+    # Query fresh record from database to avoid stale in-memory reverse cache
     try:
-        status_obj = getattr(user, 'online_status', None)
-        if status_obj is None:
-            status_obj = UserOnlineStatus.objects.filter(user=user).first()
+        status_obj = UserOnlineStatus.objects.filter(user_id=user_pk).first()
     except Exception:
         status_obj = None
 
+    now = timezone.now()
+    is_online = False
+    last_seen = None
+
     if status_obj:
-        is_online = bool(status_obj.is_online)
         last_seen = status_obj.last_seen
+        diff_sec = (now - last_seen).total_seconds() if last_seen else 999999
+
+        # A user is active/online if:
+        # 1. Marked is_online=True AND seen within the last 5 minutes (avoids stale crashed sessions), OR
+        # 2. Activity was recorded within the last 90 seconds (active web navigation or WebSocket ping)
+        if (status_obj.is_online and diff_sec < 300) or (diff_sec < 90):
+            is_online = True
+        else:
+            is_online = False
     else:
-        is_online = False
         last_seen = getattr(user, 'last_login', None)
+        if last_seen:
+            diff_sec = (now - last_seen).total_seconds()
+            if diff_sec < 90:
+                is_online = True
 
     if is_online:
         display = 'Online'
@@ -104,22 +121,28 @@ def get_user_presence(user) -> Tuple[bool, Optional[object], str]:
 def touch_user_presence(user, is_online: bool = True, force: bool = False) -> None:
     """
     Updates the user's presence and last_seen timestamp.
-    Throttled via cache to once every 2 minutes unless force=True.
+    Transitions to online immediately. Throttles subsequent heartbeats to every 45s.
     """
     if not user or not user.is_authenticated:
         return
 
-    cache_key = f'user_presence_touch:{user.pk}'
-    if not force and cache.get(cache_key):
+    from chats.models import UserOnlineStatus
+    user_pk = user.pk
+    now = timezone.now()
+
+    cache_key = f'user_presence_state:{user_pk}'
+    cached_state = cache.get(cache_key)
+
+    # If transitioning to online from offline, always write immediately
+    if not force and is_online and cached_state == 'online':
         return
 
-    cache.set(cache_key, 1, timeout=120)
+    cache.set(cache_key, 'online' if is_online else 'offline', timeout=45)
 
-    from chats.models import UserOnlineStatus
     try:
         UserOnlineStatus.objects.update_or_create(
-            user=user,
-            defaults={'is_online': is_online},
+            user_id=user_pk,
+            defaults={'is_online': is_online, 'last_seen': now},
         )
     except Exception as exc:
-        logger.warning('touch_user_presence failed for user %s: %s', user.pk, exc)
+        logger.warning('touch_user_presence failed for user %s: %s', user_pk, exc)

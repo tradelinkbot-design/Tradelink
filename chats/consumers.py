@@ -122,6 +122,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Handshake complete — connection is now open
         await self.accept()
 
+        # Send other participant's current presence to this newly connected client
+        try:
+            other_status = await self._get_other_participant_status()
+            if other_status:
+                await self.send(text_data=json.dumps(other_status))
+        except Exception as exc:
+            logger.warning('ChatConsumer: sending other participant status failed: %s', exc)
+
         # On connect, bulk-mark any unread messages as read and broadcast receipts
         try:
             unread_ids = await self._get_unread_message_ids()
@@ -192,9 +200,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if msg_type == 'ping':
             try:
                 await self._touch_presence()
+                other_status = await self._get_other_participant_status()
+                await self.send(text_data=json.dumps({
+                    'type':         'pong',
+                    'other_status': other_status,
+                }))
             except Exception:
-                pass
-            await self.send(text_data=json.dumps({'type': 'pong'}))
+                await self.send(text_data=json.dumps({'type': 'pong'}))
             return
 
         handlers = {
@@ -414,6 +426,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
             payload['last_seen_display'] = event['last_seen_display']
         await self.send(text_data=json.dumps(payload))
 
+        # Two-way handshake: when the other participant announces they came online,
+        # announce back that we are online too so they immediately see us as Online!
+        if event.get('user_id') != str(self.user.pk) and event.get('status') == 'online' and not event.get('_is_reply'):
+            try:
+                await self.channel_layer.group_send(
+                    self.group_name,
+                    {
+                        'type':      'user_status',
+                        'user_id':   str(self.user.pk),
+                        'status':    'online',
+                        '_is_reply': True,
+                    },
+                )
+            except Exception:
+                pass
+
     # ── Database helpers (wrapped for async) ──────────────────────────────────
 
     @database_sync_to_async
@@ -431,12 +459,31 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _set_online_status(self, is_online: bool) -> None:
-        from chats.models import UserOnlineStatus
-        from django.utils import timezone
-        UserOnlineStatus.objects.update_or_create(
-            user=self.user,
-            defaults={'is_online': is_online, 'last_seen': timezone.now()},
-        )
+        from chats.utils import touch_user_presence
+        touch_user_presence(self.user, is_online=is_online, force=True)
+
+    @database_sync_to_async
+    def _get_other_participant_status(self) -> dict:
+        from chats.models import Conversation
+        from chats.utils import get_user_presence
+        try:
+            conv = Conversation.objects.filter(pk=self.conversation_id).first()
+            if not conv:
+                return None
+            other = conv.get_other_participant(self.user)
+            if not other:
+                return None
+            is_online, last_seen, last_seen_display = get_user_presence(other)
+            return {
+                'type':              'user_status',
+                'user_id':           str(other.pk),
+                'status':            'online' if is_online else 'offline',
+                'last_seen':         last_seen.isoformat() if last_seen else None,
+                'last_seen_display': last_seen_display,
+            }
+        except Exception as exc:
+            logger.warning('_get_other_participant_status failed: %s', exc)
+            return None
 
     @database_sync_to_async
     def _get_unread_message_ids(self) -> list:

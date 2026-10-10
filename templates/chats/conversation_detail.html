@@ -822,7 +822,9 @@
           stop_typing:     () => onTypingStop(),
           read_receipt:    () => onReadReceipt(data),
           user_status:     () => onUserStatus(data),
-          pong:            () => {},
+          pong:            () => {
+            if (data.other_status) onUserStatus(data.other_status);
+          },
           error:           () => toast(data.message, 'error'),
         }[data.type] || (() => {}))();
       } catch { /* ignore bad frames */ }
@@ -962,7 +964,8 @@
   }
 
   function onUserStatus(data) {
-    if (data.user_id !== OTHER_USER_ID) return;
+    if (!data || !data.user_id) return;
+    if (String(data.user_id).toLowerCase().trim() !== String(OTHER_USER_ID).toLowerCase().trim()) return;
     const dot  = document.getElementById('presenceDot');
     const text = document.getElementById('presenceText');
     const on   = data.status === 'online';
@@ -979,6 +982,23 @@
       }
     }
   }
+
+  // Re-sync presence when user returns to tab
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        connect();
+      } else {
+        send({ type: 'ping' });
+      }
+    }
+  });
+
+  window.addEventListener('focus', () => {
+    if (socket?.readyState === WebSocket.OPEN) {
+      send({ type: 'ping' });
+    }
+  });
 
   /* ── Send message ────────────────────────────────────────────────── */
   function sendMessage() {
