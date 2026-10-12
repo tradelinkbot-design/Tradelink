@@ -129,7 +129,7 @@ def _update_dispute_flag(profile) -> None:
     """
     if profile.disputes_raised >= ABUSE_MIN_DISPUTES:
         loss_rate = profile.disputes_lost / profile.disputes_raised
-        if loss_rate >= ABUSE_DISPUTE_THRESHOLD and not profile.dispute_flagged:
+        if loss_rate > ABUSE_DISPUTE_THRESHOLD and not profile.dispute_flagged:
             profile.dispute_flagged = True
             profile.save(update_fields=['dispute_flagged'])
 
@@ -155,6 +155,17 @@ def initialize_milestone_payment(milestone_id: str, employer_email: str) -> dict
         logger.error("initialize_milestone_payment: Milestone %s not found.", milestone_id)
         return {}
 
+    if milestone.status != Milestone.Status.UNFUNDED:
+        logger.warning(
+            "initialize_milestone_payment: milestone %s has status %s, expected UNFUNDED.",
+            milestone_id, milestone.status,
+        )
+        return {}
+
+    if milestone.amount <= Decimal("0"):
+        logger.error("initialize_milestone_payment: milestone %s has non-positive amount %s.", milestone_id, milestone.amount)
+        return {}
+
     amount_kobo = int(milestone.amount * 100)
     reference = f"tl_ms_{uuid.uuid4().hex[:24]}"
 
@@ -177,7 +188,7 @@ def initialize_milestone_payment(milestone_id: str, employer_email: str) -> dict
             headers=_paystack_headers(),
             timeout=PAYSTACK_TIMEOUT,
         )
-    except requests.RequestException:
+    except Exception:
         logger.exception("initialize_milestone_payment: network request failed for %s", milestone_id)
         return {}
 
@@ -226,13 +237,24 @@ def verify_milestone_payment(reference: str) -> bool:
         logger.error("verify_milestone_payment: no milestone with ref %s", reference)
         return False
 
+    # Idempotent check: if already funded or further along in the workflow, succeed immediately
+    if milestone.status in (
+        Milestone.Status.FUNDED,
+        Milestone.Status.IN_REVIEW,
+        Milestone.Status.APPROVED,
+        Milestone.Status.PENDING_OTP,
+        Milestone.Status.RELEASED,
+    ):
+        logger.info("verify_milestone_payment: milestone %s is already %s — idempotent return.", milestone.pk, milestone.status)
+        return True
+
     try:
         resp = requests.get(
             f"{PAYSTACK_BASE}/transaction/verify/{reference}",
             headers=_paystack_headers(),
             timeout=PAYSTACK_TIMEOUT,
         )
-    except requests.RequestException:
+    except Exception:
         logger.exception("verify_milestone_payment: network request failed for ref %s", reference)
         return False
 
@@ -375,6 +397,17 @@ def approve_milestone(milestone_id: str) -> bool:
     milestone.approved_at = timezone.now()
     milestone.save(update_fields=["status", "approved_at", "updated_at"])
 
+    # If the milestone was in dispute, resolve the pending dispute
+    try:
+        if hasattr(milestone, 'dispute') and milestone.dispute.resolution == Dispute.Resolution.PENDING:
+            dispute = milestone.dispute
+            dispute.resolution = Dispute.Resolution.RELEASED_TO_WORKER
+            dispute.resolution_note = "Approved by employer."
+            dispute.resolved_at = timezone.now()
+            dispute.save(update_fields=["resolution", "resolution_note", "resolved_at"])
+    except Exception as exc:
+        logger.warning("approve_milestone: could not resolve dispute for %s: %s", milestone_id, exc)
+
     logger.info("approve_milestone: milestone %s approved, triggering payout.", milestone_id)
     return release_milestone_to_worker(milestone_id)
 
@@ -437,7 +470,7 @@ def release_milestone_to_worker(milestone_id: str) -> bool:
             )
             return r.ok and r.json().get("status") is True
         except Exception:
-            return False  # treat network errors as valid to avoid blocking payouts
+            return True  # treat network errors as valid to avoid blocking payouts
 
     # Recreate recipient if missing, test-mode while on live keys, or not found in current account
     _live_mode = _settings.PAYSTACK_SECRET_KEY.startswith("sk_live_")
@@ -468,7 +501,7 @@ def release_milestone_to_worker(milestone_id: str) -> bool:
         bank_account.refresh_from_db()
 
     # ── Compute worker amount after platform fee deduction ─────────────────────
-    fee_pct = Decimal(str(contract.platform_fee_pct))          # ensure Decimal
+    fee_pct = Decimal(str(contract.platform_fee_pct if contract.platform_fee_pct is not None else "10.00"))
     worker_amount = milestone.amount * (Decimal("1") - fee_pct / Decimal("100"))
     worker_amount = worker_amount.quantize(Decimal("0.01"))
     worker_amount_kobo = int(worker_amount * 100)
@@ -495,7 +528,7 @@ def release_milestone_to_worker(milestone_id: str) -> bool:
             headers=_paystack_headers(),
             timeout=PAYSTACK_TIMEOUT,
         )
-    except requests.RequestException:
+    except Exception:
         logger.exception("release_milestone_to_worker: transfer request failed for milestone %s", milestone_id)
         return False
 
@@ -679,7 +712,7 @@ def finalize_transfer_with_otp(milestone_id: str, otp: str) -> bool:
             headers=_paystack_headers(),
             timeout=PAYSTACK_TIMEOUT,
         )
-    except requests.RequestException:
+    except Exception:
         logger.exception(
             "finalize_transfer_with_otp: request failed for milestone %s", milestone_id,
         )
@@ -723,9 +756,9 @@ def sync_pending_transfers(contract) -> None:
                 timeout=PAYSTACK_TIMEOUT,
             )
             if resp.status_code == 200:
-                data = resp.json()
+                data = _safe_json(resp)
                 if data.get("status"):
-                    transfer_status = data["data"].get("status", "").lower()
+                    transfer_status = data.get("data", {}).get("status", "").lower()
                     if transfer_status in ("success", "pending", "processing", "received"):
                         # Transfer completed successfully!
                         milestone.status = Milestone.Status.RELEASED
@@ -737,15 +770,16 @@ def sync_pending_transfers(contract) -> None:
                         logger.info("sync_pending_transfers: synced milestone %s to RELEASED.", milestone.pk)
                     elif transfer_status in ("failed", "reversed", "abandoned"):
                         # Revert so it can be retried
+                        failed_ref = milestone.paystack_transfer_ref
                         milestone.status = Milestone.Status.APPROVED
                         milestone.paystack_transfer_ref = None
                         milestone.worker_amount = None
                         milestone.save(update_fields=[
                             'status', 'paystack_transfer_ref', 'worker_amount', 'updated_at',
                         ])
-                        logger.warning("sync_pending_transfers: transfer %s failed on Paystack. Reverted milestone %s.", milestone.paystack_transfer_ref, milestone.pk)
+                        logger.warning("sync_pending_transfers: transfer %s failed on Paystack. Reverted milestone %s.", failed_ref, milestone.pk)
 
-        except requests.RequestException:
+        except Exception:
             logger.exception("sync_pending_transfers: failed to sync milestone %s", milestone.pk)
             pass
 
@@ -767,7 +801,7 @@ def request_disable_transfer_otp() -> dict:
             headers=_paystack_headers(),
             timeout=PAYSTACK_TIMEOUT,
         )
-    except requests.RequestException as exc:
+    except Exception as exc:
         logger.exception("request_disable_transfer_otp failed: %s", exc)
         return {"status": False, "message": str(exc)}
 
@@ -788,7 +822,7 @@ def finalize_disable_transfer_otp(otp: str) -> dict:
             headers=_paystack_headers(),
             timeout=PAYSTACK_TIMEOUT,
         )
-    except requests.RequestException as exc:
+    except Exception as exc:
         logger.exception("finalize_disable_transfer_otp failed: %s", exc)
         return {"status": False, "message": str(exc)}
 
@@ -808,7 +842,7 @@ def enable_transfer_otp() -> dict:
             headers=_paystack_headers(),
             timeout=PAYSTACK_TIMEOUT,
         )
-    except requests.RequestException as exc:
+    except Exception as exc:
         logger.exception("enable_transfer_otp failed: %s", exc)
         return {"status": False, "message": str(exc)}
 
@@ -852,7 +886,7 @@ def create_transfer_recipient(worker_bank_account_id: str) -> str:
             headers=_paystack_headers(),
             timeout=PAYSTACK_TIMEOUT,
         )
-    except requests.RequestException:
+    except Exception:
         logger.exception(
             "create_transfer_recipient: request failed for %s",
             worker_bank_account_id,
@@ -926,6 +960,11 @@ def raise_dispute(
         logger.error("raise_dispute: Milestone %s not found.", milestone_id)
         return False, "milestone_not_found"
 
+    # ── No duplicate dispute ─────────────────────────────────────────────────
+    if Dispute.objects.filter(milestone_id=milestone_id).exists():
+        logger.warning("raise_dispute: duplicate dispute attempt on milestone %s.", milestone_id)
+        return False, "dispute_already_exists"
+
     valid_statuses = (Milestone.Status.IN_REVIEW, Milestone.Status.FUNDED)
     if milestone.status not in valid_statuses:
         logger.warning(
@@ -954,16 +993,22 @@ def raise_dispute(
             )
             return False, "dispute_window_expired"
 
-    # ── No duplicate dispute ─────────────────────────────────────────────────
-    if Dispute.objects.filter(milestone_id=milestone_id).exists():
-        logger.warning("raise_dispute: duplicate dispute attempt on milestone %s.", milestone_id)
-        return False, "dispute_already_exists"
-
     try:
         raised_by = User.objects.get(pk=raised_by_user_id)
     except User.DoesNotExist:
         logger.error("raise_dispute: User %s not found.", raised_by_user_id)
         return False, "user_not_found"
+
+    # ── Verify caller is participant in the contract or staff ────────────────
+    contract = milestone.contract
+    is_employer = contract.employer and raised_by.pk == contract.employer.user_id
+    is_worker   = contract.worker and raised_by.pk == contract.worker.user_id
+    if not (is_employer or is_worker) and not raised_by.is_staff:
+        logger.warning(
+            "raise_dispute: user %s is neither employer, worker, nor staff on contract %s.",
+            raised_by_user_id, contract.pk,
+        )
+        return False, "not_participant"
 
     # ── MIME validation + SHA-256 hash ───────────────────────────────────────
     evidence_sha256 = ""
@@ -1076,6 +1121,10 @@ def resolve_dispute(
         logger.error("resolve_dispute: Dispute %s not found.", dispute_id)
         return False
 
+    if dispute.resolution != Dispute.Resolution.PENDING:
+        logger.warning("resolve_dispute: dispute %s has already been resolved (%s).", dispute_id, dispute.resolution)
+        return False
+
     try:
         resolved_by = User.objects.get(pk=resolved_by_user_id)
     except User.DoesNotExist:
@@ -1107,7 +1156,7 @@ def resolve_dispute(
                     headers=_paystack_headers(),
                     timeout=PAYSTACK_TIMEOUT,
                 )
-            except requests.RequestException:
+            except Exception:
                 logger.exception(
                     "resolve_dispute: refund request failed for milestone %s",
                     milestone.pk,
@@ -1163,7 +1212,10 @@ def resolve_dispute(
     # Revert contract status if no more disputed milestones
     has_disputed = contract.milestones.filter(status=Milestone.Status.DISPUTED).exists()
     if not has_disputed and contract.status == Contract.Status.DISPUTED:
-        contract.status = Contract.Status.ACTIVE
+        all_released = not contract.milestones.exclude(
+            status__in=[Milestone.Status.RELEASED, Milestone.Status.REFUNDED],
+        ).exists()
+        contract.status = Contract.Status.COMPLETED if all_released else Contract.Status.ACTIVE
         contract.save(update_fields=["status", "updated_at"])
 
     # Notify both parties
@@ -1225,6 +1277,10 @@ def split_milestone(
         logger.error("split_milestone: Dispute %s not found.", dispute_id)
         return False
 
+    if dispute.resolution != Dispute.Resolution.PENDING:
+        logger.warning("split_milestone: dispute %s has already been resolved (%s).", dispute_id, dispute.resolution)
+        return False
+
     try:
         resolved_by = User.objects.get(pk=resolved_by_user_id)
     except User.DoesNotExist:
@@ -1235,19 +1291,28 @@ def split_milestone(
     contract  = milestone.contract
 
     gross         = milestone.amount                       # total in escrow
-    platform_fee  = gross * (contract.platform_fee_pct / Decimal("100"))
+    fee_pct       = Decimal(str(contract.platform_fee_pct if contract.platform_fee_pct is not None else "10.00"))
+    platform_fee  = gross * (fee_pct / Decimal("100"))
     net           = gross - platform_fee                   # what worker could get at 100%
 
     worker_share  = (net * Decimal(worker_pct) / Decimal("100")).quantize(Decimal("0.01"))
     refund_share  = (gross * Decimal(100 - worker_pct) / Decimal("100")).quantize(Decimal("0.01"))
 
     # ── Transfer worker's share ──────────────────────────────────────────────
+    transfer_code = ""
     if worker_share > 0:
         try:
             bank_account = WorkerBankAccount.objects.get(worker=contract.worker)
         except WorkerBankAccount.DoesNotExist:
             logger.error("split_milestone: no bank account for worker %s.", contract.worker.pk)
             return False
+
+        if not bank_account.paystack_recipient_code:
+            recipient_code = create_transfer_recipient(str(bank_account.pk))
+            if not recipient_code:
+                logger.error("split_milestone: failed to create recipient for bank account %s.", bank_account.pk)
+                return False
+            bank_account.refresh_from_db()
 
         transfer_ref = f"SPLIT-{dispute_id[:8]}-W"
         transfer_payload = {
@@ -1264,7 +1329,7 @@ def split_milestone(
                 headers=_paystack_headers(),
                 timeout=PAYSTACK_TIMEOUT,
             )
-        except requests.RequestException:
+        except Exception:
             logger.exception("split_milestone: transfer request failed for dispute %s", dispute_id)
             return False
 
@@ -1275,6 +1340,7 @@ def split_milestone(
                 dispute_id, resp.status_code, transfer_data.get("message") or resp.text[:200],
             )
             return False
+        transfer_code = transfer_data.get("data", {}).get("transfer_code", "") or transfer_ref
 
     # ── Refund employer's share ──────────────────────────────────────────────
     if refund_share > 0 and milestone.paystack_payment_ref:
@@ -1290,7 +1356,7 @@ def split_milestone(
                 headers=_paystack_headers(),
                 timeout=PAYSTACK_TIMEOUT,
             )
-        except requests.RequestException:
+        except Exception:
             logger.exception("split_milestone: refund request failed for dispute %s", dispute_id)
             return False
 
@@ -1307,7 +1373,11 @@ def split_milestone(
     milestone.worker_amount = worker_share
     milestone.status        = Milestone.Status.RELEASED
     milestone.approved_at   = now
-    milestone.save(update_fields=["worker_amount", "status", "approved_at", "updated_at"])
+    if transfer_code:
+        milestone.paystack_transfer_ref = transfer_code
+        milestone.save(update_fields=["worker_amount", "status", "approved_at", "paystack_transfer_ref", "updated_at"])
+    else:
+        milestone.save(update_fields=["worker_amount", "status", "approved_at", "updated_at"])
 
     dispute.resolution       = Dispute.Resolution.SPLIT
     dispute.split_worker_pct = worker_pct
@@ -1318,9 +1388,12 @@ def split_milestone(
         "resolution", "split_worker_pct", "resolution_note", "resolved_at", "resolved_by",
     ])
 
-    # Check if contract can be marked active again
+    # Check if contract can be marked active or completed
     if not contract.milestones.filter(status=Milestone.Status.DISPUTED).exists():
-        contract.status = Contract.Status.ACTIVE
+        all_released = not contract.milestones.exclude(
+            status__in=[Milestone.Status.RELEASED, Milestone.Status.REFUNDED],
+        ).exists()
+        contract.status = Contract.Status.COMPLETED if all_released else Contract.Status.ACTIVE
         contract.save(update_fields=["status", "updated_at"])
 
     # Notify both parties
@@ -1406,16 +1479,17 @@ def post_dispute_message(
         is_admin_note=is_admin_note and author.is_staff,
     )
 
-    # Notify the other participant (not the author)
-    for user in [contract.employer.user, contract.worker.user]:
-        if user.pk != author.pk:
-            _notify(
-                user=user,
-                notif_type=Notification.NotifType.ESCROW_DISPUTE,
-                title=f'New message on dispute: "{dispute.milestone.title}"',
-                body=f'{author.get_full_name() or author.username} posted: {body[:120]}',
-                data={"dispute_id": str(dispute.pk)},
-            )
+    # Notify the other participant (not the author) — skip if private admin note
+    if not msg.is_admin_note:
+        for user in [contract.employer.user, contract.worker.user]:
+            if user.pk != author.pk:
+                _notify(
+                    user=user,
+                    notif_type=Notification.NotifType.ESCROW_DISPUTE,
+                    title=f'New message on dispute: "{dispute.milestone.title}"',
+                    body=f'{author.get_full_name() or author.username} posted: {body[:120]}',
+                    data={"dispute_id": str(dispute.pk)},
+                )
 
     logger.info("post_dispute_message: message %s added to dispute %s by user %s.", msg.pk, dispute_id, author_user_id)
     return True, ""
