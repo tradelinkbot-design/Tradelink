@@ -1,24 +1,25 @@
 """
 marketplace/service/marketplace_escrow_service.py
 ==================================================
-Paystack escrow logic for the TradeLink NG marketplace.
+Flutterwave escrow logic for the TradeLink NG marketplace.
 
 Mirrors the pattern in jobs/service/escrow_service.py but adapted for
 product orders instead of job milestones.
 
 Flow
 ────
-  1. initialize_order_payment()  →  Paystack payment link for buyer
-  2. verify_order_payment()      →  webhook confirms charge.success
+  1. initialize_order_payment()  →  Flutterwave payment link for buyer
+  2. verify_order_payment()      →  webhook confirms charge.completed
   3. buyer confirms receipt      →  confirm_order_receipt()
-  4. release_order_to_seller()   →  Paystack Transfer API → seller bank
+  4. release_order_to_seller()   →  Flutterwave Transfer API → seller bank
   5. 5% fee stays in platform balance
 
 All money math uses Python Decimal — never float.
-All Paystack API calls use 30-second timeouts and try/except.
+All Flutterwave API calls use 30-second timeouts and try/except.
 """
 
 import logging
+import uuid
 from decimal import Decimal
 
 import requests
@@ -27,14 +28,13 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-PAYSTACK_BASE = 'https://api.paystack.co'
+FLW_BASE = 'https://api.flutterwave.com/v3'
 
 
 def _headers():
     return {
-        'Authorization': f'Bearer {settings.PAYSTACK_SECRET_KEY}',
+        'Authorization': f'Bearer {settings.FLW_SECRET_KEY}',
         'Content-Type':  'application/json',
-
     }
 
 
@@ -44,12 +44,12 @@ def _headers():
 
 def initialize_order_payment(order_id: str, buyer_email: str) -> dict:
     """
-    Calls Paystack Initialize Transaction API to generate a payment link
+    Calls Flutterwave Standard Payment API to generate a payment link
     for the buyer to pay for the order.
 
     Args:
         order_id:    UUID string of the Order.
-        buyer_email: Email address of the buyer for Paystack.
+        buyer_email: Email address of the buyer for Flutterwave.
 
     Returns:
         {'authorization_url': ..., 'reference': ...} on success.
@@ -62,24 +62,31 @@ def initialize_order_payment(order_id: str, buyer_email: str) -> dict:
     except Order.DoesNotExist:
         return {'error': f'Order {order_id} not found.'}
 
-    amount_kobo = int(order.agreed_price * 100)
+    amount_ngn = float(order.agreed_price)  # Flutterwave uses Naira directly
+    tx_ref = f'mktplace_{str(order.pk).replace("-", "")}'
 
     payload = {
-        'email':        buyer_email,
-        'amount':       amount_kobo,
+        'tx_ref':       tx_ref,
+        'amount':       amount_ngn,
         'currency':     'NGN',
-        'reference':    f'mktplace_{str(order.pk).replace("-", "")}',
-        'callback_url': settings.PAYSTACK_CALLBACK_URL,
-        'metadata': {
-            'order_id':    str(order.pk),
-            'product_id':  str(order.product_id),
-            'type':        'marketplace_order',
+        'redirect_url': settings.FLW_REDIRECT_URL,
+        'customer': {
+            'email': buyer_email,
+        },
+        'meta': {
+            'order_id':   str(order.pk),
+            'product_id': str(order.product_id),
+            'type':       'marketplace_order',
+        },
+        'customizations': {
+            'title':       'TradeLink Marketplace',
+            'description': f'Payment for order #{str(order.pk)[:8]}',
         },
     }
 
     try:
         resp = requests.post(
-            f'{PAYSTACK_BASE}/transaction/initialize',
+            f'{FLW_BASE}/payments',
             json=payload,
             headers=_headers(),
             timeout=30,
@@ -89,55 +96,40 @@ def initialize_order_payment(order_id: str, buyer_email: str) -> dict:
         logger.exception("initialize_order_payment: request failed for order %s", order_id)
         return {'error': str(exc)}
 
-    if not data.get('status'):
+    if data.get('status') != 'success':
         logger.error(
-            "initialize_order_payment: Paystack error for order %s — %s",
+            "initialize_order_payment: Flutterwave error for order %s — %s",
             order_id, data.get('message'),
         )
-        return {'error': data.get('message', 'Paystack error')}
+        return {'error': data.get('message', 'Flutterwave error')}
 
-    ref = data['data']['reference']
+    payment_link = data['data']['link']
+    ref = tx_ref
     Order.objects.filter(pk=order_id).update(paystack_payment_ref=ref)
 
     return {
-        'authorization_url': data['data']['authorization_url'],
+        'authorization_url': payment_link,
         'reference':         ref,
     }
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-#  VERIFY PAYMENT (called by webhook charge.success)
+#  VERIFY PAYMENT (called by webhook charge.completed)
 # ──────────────────────────────────────────────────────────────────────────────
 
-def verify_order_payment(reference: str) -> bool:
+def verify_order_payment(reference: str, transaction_id: str = None) -> bool:
     """
-    Verifies a Paystack transaction and marks the order as PAID.
+    Verifies a Flutterwave transaction and marks the order as PAID.
 
-    Called by the Paystack webhook handler on charge.success.
+    Called by the Flutterwave webhook handler on charge.completed,
+    or directly from the callback view with a transaction_id.
 
     Returns True if payment verified and order updated.
     """
     from marketplace.models import Order
     from jobs.models import Notification
 
-    try:
-        resp = requests.get(
-            f'{PAYSTACK_BASE}/transaction/verify/{reference}',
-            headers=_headers(),
-            timeout=30,
-        )
-        data = resp.json()
-    except requests.RequestException as exc:
-        logger.exception("verify_order_payment: request failed for ref %s", reference)
-        return False
-
-    if not data.get('status') or data['data']['status'] != 'success':
-        logger.warning(
-            "verify_order_payment: transaction %s not successful — %s",
-            reference, data.get('message'),
-        )
-        return False
-
+    # Try to find the order
     try:
         order = Order.objects.get(paystack_payment_ref=reference)
     except Order.DoesNotExist:
@@ -152,6 +144,48 @@ def verify_order_payment(reference: str) -> bool:
             order.pk, order.status,
         )
         return True
+
+    # Verify with Flutterwave
+    if transaction_id:
+        # Use the numeric transaction ID from the callback for a direct verify
+        try:
+            resp = requests.get(
+                f'{FLW_BASE}/transactions/{transaction_id}/verify',
+                headers=_headers(),
+                timeout=30,
+            )
+            data = resp.json()
+        except requests.RequestException as exc:
+            logger.exception("verify_order_payment: request failed for tx_id %s", transaction_id)
+            return False
+
+        if data.get('status') != 'success' or data.get('data', {}).get('status') not in ('successful', 'completed'):
+            logger.warning(
+                "verify_order_payment: transaction %s not successful — %s",
+                transaction_id, data.get('message'),
+            )
+            return False
+    else:
+        # Use tx_ref lookup
+        try:
+            resp = requests.get(
+                f'{FLW_BASE}/transactions',
+                params={'tx_ref': reference},
+                headers=_headers(),
+                timeout=30,
+            )
+            data = resp.json()
+        except requests.RequestException as exc:
+            logger.exception("verify_order_payment: request failed for ref %s", reference)
+            return False
+
+        transactions = data.get('data', [])
+        if not transactions or transactions[0].get('status') not in ('successful', 'completed'):
+            logger.warning(
+                "verify_order_payment: transaction %s not successful — %s",
+                reference, data.get('message'),
+            )
+            return False
 
     order.status  = Order.Status.PAID
     order.paid_at = timezone.now()
@@ -214,7 +248,7 @@ def confirm_order_receipt(order_id: str) -> bool:
 
 def release_order_to_seller(order_id: str) -> bool:
     """
-    Transfers the seller's payout via Paystack Transfer API.
+    Transfers the seller's payout via Flutterwave Transfer API.
     Deducts 5% platform fee. Marks order as COMPLETED.
 
     Called by:
@@ -239,7 +273,7 @@ def release_order_to_seller(order_id: str) -> bool:
         logger.info("release_order_to_seller: order %s already completed.", order_id)
         return True
 
-    # Ensure seller has a bank account with a recipient code
+    # Ensure seller has a bank account
     try:
         bank = order.seller.bank_account
     except WorkerBankAccount.DoesNotExist:
@@ -248,54 +282,9 @@ def release_order_to_seller(order_id: str) -> bool:
         )
         return False
 
-    from django.conf import settings as _settings
-    from jobs.service.escrow_service import create_transfer_recipient
-
-    def _recipient_valid(code: str) -> bool:
-        """Quick Paystack fetch to confirm the recipient code belongs to the current account."""
-        try:
-            r = requests.get(
-                f'{PAYSTACK_BASE}/transferrecipient/{code}',
-                headers=_headers(),
-                timeout=10,
-            )
-            return r.ok and r.json().get('status') is True
-        except Exception:
-            return False  # treat network errors as valid to avoid blocking payouts
-
-    # Recreate recipient if missing, test-mode while on live keys, or not found in current account
-    _live_mode = _settings.PAYSTACK_SECRET_KEY.startswith('sk_live_')
-    _code_is_test_on_live = (
-        bank.paystack_recipient_code
-        and _live_mode
-        and bank.paystack_recipient_code.startswith('RCP_test')
-    )
-    _need_recipient = (
-        not bank.paystack_recipient_code
-        or _code_is_test_on_live
-        or not _recipient_valid(bank.paystack_recipient_code)
-    )
-
-    if _need_recipient:
-        logger.warning(
-            "release_order_to_seller: creating/recreating Paystack recipient for seller %s "
-            "(existing code: %r).",
-            order.seller_id, bank.paystack_recipient_code or 'none',
-        )
-        new_code = create_transfer_recipient(str(bank.pk))
-        if not new_code:
-            logger.error(
-                "release_order_to_seller: could not create Paystack recipient "
-                "for seller %s — aborting transfer.",
-                order.seller_id,
-            )
-            return False
-        bank.refresh_from_db()
-
-    # Final guard
-    if not bank.paystack_recipient_code:
+    if not bank.account_number or not bank.bank_code:
         logger.error(
-            "release_order_to_seller: recipient code still empty for seller %s — aborting.",
+            "release_order_to_seller: seller %s bank account missing account_number or bank_code.",
             order.seller_id,
         )
         return False
@@ -304,18 +293,21 @@ def release_order_to_seller(order_id: str) -> bool:
         order.compute_financials()
         order.save(update_fields=['platform_fee_amount', 'seller_payout_amount'])
 
-    payout_kobo = int(order.seller_payout_amount * 100)
+    payout_ngn = float(order.seller_payout_amount)
+    transfer_ref = f'mktplace_payout_{str(order.pk).replace("-", "")[:20]}'
 
     payload = {
-        'source':    'balance',
-        'amount':    payout_kobo,
-        'recipient': bank.paystack_recipient_code,
-        'reason':    f'TradeLink Marketplace: {order.product.title[:60]}',
+        'account_bank':   bank.bank_code,
+        'account_number': bank.account_number,
+        'amount':         payout_ngn,
+        'currency':       'NGN',
+        'narration':      f'TradeLink Marketplace: {order.product.title[:60]}',
+        'reference':      transfer_ref,
     }
 
     try:
         resp = requests.post(
-            f'{PAYSTACK_BASE}/transfer',
+            f'{FLW_BASE}/transfers',
             json=payload,
             headers=_headers(),
             timeout=30,
@@ -327,17 +319,28 @@ def release_order_to_seller(order_id: str) -> bool:
         )
         return False
 
-    if not data.get('status'):
+    if data.get('status') not in ('success', 'pending'):
+        err_msg = data.get('message', '')
         logger.error(
-            "release_order_to_seller: Paystack transfer failed for order %s — %s",
-            order_id, data.get('message'),
+            "release_order_to_seller: Flutterwave transfer failed for order %s — %s",
+            order_id, err_msg,
         )
+        if "ip whitelisting" in str(err_msg).lower():
+            try:
+                current_ip = requests.get("https://api.ipify.org", timeout=5).text.strip()
+                logger.error(
+                    "release_order_to_seller: Your server's current public outbound IP is '%s'. "
+                    "Ensure this exact IP is added under Flutterwave Dashboard -> Settings -> Whitelisted IP addresses (in Test Mode).",
+                    current_ip
+                )
+            except Exception:
+                pass
         return False
 
-    transfer_code = data['data'].get('transfer_code', '')
+    flw_transfer_id = str(data.get('data', {}).get('id', '')) or transfer_ref
     now = timezone.now()
 
-    order.paystack_transfer_ref = transfer_code
+    order.paystack_transfer_ref = flw_transfer_id  # field reused for FLW transfer ID
     order.status                = Order.Status.COMPLETED
     order.completed_at          = now
     order.save(update_fields=[
@@ -361,7 +364,7 @@ def release_order_to_seller(order_id: str) -> bool:
 
 def refund_order_to_buyer(order_id: str) -> bool:
     """
-    Refunds the full order amount to the buyer via Paystack Refund API.
+    Refunds the full order amount to the buyer via Flutterwave Refund API.
     Marks order as REFUNDED.
     """
     from marketplace.models import Order, Product
@@ -373,21 +376,37 @@ def refund_order_to_buyer(order_id: str) -> bool:
         return False
 
     if order.paystack_payment_ref:
-        payload = {"transaction": order.paystack_payment_ref}
+        # Look up Flutterwave transaction ID for the stored tx_ref
         try:
-            resp = requests.post(
-                f"{PAYSTACK_BASE}/refund",
-                json=payload,
+            lookup_resp = requests.get(
+                f'{FLW_BASE}/transactions',
+                params={'tx_ref': order.paystack_payment_ref},
                 headers=_headers(),
                 timeout=30,
             )
-            data = resp.json()
-            if not data.get("status"):
-                logger.error(
-                    "refund_order_to_buyer: Paystack refund failed: %s",
-                    data.get("message"),
+            lookup_data = lookup_resp.json()
+            transactions = lookup_data.get('data', [])
+            if transactions:
+                flw_tx_id = transactions[0].get('id')
+                payload = {"amount": float(order.agreed_price)}
+                resp = requests.post(
+                    f'{FLW_BASE}/transactions/{flw_tx_id}/refund',
+                    json=payload,
+                    headers=_headers(),
+                    timeout=30,
                 )
-                return False
+                data = resp.json()
+                if data.get('status') != 'success':
+                    logger.error(
+                        "refund_order_to_buyer: Flutterwave refund failed: %s",
+                        data.get('message'),
+                    )
+                    return False
+            else:
+                logger.warning(
+                    "refund_order_to_buyer: no FLW transaction for ref %s — skipping refund API call.",
+                    order.paystack_payment_ref,
+                )
         except requests.RequestException:
             logger.exception("refund_order_to_buyer: request failed for order %s", order_id)
             return False
@@ -403,13 +422,13 @@ def refund_order_to_buyer(order_id: str) -> bool:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-#  SPLIT ORDER (Automated Paystack Partial Payout)
+#  SPLIT ORDER (Automated Flutterwave Partial Payout)
 # ──────────────────────────────────────────────────────────────────────────────
 
 def split_order(order_id: str, seller_pct: int) -> bool:
     """
     Transfers seller_pct% of the net amount to the seller, and refunds
-    (100 - seller_pct)% of the gross amount to the buyer via Paystack.
+    (100 - seller_pct)% of the gross amount to the buyer via Flutterwave.
     """
     from marketplace.models import Order, Product
     from jobs.models import WorkerBankAccount
@@ -437,17 +456,20 @@ def split_order(order_id: str, seller_pct: int) -> bool:
     if seller_share > 0:
         try:
             bank = WorkerBankAccount.objects.get(worker=order.seller)
-            if bank.paystack_recipient_code:
+            if bank.account_number and bank.bank_code:
+                transfer_ref = f'split_seller_{str(order.pk).replace("-", "")[:16]}'
                 payload = {
-                    'source':    'balance',
-                    'amount':    int(seller_share * 100),
-                    'recipient': bank.paystack_recipient_code,
-                    'reason':    f'Split Payout ({seller_pct}%): {order.product.title[:40]}',
+                    'account_bank':   bank.bank_code,
+                    'account_number': bank.account_number,
+                    'amount':         float(seller_share),
+                    'currency':       'NGN',
+                    'narration':      f'Split Payout ({seller_pct}%): {order.product.title[:40]}',
+                    'reference':      transfer_ref,
                 }
-                resp = requests.post(f'{PAYSTACK_BASE}/transfer', json=payload, headers=_headers(), timeout=30)
+                resp = requests.post(f'{FLW_BASE}/transfers', json=payload, headers=_headers(), timeout=30)
                 data = resp.json()
-                if not data.get('status'):
-                    logger.error("split_order: Paystack transfer failed: %s", data.get('message'))
+                if data.get('status') not in ('success', 'pending'):
+                    logger.error("split_order: Flutterwave transfer failed: %s", data.get('message'))
                     return False
         except Exception:
             logger.exception("split_order: failed transferring to seller %s", order.seller_id)
@@ -456,16 +478,28 @@ def split_order(order_id: str, seller_pct: int) -> bool:
     # 2. Refund to buyer if > 0
     if buyer_refund > 0 and order.paystack_payment_ref:
         try:
-            payload = {
-                "transaction":   order.paystack_payment_ref,
-                "amount":        int(buyer_refund * 100),
-                "merchant_note": f"Split refund ({100 - seller_pct}%): {order.product.title[:40]}",
-            }
-            resp = requests.post(f"{PAYSTACK_BASE}/refund", json=payload, headers=_headers(), timeout=30)
-            data = resp.json()
-            if not data.get("status"):
-                logger.error("split_order: Paystack refund failed: %s", data.get("message"))
-                return False
+            # Look up the Flutterwave transaction ID from the tx_ref
+            lookup_resp = requests.get(
+                f'{FLW_BASE}/transactions',
+                params={'tx_ref': order.paystack_payment_ref},
+                headers=_headers(),
+                timeout=30,
+            )
+            lookup_data = lookup_resp.json()
+            transactions = lookup_data.get('data', [])
+            if transactions:
+                flw_tx_id = transactions[0].get('id')
+                refund_payload = {"amount": float(buyer_refund)}
+                resp = requests.post(
+                    f'{FLW_BASE}/transactions/{flw_tx_id}/refund',
+                    json=refund_payload,
+                    headers=_headers(),
+                    timeout=30,
+                )
+                data = resp.json()
+                if data.get("status") != "success":
+                    logger.error("split_order: Flutterwave refund failed: %s", data.get("message"))
+                    return False
         except Exception:
             logger.exception("split_order: failed refunding buyer for order %s", order_id)
             return False
@@ -477,5 +511,3 @@ def split_order(order_id: str, seller_pct: int) -> bool:
 
     Product.objects.filter(pk=order.product_id).update(status=Product.Status.SOLD)
     return True
-
-

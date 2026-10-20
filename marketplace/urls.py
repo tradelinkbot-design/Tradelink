@@ -225,10 +225,10 @@ urlpatterns = [
         name='order_review',
     ),
 
-    # ── Paystack Callback ─────────────────────────────────────────────────────
+    # ── Flutterwave Callback ──────────────────────────────────────────────────
     path(
-        'paystack/callback/',
-        PaystackCallbackView.as_view(),
-        name='paystack_callback',
+        'flutterwave/callback/',
+        PaystackCallbackView.as_view(),   # aliased to FlutterwaveCallbackView in views
+        name='paystack_callback',         # name kept for backward compat
     ),
 ]

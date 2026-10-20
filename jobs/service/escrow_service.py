@@ -3,15 +3,15 @@ marketplace/service/escrow_service.py
 =====================================
 Business-logic layer for the milestone-based escrow payment system.
 
-All Paystack API interactions are encapsulated here so that views and
+All Flutterwave API interactions are encapsulated here so that views and
 tasks only call high-level functions.  Each function handles its own
 exceptions and logs errors via Python's logging module.
 
 Required in settings.py:
-    PAYSTACK_SECRET_KEY = env('PAYSTACK_SECRET_KEY')
-    PAYSTACK_PUBLIC_KEY = env('PAYSTACK_PUBLIC_KEY')
-    PAYSTACK_CALLBACK_URL = env('PAYSTACK_CALLBACK_URL')  # e.g. https://tradelink.ng/escrow/paystack/callback/
-    PAYSTACK_WEBHOOK_SECRET = env('PAYSTACK_SECRET_KEY')  # same key used for webhook HMAC
+    FLW_SECRET_KEY   = env('FLW_SECRET_KEY')
+    FLW_PUBLIC_KEY   = env('FLW_PUBLIC_KEY')
+    FLW_SECRET_HASH  = env('FLW_SECRET_HASH')   # webhook verification hash
+    FLW_REDIRECT_URL = env('FLW_REDIRECT_URL')  # callback URL after payment
 """
 
 import hashlib
@@ -39,8 +39,8 @@ logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
-PAYSTACK_BASE    = "https://api.paystack.co"
-PAYSTACK_TIMEOUT = 30  # seconds
+FLW_BASE    = "https://api.flutterwave.com/v3"
+FLW_TIMEOUT = 30  # seconds
 
 # ── Dispute policy constants ──────────────────────────────────────────────────
 DISPUTE_WINDOW_DAYS     = 14    # max days after funding a dispute can be raised
@@ -61,9 +61,9 @@ ALLOWED_EVIDENCE_MIME = frozenset({
 #  INTERNAL HELPERS
 # ──────────────────────────────────────────────────────────────────────────────
 
-def _paystack_headers() -> dict:
-    """Return the standard Paystack authorization headers."""
-    key = getattr(settings, 'PAYSTACK_SECRET_KEY', '') or ''
+def _flw_headers() -> dict:
+    """Return the standard Flutterwave authorization headers."""
+    key = getattr(settings, 'FLW_SECRET_KEY', '') or ''
     return {
         "Authorization": f"Bearer {key.strip()}",
         "Content-Type": "application/json",
@@ -140,13 +140,13 @@ def _update_dispute_flag(profile) -> None:
 
 def initialize_milestone_payment(milestone_id: str, employer_email: str) -> dict:
     """
-    Calls Paystack Initialize Transaction API to generate a payment link
+    Calls Flutterwave Standard Payment API to generate a payment link
     for the employer to fund a milestone.
 
-    - Amount is milestone.amount * 100 (Paystack uses kobo)
+    - Amount is milestone.amount (Flutterwave uses Naira directly, not kobo)
     - Metadata: milestone_id, contract_id, type='milestone_funding'
-    - callback_url: settings.PAYSTACK_CALLBACK_URL
-    - Saves the Paystack reference to milestone.paystack_payment_ref
+    - redirect_url: settings.FLW_REDIRECT_URL
+    - Saves the Flutterwave tx_ref to milestone.paystack_payment_ref
     - Returns {'authorization_url': ..., 'reference': ...}
     """
     try:
@@ -166,27 +166,34 @@ def initialize_milestone_payment(milestone_id: str, employer_email: str) -> dict
         logger.error("initialize_milestone_payment: milestone %s has non-positive amount %s.", milestone_id, milestone.amount)
         return {}
 
-    amount_kobo = int(milestone.amount * 100)
-    reference = f"tl_ms_{uuid.uuid4().hex[:24]}"
+    amount_ngn = float(milestone.amount)  # Flutterwave accepts Naira directly
+    tx_ref = f"tl_ms_{uuid.uuid4().hex[:24]}"
 
     payload = {
-        "email": employer_email,
-        "amount": amount_kobo,
-        "reference": reference,
-        "callback_url": settings.PAYSTACK_CALLBACK_URL,
-        "metadata": {
+        "tx_ref": tx_ref,
+        "amount": amount_ngn,
+        "currency": "NGN",
+        "redirect_url": settings.FLW_REDIRECT_URL,
+        "customer": {
+            "email": employer_email,
+        },
+        "meta": {
             "milestone_id": str(milestone.pk),
             "contract_id": str(milestone.contract.pk),
             "type": "milestone_funding",
+        },
+        "customizations": {
+            "title": "TradeLink Escrow Payment",
+            "description": f"Funding milestone: {milestone.title}",
         },
     }
 
     try:
         resp = requests.post(
-            f"{PAYSTACK_BASE}/transaction/initialize",
+            f"{FLW_BASE}/payments",
             json=payload,
-            headers=_paystack_headers(),
-            timeout=PAYSTACK_TIMEOUT,
+            headers=_flw_headers(),
+            timeout=FLW_TIMEOUT,
         )
     except Exception:
         logger.exception("initialize_milestone_payment: network request failed for %s", milestone_id)
@@ -194,22 +201,21 @@ def initialize_milestone_payment(milestone_id: str, employer_email: str) -> dict
 
     data = _safe_json(resp)
 
-    if resp.ok and data.get("status"):
-        authorization_url = data.get("data", {}).get("authorization_url")
-        ref = data.get("data", {}).get("reference")
+    if resp.ok and data.get("status") == "success":
+        payment_link = data.get("data", {}).get("link")
 
-        if authorization_url and ref:
-            milestone.paystack_payment_ref = ref
+        if payment_link and tx_ref:
+            milestone.paystack_payment_ref = tx_ref  # field reused for FLW tx_ref
             milestone.save(update_fields=["paystack_payment_ref", "updated_at"])
 
             logger.info(
-                "initialize_milestone_payment: ref=%s for milestone %s",
-                ref, milestone_id,
+                "initialize_milestone_payment: tx_ref=%s for milestone %s",
+                tx_ref, milestone_id,
             )
-            return {"authorization_url": authorization_url, "reference": ref}
+            return {"authorization_url": payment_link, "reference": tx_ref}
 
     logger.error(
-        "initialize_milestone_payment: Paystack error for %s (HTTP %s): %s",
+        "initialize_milestone_payment: Flutterwave error for %s (HTTP %s): %s",
         milestone_id, resp.status_code, data.get("message") or resp.text[:200],
     )
     return {}
@@ -221,12 +227,16 @@ def initialize_milestone_payment(milestone_id: str, employer_email: str) -> dict
 
 def verify_milestone_payment(reference: str) -> bool:
     """
-    Calls Paystack Verify Transaction API with the reference.
-    If status == 'success' and amount matches milestone.amount:
+    Calls Flutterwave Verify Transaction API with the transaction ID or tx_ref.
+    If status == 'successful' and amount matches milestone.amount:
       - Sets milestone.status = FUNDED
       - Sets milestone.funded_at = now()
       - Creates notifications for the worker and employer.
     Returns True if verified successfully.
+
+    Note: Flutterwave callback sends ?transaction_id=<id>&tx_ref=<ref>&status=<status>
+    We accept both the tx_ref (stored in paystack_payment_ref field) and the
+    numeric transaction_id (passed as reference from the callback view).
     """
     try:
         milestone = Milestone.objects.select_related(
@@ -248,11 +258,13 @@ def verify_milestone_payment(reference: str) -> bool:
         logger.info("verify_milestone_payment: milestone %s is already %s — idempotent return.", milestone.pk, milestone.status)
         return True
 
+    # Verify via Flutterwave using tx_ref query
     try:
         resp = requests.get(
-            f"{PAYSTACK_BASE}/transaction/verify/{reference}",
-            headers=_paystack_headers(),
-            timeout=PAYSTACK_TIMEOUT,
+            f"{FLW_BASE}/transactions",
+            params={"tx_ref": reference},
+            headers=_flw_headers(),
+            timeout=FLW_TIMEOUT,
         )
     except Exception:
         logger.exception("verify_milestone_payment: network request failed for ref %s", reference)
@@ -260,24 +272,30 @@ def verify_milestone_payment(reference: str) -> bool:
 
     data = _safe_json(resp)
 
-    if not resp.ok or not data.get("status"):
+    if not resp.ok or data.get("status") != "success":
         logger.error(
-            "verify_milestone_payment: Paystack error for %s (HTTP %s): %s",
+            "verify_milestone_payment: Flutterwave error for %s (HTTP %s): %s",
             reference, resp.status_code, data.get("message") or resp.text[:200],
         )
         return False
 
-    txn = data.get("data") or {}
-    if txn.get("status") != "success":
+    transactions = data.get("data", [])
+    if not transactions:
+        logger.warning("verify_milestone_payment: no transactions found for ref %s", reference)
+        return False
+
+    txn = transactions[0]
+    if txn.get("status") not in ("successful", "completed"):
         logger.warning("verify_milestone_payment: txn status=%s for %s", txn.get("status"), reference)
         return False
 
-    # Verify amount matches (Paystack returns amount in kobo)
-    expected_kobo = int(milestone.amount * 100)
-    if txn.get("amount") != expected_kobo:
+    # Verify amount matches (Flutterwave returns amount in Naira)
+    expected_ngn = float(milestone.amount)
+    paid_ngn = txn.get("amount") or txn.get("charged_amount")
+    if paid_ngn is not None and abs(float(paid_ngn) - expected_ngn) > 1.0:
         logger.error(
-            "verify_milestone_payment: amount mismatch for %s — expected %d, got %s",
-            reference, expected_kobo, txn.get("amount"),
+            "verify_milestone_payment: amount mismatch for %s — expected %.2f, got %s",
+            reference, expected_ngn, paid_ngn,
         )
         return False
 
@@ -311,6 +329,92 @@ def verify_milestone_payment(reference: str) -> bool:
     )
 
     logger.info("verify_milestone_payment: milestone %s funded successfully.", milestone.pk)
+    return True
+
+
+def verify_milestone_payment_by_id(transaction_id: str, tx_ref: str) -> bool:
+    """
+    Verifies a Flutterwave payment using the numeric transaction_id returned in the
+    callback URL. Looks up the milestone by tx_ref and verifies via /transactions/{id}/verify.
+    """
+    try:
+        milestone = Milestone.objects.select_related(
+            "contract__employer__user",
+            "contract__worker__user",
+        ).get(paystack_payment_ref=tx_ref)
+    except Milestone.DoesNotExist:
+        logger.error("verify_milestone_payment_by_id: no milestone with tx_ref %s", tx_ref)
+        return False
+
+    if milestone.status in (
+        Milestone.Status.FUNDED,
+        Milestone.Status.IN_REVIEW,
+        Milestone.Status.APPROVED,
+        Milestone.Status.PENDING_OTP,
+        Milestone.Status.RELEASED,
+    ):
+        logger.info("verify_milestone_payment_by_id: milestone %s is already %s — idempotent.", milestone.pk, milestone.status)
+        return True
+
+    try:
+        resp = requests.get(
+            f"{FLW_BASE}/transactions/{transaction_id}/verify",
+            headers=_flw_headers(),
+            timeout=FLW_TIMEOUT,
+        )
+    except Exception:
+        logger.exception("verify_milestone_payment_by_id: network request failed for id %s", transaction_id)
+        return False
+
+    data = _safe_json(resp)
+
+    if not resp.ok or data.get("status") != "success":
+        logger.error(
+            "verify_milestone_payment_by_id: Flutterwave error for tx %s (HTTP %s): %s",
+            transaction_id, resp.status_code, data.get("message") or resp.text[:200],
+        )
+        return False
+
+    txn = data.get("data", {})
+    if txn.get("status") not in ("successful", "completed"):
+        logger.warning("verify_milestone_payment_by_id: txn status=%s for id %s", txn.get("status"), transaction_id)
+        return False
+
+    expected_ngn = float(milestone.amount)
+    paid_ngn = txn.get("amount") or txn.get("charged_amount")
+    if paid_ngn is not None and abs(float(paid_ngn) - expected_ngn) > 1.0:
+        logger.error(
+            "verify_milestone_payment_by_id: amount mismatch — expected %.2f, got %s",
+            expected_ngn, paid_ngn,
+        )
+        return False
+
+    now = timezone.now()
+    milestone.status = Milestone.Status.FUNDED
+    milestone.funded_at = now
+    milestone.save(update_fields=["status", "funded_at", "updated_at"])
+
+    contract = milestone.contract
+    if contract.status == Contract.Status.PENDING:
+        contract.status = Contract.Status.ACTIVE
+        contract.save(update_fields=["status", "updated_at"])
+
+    _notify(
+        user=contract.worker.user,
+        notif_type=Notification.NotifType.ESCROW_FUNDED,
+        title=f'Milestone "{milestone.title}" has been funded',
+        body=f'Milestone "{milestone.title}" has been funded. You can now begin work.',
+        data={"milestone_id": str(milestone.pk), "contract_id": str(contract.pk)},
+    )
+    _notify(
+        user=contract.employer.user,
+        notif_type=Notification.NotifType.ESCROW_FUNDED,
+        title='Payment secured in escrow',
+        body=f'Your payment of \u20a6{milestone.amount:,.2f} for "{milestone.title}" is secured in escrow.',
+        data={"milestone_id": str(milestone.pk), "contract_id": str(contract.pk)},
+    )
+
+    logger.info("verify_milestone_payment_by_id: milestone %s funded successfully.", milestone.pk)
     return True
 
 
@@ -386,9 +490,9 @@ def approve_milestone(milestone_id: str) -> bool:
         logger.error("approve_milestone: Milestone %s not found.", milestone_id)
         return False
 
-    if milestone.status not in (Milestone.Status.IN_REVIEW, Milestone.Status.DISPUTED):
+    if milestone.status not in (Milestone.Status.IN_REVIEW, Milestone.Status.DISPUTED, Milestone.Status.APPROVED):
         logger.warning(
-            "approve_milestone: milestone %s has status %s, expected IN_REVIEW or DISPUTED.",
+            "approve_milestone: milestone %s has status %s, expected IN_REVIEW, DISPUTED, or APPROVED.",
             milestone_id, milestone.status,
         )
         return False
@@ -422,18 +526,12 @@ def release_milestone_to_worker(milestone_id: str) -> bool:
     Celery task.
 
     Flow:
-      1. Validates worker has a WorkerBankAccount with a paystack_recipient_code.
-         If not, creates one first via create_transfer_recipient().
+      1. Validates worker has a WorkerBankAccount with account details.
       2. Deducts the platform fee (contract.platform_fee_pct, default 10%):
              worker_amount = milestone.amount × (1 − fee_pct / 100)
-      3. Calls Paystack POST /transfer.
-      4. Paystack may respond with inner status "otp" or "pending" (OTP required)
-         OR "success" (OTP disabled on the account).
-         - OTP required  → sets milestone.status = PENDING_OTP, saves transfer_code,
-                           notifies admin to approve the transfer on the Paystack
-                           dashboard or via the OTP finalization endpoint.
-         - Success       → calls mark_milestone_released() to set RELEASED and notify.
-      Returns True if the transfer was initiated (otp/pending/success), False on error.
+      3. Calls Flutterwave POST /transfers with bank details inline.
+      4. On success, marks milestone RELEASED and notifies parties.
+      Returns True if the transfer was initiated successfully, False on error.
     """
     try:
         milestone = Milestone.objects.select_related(
@@ -448,7 +546,7 @@ def release_milestone_to_worker(milestone_id: str) -> bool:
     contract = milestone.contract
     worker_profile = contract.worker
 
-    # Get or validate bank account
+    # Get bank account
     try:
         bank_account = WorkerBankAccount.objects.get(worker=worker_profile)
     except WorkerBankAccount.DoesNotExist:
@@ -458,53 +556,18 @@ def release_milestone_to_worker(milestone_id: str) -> bool:
         )
         return False
 
-    from django.conf import settings as _settings
-
-    def _recipient_valid(code: str) -> bool:
-        """Quick Paystack fetch to confirm the recipient code belongs to the current account."""
-        try:
-            r = requests.get(
-                f"{PAYSTACK_BASE}/transferrecipient/{code}",
-                headers=_paystack_headers(),
-                timeout=10,
-            )
-            return r.ok and r.json().get("status") is True
-        except Exception:
-            return True  # treat network errors as valid to avoid blocking payouts
-
-    # Recreate recipient if missing, test-mode while on live keys, or not found in current account
-    _live_mode = _settings.PAYSTACK_SECRET_KEY.startswith("sk_live_")
-    _code_is_test_on_live = (
-        bank_account.paystack_recipient_code
-        and _live_mode
-        and bank_account.paystack_recipient_code.startswith("RCP_test")
-    )
-    _need_recipient = (
-        not bank_account.paystack_recipient_code
-        or _code_is_test_on_live
-        or not _recipient_valid(bank_account.paystack_recipient_code)
-    )
-
-    if _need_recipient:
-        logger.warning(
-            "release_milestone_to_worker: creating/recreating Paystack recipient for worker %s "
-            "(existing code: %r).",
-            worker_profile.pk, bank_account.paystack_recipient_code or "none",
+    if not bank_account.account_number or not bank_account.bank_code:
+        logger.error(
+            "release_milestone_to_worker: bank account %s is missing account_number or bank_code.",
+            bank_account.pk,
         )
-        recipient_code = create_transfer_recipient(str(bank_account.pk))
-        if not recipient_code:
-            logger.error(
-                "release_milestone_to_worker: failed to create/recreate recipient for %s.",
-                bank_account.pk,
-            )
-            return False
-        bank_account.refresh_from_db()
+        return False
 
     # ── Compute worker amount after platform fee deduction ─────────────────────
     fee_pct = Decimal(str(contract.platform_fee_pct if contract.platform_fee_pct is not None else "10.00"))
     worker_amount = milestone.amount * (Decimal("1") - fee_pct / Decimal("100"))
     worker_amount = worker_amount.quantize(Decimal("0.01"))
-    worker_amount_kobo = int(worker_amount * 100)
+    worker_amount_ngn = float(worker_amount)
     platform_fee = milestone.amount - worker_amount
 
     logger.info(
@@ -513,20 +576,23 @@ def release_milestone_to_worker(milestone_id: str) -> bool:
         milestone_id, milestone.amount, fee_pct, platform_fee, worker_amount,
     )
 
-    # ── Initiate Paystack transfer ─────────────────────────────────────────────
+    # ── Initiate Flutterwave transfer ─────────────────────────────────────────
+    transfer_ref = f"tl_payout_{uuid.uuid4().hex[:20]}"
     payload = {
-        "source": "balance",
-        "amount": worker_amount_kobo,
-        "recipient": bank_account.paystack_recipient_code,
-        "reason": f"TradeLink payout: {milestone.title}",
+        "account_bank": bank_account.bank_code,
+        "account_number": bank_account.account_number,
+        "amount": worker_amount_ngn,
+        "currency": "NGN",
+        "narration": f"TradeLink payout: {milestone.title}",
+        "reference": transfer_ref,
     }
 
     try:
         resp = requests.post(
-            f"{PAYSTACK_BASE}/transfer",
+            f"{FLW_BASE}/transfers",
             json=payload,
-            headers=_paystack_headers(),
-            timeout=PAYSTACK_TIMEOUT,
+            headers=_flw_headers(),
+            timeout=FLW_TIMEOUT,
         )
     except Exception:
         logger.exception("release_milestone_to_worker: transfer request failed for milestone %s", milestone_id)
@@ -534,81 +600,43 @@ def release_milestone_to_worker(milestone_id: str) -> bool:
 
     data = _safe_json(resp)
 
-    if not resp.ok or not data.get("status"):
+    if not resp.ok or data.get("status") not in ("success", "pending"):
+        err_msg = data.get("message") or resp.text
         logger.error(
-            "release_milestone_to_worker: Paystack transfer failed for milestone %s (HTTP %s): %s",
-            milestone_id, resp.status_code, data.get("message") or resp.text[:200],
+            "release_milestone_to_worker: Flutterwave transfer failed for milestone %s (HTTP %s): %s | Details: %s",
+            milestone_id, resp.status_code, err_msg, resp.text,
         )
+        if "ip whitelisting" in err_msg.lower():
+            try:
+                current_ip = requests.get("https://api.ipify.org", timeout=5).text.strip()
+                logger.error(
+                    "release_milestone_to_worker: Your server's current public outbound IP is '%s'. "
+                    "Ensure this exact IP is added under Flutterwave Dashboard -> Settings -> Whitelisted IP addresses (in Test Mode).",
+                    current_ip
+                )
+            except Exception:
+                pass
         return False
 
     transfer_data = data.get("data", {})
-    transfer_status = transfer_data.get("status", "").lower()
-    transfer_code = transfer_data.get("transfer_code", "")
+    flw_transfer_id = str(transfer_data.get("id", ""))
+    transfer_code = flw_transfer_id or transfer_ref
+    transfer_status = (transfer_data.get("status") or "").lower()
 
     # Always save transfer_code and worker_amount immediately
-    milestone.paystack_transfer_ref = transfer_code
+    milestone.paystack_transfer_ref = transfer_code  # field reused for FLW transfer id
     milestone.worker_amount = worker_amount
 
-    if transfer_status in ("success", "pending", "processing", "received"):
-        # ── Automatic transfer initiated — no OTP required ───────────────
-        # Paystack has accepted and queued/executed the transfer directly to the bank.
+    if transfer_status in ("successful", "success", "new", "pending"):
+        # Transfer initiated successfully — Flutterwave will process it
         milestone.status = Milestone.Status.RELEASED
         milestone.save(update_fields=[
             "paystack_transfer_ref", "worker_amount", "status", "updated_at",
         ])
         mark_milestone_released(milestone)
         logger.info(
-            "release_milestone_to_worker: automatic transfer %s completed (status=%s) — milestone %s marked RELEASED.",
+            "release_milestone_to_worker: transfer %s initiated (status=%s) — milestone %s marked RELEASED.",
             transfer_code, transfer_status, milestone_id,
-        )
-        return True
-
-    elif transfer_status == "otp":
-        # ── Paystack requires OTP / dashboard approval ─────────────────
-        # Only fires if OTP requirement is still active on the Paystack dashboard.
-        milestone.status = Milestone.Status.PENDING_OTP
-        milestone.save(update_fields=[
-            "paystack_transfer_ref", "worker_amount", "status", "updated_at",
-        ])
-
-        # Notify admins to approve the OTP or disable OTP in Paystack settings
-        User = get_user_model()
-        admin_users = User.objects.filter(is_staff=True)
-        for admin_user in admin_users:
-            _notify(
-                user=admin_user,
-                notif_type=Notification.NotifType.SYSTEM,
-                title=f"[ACTION REQUIRED] Approve Transfer OTP: {milestone.title}",
-                body=(
-                    f"A transfer of ₦{worker_amount:,.2f} for milestone "
-                    f'"{milestone.title}" is awaiting OTP confirmation on Paystack. '
-                    f"Transfer code: {transfer_code}. "
-                    f"To make transfers 100% automatic, disable OTP in Paystack Dashboard preferences or via 'python manage.py disable_paystack_otp'."
-                ),
-                data={
-                    "milestone_id": str(milestone.pk),
-                    "transfer_code": transfer_code,
-                    "contract_id": str(contract.pk),
-                },
-            )
-
-        # Notify worker that payout is pending
-        _notify(
-            user=contract.worker.user,
-            notif_type=Notification.NotifType.ESCROW_RELEASED,
-            title=f'Payout initiated: ₦{worker_amount:,.2f}',
-            body=(
-                f'Your payout of ₦{worker_amount:,.2f} for "{milestone.title}" '
-                f'has been initiated and is being processed by Paystack. '
-                f'You will be notified once the funds arrive in your account.'
-            ),
-            data={"milestone_id": str(milestone.pk), "contract_id": str(contract.pk)},
-        )
-
-        logger.info(
-            "release_milestone_to_worker: milestone %s PENDING_OTP — "
-            "transfer_code=%s, worker_amount=₦%s.",
-            milestone_id, transfer_code, worker_amount,
         )
         return True
 
@@ -622,8 +650,7 @@ def release_milestone_to_worker(milestone_id: str) -> bool:
 
 def mark_milestone_released(milestone) -> None:
     """
-    Called after a transfer is confirmed (either immediately when OTP is
-    disabled, or via the transfer.success webhook).
+    Called after a transfer is confirmed (either immediately or via webhook).
     Marks contract completed if all milestones are done and fires notifications.
     """
     contract = milestone.contract
@@ -669,81 +696,25 @@ def mark_milestone_released(milestone) -> None:
 
 def finalize_transfer_with_otp(milestone_id: str, otp: str) -> bool:
     """
-    Calls Paystack POST /transfer/finalize_transfer with the OTP entered by
-    the account owner to confirm a pending transfer.
-
-    This is used when OTP is enabled on the Paystack account.  After the OTP
-    is accepted, Paystack sends a transfer.success webhook which triggers
-    mark_milestone_released() via the webhook handler.
-
-    Returns True if Paystack accepted the OTP.
+    Legacy stub — Flutterwave does not use OTP-based transfer confirmation
+    like Paystack did. This function is kept for API compatibility but
+    is a no-op. Transfers are automatic once initiated.
+    Returns False as OTP finalization is not applicable.
     """
-    try:
-        milestone = Milestone.objects.select_related(
-            "contract__worker__user",
-            "contract__employer__user",
-        ).get(pk=milestone_id)
-    except Milestone.DoesNotExist:
-        logger.error("finalize_transfer_with_otp: Milestone %s not found.", milestone_id)
-        return False
-
-    if milestone.status != Milestone.Status.PENDING_OTP:
-        logger.warning(
-            "finalize_transfer_with_otp: milestone %s has status %s, expected PENDING_OTP.",
-            milestone_id, milestone.status,
-        )
-        return False
-
-    if not milestone.paystack_transfer_ref:
-        logger.error(
-            "finalize_transfer_with_otp: milestone %s has no transfer_code.", milestone_id,
-        )
-        return False
-
-    payload = {
-        "transfer_code": milestone.paystack_transfer_ref,
-        "otp": otp,
-    }
-
-    try:
-        resp = requests.post(
-            f"{PAYSTACK_BASE}/transfer/finalize_transfer",
-            json=payload,
-            headers=_paystack_headers(),
-            timeout=PAYSTACK_TIMEOUT,
-        )
-    except Exception:
-        logger.exception(
-            "finalize_transfer_with_otp: request failed for milestone %s", milestone_id,
-        )
-        return False
-
-    data = _safe_json(resp)
-
-    if not resp.ok or not data.get("status"):
-        logger.error(
-            "finalize_transfer_with_otp: Paystack rejected OTP for milestone %s (HTTP %s): %s",
-            milestone_id, resp.status_code, data.get("message") or resp.text[:200],
-        )
-        return False
-
     logger.info(
-        "finalize_transfer_with_otp: OTP accepted for milestone %s, "
-        "transfer_code=%s. Marking as released.",
-        milestone_id, milestone.paystack_transfer_ref,
+        "finalize_transfer_with_otp: OTP flow not used with Flutterwave — milestone %s.",
+        milestone_id,
     )
-    milestone.status = Milestone.Status.RELEASED
-    milestone.save(update_fields=["status", "updated_at"])
-    mark_milestone_released(milestone)
-    return True
+    return False
 
 
 def sync_pending_transfers(contract) -> None:
     """
-    Checks the status of any PENDING_OTP milestones on a contract by directly
-    querying the Paystack API. This acts as a fallback for missed webhooks,
-    especially useful in local development environments.
+    Checks the status of any PENDING_OTP milestones on a contract by querying
+    the Flutterwave API. Acts as a fallback for missed webhooks.
     """
+    # With Flutterwave, transfers don't have an OTP pending state.
+    # Any milestone stuck in PENDING_OTP is a legacy state — we check transfer status.
     pending_milestones = contract.milestones.filter(status=Milestone.Status.PENDING_OTP)
     for milestone in pending_milestones:
         if not milestone.paystack_transfer_ref:
@@ -751,16 +722,15 @@ def sync_pending_transfers(contract) -> None:
 
         try:
             resp = requests.get(
-                f"{PAYSTACK_BASE}/transfer/{milestone.paystack_transfer_ref}",
-                headers=_paystack_headers(),
-                timeout=PAYSTACK_TIMEOUT,
+                f"{FLW_BASE}/transfers/{milestone.paystack_transfer_ref}",
+                headers=_flw_headers(),
+                timeout=FLW_TIMEOUT,
             )
             if resp.status_code == 200:
                 data = _safe_json(resp)
-                if data.get("status"):
-                    transfer_status = data.get("data", {}).get("status", "").lower()
-                    if transfer_status in ("success", "pending", "processing", "received"):
-                        # Transfer completed successfully!
+                if data.get("status") == "success":
+                    transfer_status = (data.get("data", {}).get("status") or "").lower()
+                    if transfer_status in ("successful", "success"):
                         milestone.status = Milestone.Status.RELEASED
                         if not milestone.worker_amount:
                             fee_pct = Decimal(str(contract.platform_fee_pct or 10.00))
@@ -768,8 +738,7 @@ def sync_pending_transfers(contract) -> None:
                         milestone.save(update_fields=["status", "worker_amount", "updated_at"])
                         mark_milestone_released(milestone)
                         logger.info("sync_pending_transfers: synced milestone %s to RELEASED.", milestone.pk)
-                    elif transfer_status in ("failed", "reversed", "abandoned"):
-                        # Revert so it can be retried
+                    elif transfer_status in ("failed",):
                         failed_ref = milestone.paystack_transfer_ref
                         milestone.status = Milestone.Status.APPROVED
                         milestone.paystack_transfer_ref = None
@@ -777,7 +746,7 @@ def sync_pending_transfers(contract) -> None:
                         milestone.save(update_fields=[
                             'status', 'paystack_transfer_ref', 'worker_amount', 'updated_at',
                         ])
-                        logger.warning("sync_pending_transfers: transfer %s failed on Paystack. Reverted milestone %s.", failed_ref, milestone.pk)
+                        logger.warning("sync_pending_transfers: transfer %s failed on Flutterwave. Reverted milestone %s.", failed_ref, milestone.pk)
 
         except Exception:
             logger.exception("sync_pending_transfers: failed to sync milestone %s", milestone.pk)
@@ -785,82 +754,39 @@ def sync_pending_transfers(contract) -> None:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-#  PAYSTACK TRANSFER OTP MANAGEMENT (Enable / Disable OTP for transfers)
+#  OTP MANAGEMENT — Not applicable for Flutterwave (stubs for compatibility)
 # ──────────────────────────────────────────────────────────────────────────────
 
 def request_disable_transfer_otp() -> dict:
-    """
-    Calls Paystack POST /transfer/disable_otp.
-    Paystack generates an OTP and sends it to the account owner's mobile/email.
-    To complete the process, submit the OTP via finalize_disable_transfer_otp().
-    """
-    try:
-        resp = requests.post(
-            f"{PAYSTACK_BASE}/transfer/disable_otp",
-            json={},
-            headers=_paystack_headers(),
-            timeout=PAYSTACK_TIMEOUT,
-        )
-    except Exception as exc:
-        logger.exception("request_disable_transfer_otp failed: %s", exc)
-        return {"status": False, "message": str(exc)}
-
-    data = _safe_json(resp)
-    logger.info("request_disable_transfer_otp: response=%s", data)
-    return data if data else {"status": False, "message": f"Invalid response (HTTP {resp.status_code})"}
+    """Stub — Flutterwave does not have a transfer OTP flow to disable."""
+    logger.info("request_disable_transfer_otp: not applicable for Flutterwave.")
+    return {"status": True, "message": "Flutterwave does not use transfer OTP."}
 
 
 def finalize_disable_transfer_otp(otp: str) -> dict:
-    """
-    Calls Paystack POST /transfer/disable_otp_finalize with the OTP received.
-    Once successful, all future transfers from this Paystack secret key will be 100% automated without OTP.
-    """
-    try:
-        resp = requests.post(
-            f"{PAYSTACK_BASE}/transfer/disable_otp_finalize",
-            json={"otp": otp.strip()},
-            headers=_paystack_headers(),
-            timeout=PAYSTACK_TIMEOUT,
-        )
-    except Exception as exc:
-        logger.exception("finalize_disable_transfer_otp failed: %s", exc)
-        return {"status": False, "message": str(exc)}
-
-    data = _safe_json(resp)
-    logger.info("finalize_disable_transfer_otp: response=%s", data)
-    return data if data else {"status": False, "message": f"Invalid response (HTTP {resp.status_code})"}
+    """Stub — Flutterwave does not have a transfer OTP flow to finalize."""
+    logger.info("finalize_disable_transfer_otp: not applicable for Flutterwave.")
+    return {"status": True, "message": "Flutterwave does not use transfer OTP."}
 
 
 def enable_transfer_otp() -> dict:
-    """
-    Calls Paystack POST /transfer/enable_otp to re-enable OTP requirement if needed.
-    """
-    try:
-        resp = requests.post(
-            f"{PAYSTACK_BASE}/transfer/enable_otp",
-            json={},
-            headers=_paystack_headers(),
-            timeout=PAYSTACK_TIMEOUT,
-        )
-    except Exception as exc:
-        logger.exception("enable_transfer_otp failed: %s", exc)
-        return {"status": False, "message": str(exc)}
-
-    data = _safe_json(resp)
-    logger.info("enable_transfer_otp: response=%s", data)
-    return data if data else {"status": False, "message": f"Invalid response (HTTP {resp.status_code})"}
+    """Stub — Flutterwave does not have a transfer OTP flow to enable."""
+    logger.info("enable_transfer_otp: not applicable for Flutterwave.")
+    return {"status": True, "message": "Flutterwave does not use transfer OTP."}
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-#  6. CREATE TRANSFER RECIPIENT
+#  6. CREATE TRANSFER RECIPIENT (legacy compat — not needed for Flutterwave)
 # ──────────────────────────────────────────────────────────────────────────────
 
 def create_transfer_recipient(worker_bank_account_id: str) -> str:
     """
-    Calls Paystack Create Transfer Recipient API.
-    - POST https://api.paystack.co/transferrecipient
-    - Saves recipient_code to WorkerBankAccount.paystack_recipient_code
-    Returns recipient_code, or empty string on failure.
+    Flutterwave transfers use bank details inline — no separate recipient
+    registration step is required. This function validates the bank account
+    exists and marks it as verified.
+
+    Returns the bank account ID (used as a stand-in for recipient code) or
+    empty string on failure.
     """
     try:
         bank_account = WorkerBankAccount.objects.get(pk=worker_bank_account_id)
@@ -871,52 +797,25 @@ def create_transfer_recipient(worker_bank_account_id: str) -> str:
         )
         return ""
 
-    payload = {
-        "type": "nuban",
-        "name": bank_account.account_name,
-        "account_number": bank_account.account_number,
-        "bank_code": bank_account.bank_code,
-        "currency": "NGN",
-    }
-
-    try:
-        resp = requests.post(
-            f"{PAYSTACK_BASE}/transferrecipient",
-            json=payload,
-            headers=_paystack_headers(),
-            timeout=PAYSTACK_TIMEOUT,
-        )
-    except Exception:
-        logger.exception(
-            "create_transfer_recipient: request failed for %s",
+    if not bank_account.account_number or not bank_account.bank_code:
+        logger.error(
+            "create_transfer_recipient: bank account %s missing required fields.",
             worker_bank_account_id,
         )
         return ""
 
-    data = _safe_json(resp)
-
-    if not resp.ok or not data.get("status"):
-        logger.error(
-            "create_transfer_recipient: Paystack returned status=false: %s (HTTP %s)",
-            data.get("message") or resp.text[:200], resp.status_code,
-        )
-        return ""
-
-    recipient_code = data.get("data", {}).get("recipient_code", "")
-    if not recipient_code:
-        return ""
-
-    bank_account.paystack_recipient_code = recipient_code
+    # Mark as verified — with Flutterwave, the account is used directly in transfers
+    bank_account.paystack_recipient_code = f"FLW_{bank_account.pk}"
     bank_account.is_verified = True
     bank_account.save(update_fields=[
         "paystack_recipient_code", "is_verified", "updated_at",
     ])
 
     logger.info(
-        "create_transfer_recipient: recipient %s created for bank account %s.",
-        recipient_code, worker_bank_account_id,
+        "create_transfer_recipient: bank account %s marked ready for Flutterwave transfers.",
+        worker_bank_account_id,
     )
-    return recipient_code
+    return bank_account.paystack_recipient_code
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -1107,7 +1006,7 @@ def resolve_dispute(
     """
     Admin-only. resolution is one of: RELEASED_TO_WORKER, REFUNDED_TO_EMPLOYER.
     - If RELEASED_TO_WORKER: calls release_milestone_to_worker()
-    - If REFUNDED_TO_EMPLOYER: calls Paystack refund API, sets milestone.status = REFUNDED
+    - If REFUNDED_TO_EMPLOYER: calls Flutterwave refund API, sets milestone.status = REFUNDED
     - Sets dispute.resolution, dispute.resolved_at, dispute.resolved_by
     - Notifies both parties of outcome
     Returns True on success.
@@ -1144,34 +1043,44 @@ def resolve_dispute(
             return False
 
     elif resolution == Dispute.Resolution.REFUNDED_TO_EMPLOYER:
-        # Call Paystack refund API
+        # Call Flutterwave refund API using the transaction that was used to fund
         if milestone.paystack_payment_ref:
-            payload = {
-                "transaction": milestone.paystack_payment_ref,
-            }
+            # Look up the Flutterwave transaction ID for this tx_ref
             try:
-                resp = requests.post(
-                    f"{PAYSTACK_BASE}/refund",
-                    json=payload,
-                    headers=_paystack_headers(),
-                    timeout=PAYSTACK_TIMEOUT,
+                lookup_resp = requests.get(
+                    f"{FLW_BASE}/transactions",
+                    params={"tx_ref": milestone.paystack_payment_ref},
+                    headers=_flw_headers(),
+                    timeout=FLW_TIMEOUT,
                 )
+                lookup_data = _safe_json(lookup_resp)
+                transactions = lookup_data.get("data", [])
+                if transactions:
+                    flw_tx_id = transactions[0].get("id")
+                    refund_resp = requests.post(
+                        f"{FLW_BASE}/transactions/{flw_tx_id}/refund",
+                        json={"amount": float(milestone.amount)},
+                        headers=_flw_headers(),
+                        timeout=FLW_TIMEOUT,
+                    )
+                    refund_data = _safe_json(refund_resp)
+                    if not refund_resp.ok or refund_data.get("status") != "success":
+                        logger.error(
+                            "resolve_dispute: Flutterwave refund failed for milestone %s (HTTP %s): %s",
+                            milestone.pk, refund_resp.status_code, refund_data.get("message") or refund_resp.text[:200],
+                        )
+                        return False
+                else:
+                    logger.warning(
+                        "resolve_dispute: no FLW transaction found for ref %s — skipping refund API call.",
+                        milestone.paystack_payment_ref,
+                    )
             except Exception:
                 logger.exception(
                     "resolve_dispute: refund request failed for milestone %s",
                     milestone.pk,
                 )
                 return False
-
-            data = _safe_json(resp)
-
-            if not resp.ok or not data.get("status"):
-                logger.error(
-                    "resolve_dispute: Paystack refund failed for milestone %s (HTTP %s): %s",
-                    milestone.pk, resp.status_code, data.get("message") or resp.text[:200],
-                )
-                return False
-
 
         milestone.status = Milestone.Status.REFUNDED
         milestone.save(update_fields=["status", "updated_at"])
@@ -1244,7 +1153,7 @@ def resolve_dispute(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-#  9. SPLIT MILESTONE  (automated Paystack partial payout)
+#  9. SPLIT MILESTONE  (automated Flutterwave partial payout)
 # ──────────────────────────────────────────────────────────────────────────────
 
 def split_milestone(
@@ -1255,12 +1164,12 @@ def split_milestone(
 ) -> bool:
     """
     Execute a SPLIT resolution: worker receives worker_pct% of the net amount;
-    employer is refunded (100-worker_pct)% of the gross amount via Paystack.
+    employer is refunded (100-worker_pct)% of the gross amount via Flutterwave.
 
     Steps:
       1. Compute worker_amount = (milestone.amount * worker_pct / 100) less platform fee
-      2. Transfer worker_amount to worker's Paystack recipient
-      3. Refund (milestone.amount * (100-worker_pct) / 100) to employer via Paystack refund
+      2. Transfer worker_amount to worker's bank account via Flutterwave
+      3. Refund (milestone.amount * (100-worker_pct) / 100) to employer via Flutterwave refund
       4. Update dispute and milestone records
     """
     if not (0 <= worker_pct <= 100):
@@ -1307,65 +1216,65 @@ def split_milestone(
             logger.error("split_milestone: no bank account for worker %s.", contract.worker.pk)
             return False
 
-        if not bank_account.paystack_recipient_code:
-            recipient_code = create_transfer_recipient(str(bank_account.pk))
-            if not recipient_code:
-                logger.error("split_milestone: failed to create recipient for bank account %s.", bank_account.pk)
-                return False
-            bank_account.refresh_from_db()
-
         transfer_ref = f"SPLIT-{dispute_id[:8]}-W"
         transfer_payload = {
-            "source":    "balance",
-            "amount":    int(worker_share * 100),  # Paystack uses kobo
-            "recipient": bank_account.paystack_recipient_code,
-            "reason":    f"Split payout — {milestone.title} ({worker_pct}%)",
-            "reference": transfer_ref,
+            "account_bank":   bank_account.bank_code,
+            "account_number": bank_account.account_number,
+            "amount":         float(worker_share),
+            "currency":       "NGN",
+            "narration":      f"Split payout — {milestone.title} ({worker_pct}%)",
+            "reference":      transfer_ref,
         }
         try:
             resp = requests.post(
-                f"{PAYSTACK_BASE}/transfer",
+                f"{FLW_BASE}/transfers",
                 json=transfer_payload,
-                headers=_paystack_headers(),
-                timeout=PAYSTACK_TIMEOUT,
+                headers=_flw_headers(),
+                timeout=FLW_TIMEOUT,
             )
         except Exception:
             logger.exception("split_milestone: transfer request failed for dispute %s", dispute_id)
             return False
 
         transfer_data = _safe_json(resp)
-        if not resp.ok or not transfer_data.get("status"):
+        if not resp.ok or transfer_data.get("status") not in ("success", "pending"):
             logger.error(
                 "split_milestone: transfer failed for dispute %s (HTTP %s): %s",
                 dispute_id, resp.status_code, transfer_data.get("message") or resp.text[:200],
             )
             return False
-        transfer_code = transfer_data.get("data", {}).get("transfer_code", "") or transfer_ref
+        transfer_code = str(transfer_data.get("data", {}).get("id", "")) or transfer_ref
 
     # ── Refund employer's share ──────────────────────────────────────────────
     if refund_share > 0 and milestone.paystack_payment_ref:
-        refund_payload = {
-            "transaction":  milestone.paystack_payment_ref,
-            "amount":       int(refund_share * 100),  # partial refund in kobo
-            "merchant_note": f"Split refund — {milestone.title} ({100-worker_pct}%)",
-        }
         try:
-            resp = requests.post(
-                f"{PAYSTACK_BASE}/refund",
-                json=refund_payload,
-                headers=_paystack_headers(),
-                timeout=PAYSTACK_TIMEOUT,
+            # Look up Flutterwave transaction ID for the original tx_ref
+            lookup_resp = requests.get(
+                f"{FLW_BASE}/transactions",
+                params={"tx_ref": milestone.paystack_payment_ref},
+                headers=_flw_headers(),
+                timeout=FLW_TIMEOUT,
             )
+            lookup_data = _safe_json(lookup_resp)
+            transactions = lookup_data.get("data", [])
+            if transactions:
+                flw_tx_id = transactions[0].get("id")
+                refund_payload = {"amount": float(refund_share)}
+                resp = requests.post(
+                    f"{FLW_BASE}/transactions/{flw_tx_id}/refund",
+                    json=refund_payload,
+                    headers=_flw_headers(),
+                    timeout=FLW_TIMEOUT,
+                )
+                refund_data = _safe_json(resp)
+                if not resp.ok or refund_data.get("status") != "success":
+                    logger.error(
+                        "split_milestone: refund failed for dispute %s (HTTP %s): %s",
+                        dispute_id, resp.status_code, refund_data.get("message") or resp.text[:200],
+                    )
+                    return False
         except Exception:
             logger.exception("split_milestone: refund request failed for dispute %s", dispute_id)
-            return False
-
-        refund_data = _safe_json(resp)
-        if not resp.ok or not refund_data.get("status"):
-            logger.error(
-                "split_milestone: refund failed for dispute %s (HTTP %s): %s",
-                dispute_id, resp.status_code, refund_data.get("message") or resp.text[:200],
-            )
             return False
 
     # ── Update records ───────────────────────────────────────────────────────
@@ -1597,4 +1506,3 @@ def mediation_agree(
         agreeing_user_id, agreed_resolution, dispute_id,
     )
     return True, "pending_other_party"
-

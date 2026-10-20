@@ -951,13 +951,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-/* ── Scroll-triggered fade-up for cards only ──
-   NOTE: The submit bar intentionally does NOT have the fade-up class.
-   Applying fade-up to position:sticky elements causes opacity:0 +
-   translateY(28px) via animation-fill-mode:both when paused, making
-   the element invisible and shifting its click area — which was the
-   root cause of no POST requests reaching the server.
-── */
+
 const obs = new IntersectionObserver(entries => {
   entries.forEach(e => {
     if (e.isIntersecting) {

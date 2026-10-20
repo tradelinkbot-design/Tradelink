@@ -46,6 +46,7 @@ from .views import (
 from .service.escrow_service import (
     initialize_milestone_payment,
     verify_milestone_payment,
+    verify_milestone_payment_by_id,
     submit_milestone_work,
     approve_milestone,
     raise_dispute,
@@ -143,7 +144,7 @@ class ContractDetailView(LoginRequiredMixin, View):
         if not _user_owns_contract(request.user, contract):
             raise Http404
 
-        # Check Paystack directly for any pending transfers
+        # Check Flutterwave directly for any pending transfers
         # (This is a robust fallback for missed webhooks, especially locally)
         sync_pending_transfers(contract)
 
@@ -261,7 +262,7 @@ class MilestoneCreateView(EmployerRequiredMixin, View):
 class MilestoneFundView(EmployerRequiredMixin, View):
     """
     POST /escrow/milestones/<pk>/fund/
-    Calls initialize_milestone_payment() and redirects to Paystack.
+    Calls initialize_milestone_payment() and redirects to Flutterwave hosted checkout.
     """
 
     @rate_limit(key='fund_milestone:{user}', limit=10, window=600, message='Too many payment initialization attempts. Please wait a few minutes.')
@@ -289,56 +290,66 @@ class MilestoneFundView(EmployerRequiredMixin, View):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-#  PAYSTACK CALLBACK
+#  FLUTTERWAVE CALLBACK
 # ──────────────────────────────────────────────────────────────────────────────
 
-class PaystackCallbackView(View):
+class FlutterwaveCallbackView(View):
     """
-    GET /escrow/paystack/callback/
-    Handles the redirect from Paystack after the employer (or buyer) completes payment.
+    GET /escrow/flutterwave/callback/
+    Handles the redirect from Flutterwave after the employer (or buyer) completes payment.
 
-    LoginRequiredMixin is removed because cross-site redirects (from Paystack) often
-    lose session cookies in modern browsers (SameSite=Lax). Subsequent same-site redirects
-    will re-attach the session cookie.
+    Flutterwave appends: ?status=<status>&tx_ref=<tx_ref>&transaction_id=<id>
+
+    LoginRequiredMixin is removed because cross-site redirects often lose
+    session cookies in modern browsers (SameSite=Lax).
     """
 
-    @rate_limit(key='escrow_paystack_cb:{ip}', limit=30, window=60, message='Too many requests.')
+    @rate_limit(key='escrow_flw_cb:{ip}', limit=30, window=60, message='Too many requests.')
     def get(self, request):
-        reference = request.GET.get('reference', '')
-        trxref    = request.GET.get('trxref', reference)
-        ref       = reference or trxref
+        status         = request.GET.get('status', '')
+        tx_ref         = request.GET.get('tx_ref', '')
+        transaction_id = request.GET.get('transaction_id', '')
 
-        if not ref:
+        if not tx_ref:
             messages.error(request, 'No payment reference found.')
             return redirect('marketplace:contract_list')
 
-        # Route to the correct service based on the reference prefix
-        if ref.startswith('mktplace_'):
+        # Flutterwave sends either 'successful' or 'completed' on success
+        if status not in ('successful', 'completed'):
+            messages.warning(
+                request,
+                'Payment was not completed. Please try again or contact support.',
+            )
+            return redirect('marketplace:contract_list')
+
+        # Route to the correct service based on the tx_ref prefix
+        if tx_ref.startswith('mktplace_'):
             from marketplace.service.market_place_service_escrow import verify_order_payment
             from marketplace.models import Order
-            
-            success = verify_order_payment(ref)
+
+            success = verify_order_payment(tx_ref, transaction_id=transaction_id)
             if success:
                 try:
-                    order = Order.objects.get(paystack_payment_ref=ref)
+                    order = Order.objects.get(paystack_payment_ref=tx_ref)
                     messages.success(request, 'Payment successful! Your order is now in escrow.')
                     return redirect('mktplace:order_detail', pk=order.pk)
                 except Order.DoesNotExist:
                     messages.success(request, 'Payment verified successfully.')
                     return redirect('mktplace:order_list')
-            
+
             messages.error(
                 request,
-                'Payment verification failed. Please contact support if funds were deducted.'
+                'Payment verification failed. Please contact support if funds were deducted.',
             )
             return redirect('mktplace:order_list')
         else:
-            # Assume it's a job milestone
-            success = verify_milestone_payment(ref)
+            # Assume it's a job milestone (tx_ref starts with 'tl_ms_')
+            from jobs.service.escrow_service import verify_milestone_payment_by_id
+            success = verify_milestone_payment_by_id(transaction_id, tx_ref)
             if success:
                 try:
                     milestone = Milestone.objects.select_related('contract').get(
-                        paystack_payment_ref=ref,
+                        paystack_payment_ref=tx_ref,
                     )
                     messages.success(
                         request,
@@ -356,6 +367,10 @@ class PaystackCallbackView(View):
                 'Please contact support if funds were deducted from your account.',
             )
             return redirect('marketplace:contract_list')
+
+
+# Backward-compat alias
+PaystackCallbackView = FlutterwaveCallbackView
 
 
 
@@ -651,12 +666,10 @@ class DisputeAdminResolveView(LoginRequiredMixin, View):
 class MilestoneFinalizeOtpView(LoginRequiredMixin, View):
     """
     POST /escrow/milestones/<pk>/finalize-otp/
-    Staff-only view to submit the Paystack transfer OTP for a PENDING_OTP milestone.
+    Legacy compatibility view for PENDING_OTP milestones.
 
-    When Paystack requires OTP confirmation for a transfer, this view accepts
-    the OTP and calls Paystack's /transfer/finalize_transfer endpoint.
-    Paystack then fires a transfer.success webhook which marks the milestone
-    as RELEASED.
+    Flutterwave processes transfers automatically without manual OTP submission,
+    but this endpoint is preserved for handling any legacy pending-OTP records.
     """
 
     def post(self, request, pk):
@@ -673,7 +686,7 @@ class MilestoneFinalizeOtpView(LoginRequiredMixin, View):
         if not otp:
             if _is_ajax(request):
                 return JsonResponse({'error': 'OTP is required.'}, status=400)
-            messages.error(request, 'Please enter the OTP sent to your Paystack account email/phone.')
+            messages.error(request, 'Please enter the confirmation code.')
             return redirect('marketplace:contract_detail', pk=milestone.contract.pk)
 
         success = finalize_transfer_with_otp(
@@ -685,16 +698,16 @@ class MilestoneFinalizeOtpView(LoginRequiredMixin, View):
             if _is_ajax(request):
                 return JsonResponse({
                     'status': 'otp_accepted',
-                    'message': 'OTP accepted. The transfer will complete shortly.',
+                    'message': 'Confirmation accepted. The transfer will complete shortly.',
                 })
             messages.success(
                 request,
-                f'OTP accepted for "{milestone.title}". '
+                f'Confirmation accepted for "{milestone.title}". '
                 'The transfer will be completed shortly and the worker will be notified.'
             )
         else:
             if _is_ajax(request):
-                return JsonResponse({'error': 'Invalid OTP or transfer already processed.'}, status=400)
-            messages.error(request, 'Invalid OTP or this transfer has already been processed.')
+                return JsonResponse({'error': 'Invalid code or transfer already processed.'}, status=400)
+            messages.error(request, 'Invalid code or this transfer has already been processed.')
 
         return redirect('marketplace:contract_detail', pk=milestone.contract.pk)

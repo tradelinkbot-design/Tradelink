@@ -577,19 +577,19 @@ if not DEBUG:
     X_FRAME_OPTIONS                = 'DENY'
 
 # ==================================
-# PAYSTACK
+# FLUTTERWAVE
 # ==================================
 
-PAYSTACK_SECRET_KEY     = os.environ.get('PAYSTACK_SECRET_KEY', 'sk_test_166306c4fa6512b95030917dbcfaaa25866d2ff0')
-PAYSTACK_PUBLIC_KEY     = os.environ.get('PAYSTACK_PUBLIC_KEY', 'pk_test_d487748abaabb52e28f3c13481053902f78f0e1d')
+FLW_SECRET_KEY    = os.environ.get('FLW_SECRET_KEY', '')
+FLW_PUBLIC_KEY    = os.environ.get('FLW_PUBLIC_KEY', '')
+FLW_SECRET_HASH   = os.environ.get('FLW_SECRET_HASH', '')   # Webhook verification hash (set in FLW dashboard)
 _railway_host = os.environ.get('RAILWAY_PUBLIC_DOMAIN') or os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 _default_callback = (
-    f'https://{_railway_host}/escrow/paystack/callback/'
+    f'https://{_railway_host}/escrow/flutterwave/callback/'
     if _railway_host
-    else 'http://127.0.0.1:8000/escrow/paystack/callback/'
+    else 'http://127.0.0.1:8000/escrow/flutterwave/callback/'
 )
-PAYSTACK_CALLBACK_URL   = os.environ.get('PAYSTACK_CALLBACK_URL', _default_callback)
-PAYSTACK_WEBHOOK_SECRET = os.environ.get('PAYSTACK_WEBHOOK_SECRET', PAYSTACK_SECRET_KEY)  # Falls back to secret key if not separately set
+FLW_REDIRECT_URL  = os.environ.get('FLW_REDIRECT_URL', _default_callback)
 # ==================================
 # DOJAH (KYC / VERIFICATION)
 # ==================================

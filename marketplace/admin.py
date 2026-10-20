@@ -206,7 +206,7 @@ class OrderAdmin(admin.ModelAdmin):
                 'platform_fee_amount', 'seller_payout_amount',
             ),
         }),
-        ('Paystack', {
+        ('Payment References', {
             'fields': ('paystack_payment_ref', 'paystack_transfer_ref'),
         }),
         ('Meetup', {

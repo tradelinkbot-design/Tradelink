@@ -15,16 +15,22 @@ from core.ratelimit import rate_limit
 
 logger = logging.getLogger(__name__)
 
-PAYSTACK_BASE = 'https://api.paystack.co'
+FLW_BASE = 'https://api.flutterwave.com/v3'
 
 
-def _paystack_headers():
+def _flw_headers():
     from django.conf import settings
-    sk = getattr(settings, 'PAYSTACK_SECRET_KEY', '')
+    sk = getattr(settings, 'FLW_SECRET_KEY', '')
     return {
         'Authorization': f'Bearer {sk}',
         'Content-Type': 'application/json',
+        'accept': 'application/json',
     }
+
+
+# Keep old alias so any indirect references still resolve
+PAYSTACK_BASE = FLW_BASE
+_paystack_headers = _flw_headers
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -174,7 +180,7 @@ class BankAccountProfileView(LoginRequiredMixin, View):
     POST /profile/bank-account/
 
     Save (or update) the user's bank account details, then asynchronously
-    create a Paystack Transfer Recipient so payouts can be triggered later.
+    mark the account ready for Flutterwave payouts.
 
     Supports both regular form POST and AJAX (fetch) calls — detected via
     the X-Requested-With header or Accept: application/json.
@@ -223,12 +229,12 @@ class BankAccountProfileView(LoginRequiredMixin, View):
                 'account_name':            account_name,
                 'bank_code':               bank_code,
                 'bank_name':               bank_name,
-                'paystack_recipient_code': '',   # reset — will be re-created async
+                'paystack_recipient_code': '',   # reset — will be re-validated async
                 'is_verified':             False,
             },
         )
 
-        # Trigger async Paystack Transfer Recipient creation
+        # Trigger async transfer recipient creation/validation task
         try:
             from jobs.tasks import create_transfer_recipient_task
             create_transfer_recipient_task.delay(str(bank_account.pk))
@@ -257,16 +263,16 @@ class BankAccountProfileView(LoginRequiredMixin, View):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Paystack Proxy Endpoints (AJAX — keeps secret key server-side)
+# Flutterwave Proxy Endpoints (AJAX — keeps secret key server-side)
 # ─────────────────────────────────────────────────────────────────────────────
 
 class BankResolveAPIView(LoginRequiredMixin, View):
     """
     GET /bank-resolve/?account_number=0123456789&bank_code=044
 
-    Server-side proxy for Paystack's /bank/resolve endpoint.
+    Server-side proxy for Flutterwave's POST /accounts/resolve endpoint.
     Returns the verified account name in real-time as the user types.
-    Keeping this server-side prevents exposing the Paystack secret key.
+    Keeping this server-side prevents exposing the Flutterwave secret key.
     """
 
     login_url = 'signin'
@@ -289,10 +295,10 @@ class BankResolveAPIView(LoginRequiredMixin, View):
             )
 
         try:
-            resp = requests.get(
-                f'{PAYSTACK_BASE}/bank/resolve',
-                params={'account_number': account_number, 'bank_code': bank_code},
-                headers=_paystack_headers(),
+            resp = requests.post(
+                f'{FLW_BASE}/accounts/resolve',
+                json={'account_number': account_number, 'account_bank': bank_code},
+                headers=_flw_headers(),
                 timeout=15,
             )
             data = resp.json()
@@ -303,57 +309,115 @@ class BankResolveAPIView(LoginRequiredMixin, View):
                 status=502
             )
 
-        if data.get('status') and data.get('data'):
+        if data.get('status') == 'success' and data.get('data'):
             return JsonResponse({
                 'account_name':   data['data'].get('account_name', ''),
                 'account_number': data['data'].get('account_number', account_number),
             })
 
+        logger.warning(
+            "BankResolveAPIView: Flutterwave returned HTTP %s: %s",
+            resp.status_code, resp.text[:200]
+        )
         error_msg = data.get(
             'message',
             'Could not resolve account. Check the number and bank.'
         )
+
+        from django.conf import settings
+        sk = getattr(settings, 'FLW_SECRET_KEY', '')
+        if 'invalid account' in error_msg.lower() and ('_TEST' in sk or sk.startswith('FLWSECK_TEST')):
+            error_msg = (
+                "Flutterwave Sandbox (Test Mode) does not verify real bank accounts. "
+                "Use test account: 0690000032 with Access Bank."
+            )
+
         return JsonResponse({'error': error_msg}, status=422)
+
+
+NIGERIAN_BANKS_FALLBACK = [
+    {'name': 'Access Bank', 'code': '044'},
+    {'name': 'Access Bank (Diamond)', 'code': '063'},
+    {'name': 'Citibank Nigeria', 'code': '023'},
+    {'name': 'Ecobank Nigeria', 'code': '050'},
+    {'name': 'Fidelity Bank', 'code': '070'},
+    {'name': 'First Bank of Nigeria', 'code': '011'},
+    {'name': 'First City Monument Bank (FCMB)', 'code': '214'},
+    {'name': 'Globus Bank', 'code': '00103'},
+    {'name': 'Guaranty Trust Bank (GTBank)', 'code': '058'},
+    {'name': 'Heritage Bank', 'code': '030'},
+    {'name': 'Jaiz Bank', 'code': '301'},
+    {'name': 'Keystone Bank', 'code': '082'},
+    {'name': 'Kuda Bank', 'code': '50211'},
+    {'name': 'Lotus Bank', 'code': '303'},
+    {'name': 'Moniepoint Microfinance Bank', 'code': '50515'},
+    {'name': 'OPay Digital Services', 'code': '999992'},
+    {'name': 'Optimus Bank', 'code': '107'},
+    {'name': 'PalmPay', 'code': '999991'},
+    {'name': 'Parallex Bank', 'code': '104'},
+    {'name': 'Polaris Bank', 'code': '076'},
+    {'name': 'PremiumTrust Bank', 'code': '105'},
+    {'name': 'Providus Bank', 'code': '101'},
+    {'name': 'Stanbic IBTC Bank', 'code': '221'},
+    {'name': 'Standard Chartered Bank', 'code': '068'},
+    {'name': 'Sterling Bank', 'code': '232'},
+    {'name': 'Suntrust Bank', 'code': '100'},
+    {'name': 'TAJ Bank', 'code': '302'},
+    {'name': 'Titan Trust Bank', 'code': '102'},
+    {'name': 'Union Bank of Nigeria', 'code': '032'},
+    {'name': 'United Bank for Africa (UBA)', 'code': '033'},
+    {'name': 'Unity Bank', 'code': '215'},
+    {'name': 'Wema Bank', 'code': '035'},
+    {'name': 'Zenith Bank', 'code': '057'},
+]
 
 
 class BankListAPIView(LoginRequiredMixin, View):
     """
     GET /bank-list/
 
-    Returns the list of Nigerian banks from Paystack, cached for 24 h in
-    the Django session to avoid hammering the Paystack API on every page load.
+    Returns the list of Nigerian banks from Flutterwave, cached for 24 h in
+    the Django session to avoid hammering the Flutterwave API on every page load.
+    Falls back gracefully to a standard list if Flutterwave is unreachable or
+    credentials are not yet configured.
     """
 
     login_url = 'signin'
 
     def get(self, request):
-        cached = request.session.get('paystack_bank_list')
+        cached = request.session.get('flw_bank_list')
         if cached:
             return JsonResponse({'banks': cached})
 
+        from django.conf import settings
+        sk = getattr(settings, 'FLW_SECRET_KEY', '')
+        if not sk:
+            return JsonResponse({'banks': NIGERIAN_BANKS_FALLBACK})
+
         try:
             resp = requests.get(
-                f'{PAYSTACK_BASE}/bank',
-                params={'currency': 'NGN', 'perPage': 200},
-                headers=_paystack_headers(),
+                f'{FLW_BASE}/banks/NG',
+                headers=_flw_headers(),
                 timeout=15,
             )
             data = resp.json()
         except requests.RequestException as exc:
-            logger.error("BankListAPIView: request failed: %s", exc)
-            return JsonResponse({'error': 'Could not fetch bank list.'}, status=502)
+            logger.warning("BankListAPIView: Flutterwave request exception: %s. Using fallback list.", exc)
+            return JsonResponse({'banks': NIGERIAN_BANKS_FALLBACK})
 
-        if data.get('status') and data.get('data'):
+        if data.get('status') == 'success' and data.get('data'):
             banks = [
                 {'name': b['name'], 'code': b['code']}
                 for b in data['data']
-                if b.get('active') and b.get('currency') == 'NGN'
             ]
-            # Cache in session (24 h TTL managed by session middleware)
-            request.session['paystack_bank_list'] = banks
+            request.session['flw_bank_list'] = banks
             return JsonResponse({'banks': banks})
 
-        return JsonResponse({'error': 'Could not fetch bank list.'}, status=502)
+        logger.info(
+            "BankListAPIView: Flutterwave endpoint returned HTTP %s. Serving fallback Nigerian bank list.",
+            resp.status_code
+        )
+        return JsonResponse({'banks': NIGERIAN_BANKS_FALLBACK})
 
 
 # ─────────────────────────────────────────────────────────────────────────────

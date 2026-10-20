@@ -338,15 +338,15 @@ urlpatterns = [
         name='dispute_resolve',
     ),
     path(
-        'escrow/paystack/callback/',
-        PaystackCallbackView.as_view(),
-        name='paystack_callback',
+        'escrow/flutterwave/callback/',
+        PaystackCallbackView.as_view(),   # PaystackCallbackView is aliased to FlutterwaveCallbackView
+        name='paystack_callback',         # name kept for backward compat with existing redirects
     ),
 
     # ── Webhooks ──────────────────────────────────────────────────────────────
     path(
-        'webhooks/paystack/',
-        PaystackWebhookView.as_view(),
-        name='paystack_webhook',
+        'webhooks/flutterwave/',
+        PaystackWebhookView.as_view(),    # PaystackWebhookView is aliased to FlutterwaveWebhookView
+        name='paystack_webhook',          # name kept for backward compat
     ),
 ]

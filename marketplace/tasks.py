@@ -11,7 +11,7 @@ Tasks
       the model is already loaded in memory, so this costs only ~30 ms.
 
   process_order_payout_task
-      Releases seller funds via Paystack Transfer API after buyer confirms.
+      Releases seller funds via Flutterwave Transfer API after buyer confirms.
 
   auto_complete_orders_task
       Periodic task — auto-completes orders 7 days after buyer confirmation

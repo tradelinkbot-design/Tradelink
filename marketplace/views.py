@@ -25,7 +25,7 @@ View map
     RaiseDisputeView             POST /marketplace/orders/<uuid:pk>/dispute/
     SubmitReviewView             POST /marketplace/orders/<uuid:pk>/review/
     ToggleSaveProductView        POST /marketplace/products/<uuid:pk>/save/
-    PaystackCallbackView         GET  /marketplace/paystack/callback/
+    PaystackCallbackView         GET  /marketplace/flutterwave/callback/
 
   Auth — WorkerProfile required (seller actions)
     SellerDashboardView          GET  /marketplace/dashboard/
@@ -44,7 +44,7 @@ Design notes
 ────────────
   • Sellers must be WorkerProfile users — enforced by SellerRequiredMixin.
   • Buyers can be any authenticated user (employers, workers, staff).
-  • All Paystack calls are delegated to marketplace_escrow_service — views
+  • All Flutterwave calls are delegated to marketplace_escrow_service — views
     only redirect and set messages.
   • Semantic search (sentence-transformer) is attempted first; on failure
     the view falls back to icontains keyword search transparently.
@@ -1232,7 +1232,7 @@ class BuyNowView(LoginRequiredMixin, View):
             status       = Order.Status.PENDING,
         )
 
-        # Initialize Paystack payment
+        # Initialize Flutterwave payment
         from marketplace.service.market_place_service_escrow import initialize_order_payment
         result = initialize_order_payment(str(order.pk), request.user.email)
 
@@ -1421,31 +1421,34 @@ class ConfirmReceiptView(LoginRequiredMixin, View):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-#  BUYER — PAYSTACK CALLBACK
+#  BUYER — FLUTTERWAVE CALLBACK
 # ──────────────────────────────────────────────────────────────────────────────
 
 class PaystackCallbackView(View):
     """
-    GET /marketplace/paystack/callback/
+    GET /marketplace/flutterwave/callback/
 
-    Paystack redirects here after the buyer completes payment on their
+    Flutterwave redirects here after the buyer completes payment on the
     hosted checkout page.
 
-    We do NOT verify payment here — that is done by the webhook
-    (charge.success → verify_order_payment). This view just finds
-    the order from the reference and shows the right message.
+    Flutterwave appends: ?status=<status>&tx_ref=<tx_ref>&transaction_id=<id>
+
+    We verify the payment here and update the order status, then redirect
+    to the order detail page.
     """
 
-    @rate_limit(key='mkt_paystack_cb:{ip}', limit=30, window=60, message='Too many requests.')
+    @rate_limit(key='mkt_flw_cb:{ip}', limit=30, window=60, message='Too many requests.')
     def get(self, request):
-        reference = request.GET.get('reference', '')
+        status         = request.GET.get('status', '')
+        tx_ref         = request.GET.get('tx_ref', '')
+        transaction_id = request.GET.get('transaction_id', '')
 
-        if not reference:
+        if not tx_ref:
             messages.error(request, 'No payment reference found.')
             return redirect('mktplace:order_list')
 
         order = Order.objects.filter(
-            paystack_payment_ref=reference,
+            paystack_payment_ref=tx_ref,
         ).first()
 
         if order and request.user.is_authenticated and order.buyer != request.user:
@@ -1460,6 +1463,12 @@ class PaystackCallbackView(View):
             )
             return redirect('mktplace:order_list')
 
+        # Verify payment if still PENDING (Flutterwave sends 'successful' or 'completed')
+        if order.status == Order.Status.PENDING and status in ('successful', 'completed'):
+            from marketplace.service.market_place_service_escrow import verify_order_payment
+            verify_order_payment(tx_ref, transaction_id=transaction_id)
+            order.refresh_from_db()
+
         if order.status in [
             Order.Status.PAID,
             Order.Status.MEETUP_SCHEDULED,
@@ -1471,6 +1480,8 @@ class PaystackCallbackView(View):
                 'Payment confirmed! The seller has been notified and will '
                 'contact you to arrange handover.',
             )
+        elif status == 'cancelled':
+            messages.warning(request, 'Payment was cancelled. You can try again from the product page.')
         else:
             messages.info(
                 request,
@@ -1801,8 +1812,8 @@ class DisputeAdminResolveView(LoginRequiredMixin, View):
     request.POST['split_seller_pct'] = <0-100>  (only for 'split')
 
     On released_to_seller → release_order_to_seller()
-    On refunded_to_buyer  → Paystack Refund API (phase 2 — stub for now)
-    On split              → partial transfer (phase 2 — stub)
+    On refunded_to_buyer  → refund_order_to_buyer() via Flutterwave Refund API
+    On split              → split_order() via Flutterwave transfer + refund
     """
 
     def dispatch(self, request, *args, **kwargs):
@@ -1858,14 +1869,14 @@ class DisputeAdminResolveView(LoginRequiredMixin, View):
         if resolution == OrderDispute.Resolution.RELEASED_TO_SELLER:
             success = release_order_to_seller(str(order.pk))
             if success:
-                messages.success(request, 'Funds released to seller via Paystack Transfer.')
+                messages.success(request, 'Funds released to seller via Flutterwave Transfer.')
             else:
                 messages.error(request, 'Transfer failed — check logs.')
 
         elif resolution == OrderDispute.Resolution.REFUNDED_TO_BUYER:
             success = refund_order_to_buyer(str(order.pk))
             if success:
-                messages.success(request, 'Order refunded to buyer via Paystack Refund API.')
+                messages.success(request, 'Order refunded to buyer via Flutterwave Refund API.')
             else:
                 messages.error(request, 'Refund failed — check logs.')
 

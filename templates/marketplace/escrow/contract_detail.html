@@ -522,28 +522,22 @@
             </div>
             {% endif %}
 
-            <!-- PENDING_OTP status box -->
+            <!-- PENDING_OTP status box (legacy — transfers now processed automatically) -->
             {% if milestone.status == 'pending_otp' %}
             <div class="submission-note" style="background: rgba(245,158,11,0.06); border-color: rgba(245,158,11,0.3);">
-              <p class="submission-note-label" style="color: var(--amber);"><i class="fas fa-key"></i> Transfer Awaiting OTP Approval</p>
+              <p class="submission-note-label" style="color: var(--amber);"><i class="fas fa-clock"></i> Transfer Processing</p>
               <p style="font-size:0.85rem; color:var(--text-2); margin-bottom:10px;">
                 A payout of <strong>₦{{ milestone.worker_amount|floatformat:0 }}</strong> has been initiated
-                (Transfer code: <code>{{ milestone.paystack_transfer_ref }}</code>).
-                Paystack requires OTP confirmation before funds are released.
+                (Transfer ID: <code>{{ milestone.paystack_transfer_ref }}</code>).
+                The transfer is being processed — funds will arrive in the worker's bank account shortly.
               </p>
               {% if request.user.is_staff %}
-              <form method="post" action="{% url 'marketplace:milestone_finalize_otp' pk=milestone.pk %}" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                {% csrf_token %}
-                <input type="text" name="otp" placeholder="Enter Paystack OTP"
-                       class="form-control" style="max-width:180px; padding:8px 14px; font-size:0.9rem;"
-                       maxlength="10" required autocomplete="one-time-code">
-                <button type="submit" class="btn btn-primary btn-sm">
-                  <i class="fas fa-key"></i> Confirm OTP
-                </button>
-              </form>
+              <p style="font-size:0.82rem; color:var(--text-3);">
+                <i class="fas fa-info-circle"></i> Check the Flutterwave dashboard if the transfer has been pending for more than 24 hours.
+              </p>
               {% else %}
               <p style="font-size:0.82rem; color:var(--text-3);">
-                <i class="fas fa-info-circle"></i> An admin will approve this transfer shortly.
+                <i class="fas fa-info-circle"></i> An admin will confirm this transfer shortly.
               </p>
               {% endif %}
             </div>
@@ -565,6 +559,21 @@
               {% endif %}
             </div>
             {% endif %}
+            {% endif %}
+
+            <!-- APPROVED (Payout pending/retry) status box -->
+            {% if milestone.status == 'approved' %}
+            <div class="submission-note" style="background: rgba(16,185,129,0.06); border-color: rgba(16,185,129,0.3);">
+              <p class="submission-note-label" style="color: var(--emerald);"><i class="fas fa-check-circle"></i> Work Approved</p>
+              <p style="font-size:0.85rem; color:var(--text-2); margin-bottom:6px;">
+                Work for this milestone has been approved.
+                {% if is_employer %}
+                If the payout transfer didn't complete automatically, click <strong>Retry Release Payout</strong> below.
+                {% else %}
+                Funds are being transferred to your bank account.
+                {% endif %}
+              </p>
+            </div>
             {% endif %}
 
             <!-- ── Action buttons ── -->
@@ -591,6 +600,13 @@
                 </button>
                 {% endif %}
 
+                {% if milestone.status == 'approved' %}
+                <button type="button" class="btn btn-primary btn-sm" style="background:var(--emerald);"
+                        onclick="openApproveModal('{{ milestone.pk }}', '{{ milestone.title|escapejs }}')">
+                  <i class="fas fa-redo"></i> Retry Release Payout
+                </button>
+                {% endif %}
+
               {% else %}
                 {% if milestone.status == 'funded' %}
                 <button type="button" class="btn btn-primary btn-sm"
@@ -602,6 +618,12 @@
                 {% if milestone.status == 'in_review' %}
                 <span class="meta-chip" style="font-size:0.82rem; color: var(--amber);">
                   <i class="fas fa-clock"></i> Awaiting employer approval
+                </span>
+                {% endif %}
+
+                {% if milestone.status == 'approved' %}
+                <span class="meta-chip" style="font-size:0.82rem; color: var(--amber);">
+                  <i class="fas fa-clock"></i> Approved — processing payout
                 </span>
                 {% endif %}
 
@@ -762,7 +784,7 @@
           </a>
           {% else %}
           <p style="font-size:0.87rem; color:var(--text-2); margin-bottom:12px;">
-            Add your bank account to receive milestone payouts via Paystack.
+            Add your bank account to receive milestone payouts via Flutterwave.
           </p>
           <a href="{% url 'edit_profile' %}#bank" class="btn btn-primary btn-sm" style="width:100%; justify-content:center;">
             <i class="fas fa-plus"></i> Add Bank Account

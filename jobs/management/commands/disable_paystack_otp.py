@@ -43,45 +43,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        otp = options.get("otp")
-        enable = options.get("enable")
-
-        if enable:
-            self.stdout.write(self.style.WARNING("Attempting to re-enable OTP requirement on Paystack..."))
-            result = enable_transfer_otp()
-            if result.get("status"):
-                self.stdout.write(self.style.SUCCESS(f"Success: {result.get('message', 'OTP requirement enabled.')}"))
-            else:
-                self.stdout.write(self.style.ERROR(f"Error: {result.get('message', 'Failed to enable OTP.')}"))
-            return
-
-        if otp:
-            self.stdout.write(self.style.WARNING(f"Submitting OTP '{otp}' to disable transfer OTP on Paystack..."))
-            result = finalize_disable_transfer_otp(otp)
-            if result.get("status"):
-                self.stdout.write(self.style.SUCCESS(
-                    f"SUCCESS: {result.get('message', 'OTP requirement for transfers has been disabled.')}\n"
-                    "All future escrow payouts will now transfer automatically without OTP!"
-                ))
-            else:
-                self.stdout.write(self.style.ERROR(
-                    f"FAILED: {result.get('message', 'Invalid OTP or request failed.')}"
-                ))
-        else:
-            self.stdout.write(self.style.WARNING(
-                "Requesting OTP from Paystack to disable transfer OTP requirement..."
-            ))
-            result = request_disable_transfer_otp()
-            if result.get("status"):
-                self.stdout.write(self.style.SUCCESS(
-                    f"SUCCESS: {result.get('message')}\n\n"
-                    "Check your Paystack-registered mobile number or email for the OTP.\n"
-                    "Then run:\n"
-                    "  python manage.py disable_paystack_otp --otp <YOUR_OTP>\n"
-                ))
-            else:
-                self.stdout.write(self.style.ERROR(
-                    f"FAILED: {result.get('message', 'Could not request OTP from Paystack.')}\n"
-                    "Note: If OTP is already disabled on your Paystack account, you can also verify this in "
-                    "Paystack Dashboard -> Settings -> Preferences -> Transfer."
-                ))
+        self.stdout.write(self.style.SUCCESS(
+            "Notice: TradeLink has migrated to Flutterwave. "
+            "Flutterwave transfers execute automatically and do not require OTP management."
+        ))

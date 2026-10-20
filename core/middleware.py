@@ -175,7 +175,7 @@ class TerminalErrorLoggingMiddleware:
     SENSITIVE_KEYS = {
         'password', 'password1', 'password2', 'secret', 'token', 'access_token',
         'refresh_token', 'api_key', 'key', 'authorization', 'card', 'cvv', 'pin',
-        'paystack_secret_key', 'paystack_public_key', 'secret_key',
+        'flw_secret_key', 'flw_public_key', 'flw_secret_hash', 'secret_key',
     }
 
     def __init__(self, get_response):

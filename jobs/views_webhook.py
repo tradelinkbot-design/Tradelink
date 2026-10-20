@@ -1,26 +1,23 @@
 """
-marketplace/views_webhook.py
+jobs/views_webhook.py
 ==============================
-Paystack webhook handler.
+Flutterwave webhook handler.
 
-Paystack sends POST events to /webhooks/paystack/.
-The X-Paystack-Signature header is verified using HMAC SHA512 of the
-raw body with settings.PAYSTACK_SECRET_KEY.
+Flutterwave sends POST events to /webhooks/flutterwave/.
+The verif-hash header is compared against settings.FLW_SECRET_HASH
+(a plain string token you configure in the Flutterwave dashboard).
 
 Handled events:
-  - charge.success      → verify milestone payment
-  - transfer.success    → log success
-  - transfer.failed     → revert milestone to APPROVED, notify admin/worker
-  - transfer.reversed   → same as transfer.failed
+  - charge.completed      → verify milestone payment
+  - transfer.completed    → log success / mark milestone RELEASED
+  - transfer.failed       → revert milestone to APPROVED, notify admin/worker
 
 Security:
-  - CSRF exempt (Paystack cannot send CSRF tokens)
-  - Always returns HTTP 200 (Paystack retries on non-200)
-  - Never logs raw webhook payloads or Paystack credentials
+  - CSRF exempt (Flutterwave cannot send CSRF tokens)
+  - Always returns HTTP 200 (Flutterwave retries on non-200)
+  - Never logs raw webhook payloads or Flutterwave credentials
 """
 
-import hashlib
-import hmac
 import json
 import logging
 
@@ -34,97 +31,115 @@ logger = logging.getLogger(__name__)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
-class PaystackWebhookView(View):
+class FlutterwaveWebhookView(View):
     """
-    Receives and processes Paystack webhook events.
+    Receives and processes Flutterwave webhook events.
 
-    POST /webhooks/paystack/
+    POST /webhooks/flutterwave/
     """
 
     def post(self, request):
-        """Handle incoming Paystack webhook POST."""
-        payload = request.body
-        signature = request.META.get('HTTP_X_PAYSTACK_SIGNATURE', '')
+        """Handle incoming Flutterwave webhook POST."""
+        # Flutterwave uses a simple secret hash comparison (not HMAC)
+        received_hash = request.META.get('HTTP_VERIF_HASH', '')
+        expected_hash = getattr(settings, 'FLW_SECRET_HASH', '')
 
-        # Verify HMAC signature
-        secret = settings.PAYSTACK_WEBHOOK_SECRET
-        expected = hmac.new(
-            secret.encode('utf-8'),
-            payload,
-            hashlib.sha512,
-        ).hexdigest()
-
-        if not hmac.compare_digest(expected, signature):
-            logger.warning("PaystackWebhookView: invalid signature — request rejected.")
+        if not expected_hash or received_hash != expected_hash:
+            logger.warning("FlutterwaveWebhookView: invalid verif-hash — request rejected.")
             return HttpResponse(status=400)
 
         # Parse the event
         try:
-            data = json.loads(payload)
+            data = json.loads(request.body)
         except (json.JSONDecodeError, ValueError):
-            logger.warning("PaystackWebhookView: malformed JSON payload.")
+            logger.warning("FlutterwaveWebhookView: malformed JSON payload.")
             return HttpResponse(status=200)
 
         event = data.get('event', '')
         event_data = data.get('data', {})
 
-        logger.info("PaystackWebhookView: received event '%s'.", event)
+        logger.info("FlutterwaveWebhookView: received event '%s'.", event)
 
         try:
-            if event == 'charge.success':
-                self._handle_charge_success(event_data)
+            if event == 'charge.completed':
+                self._handle_charge_completed(event_data)
 
-            elif event == 'transfer.success':
-                self._handle_transfer_success(event_data)
+            elif event == 'transfer.completed':
+                self._handle_transfer_completed(event_data)
 
-            elif event in ('transfer.failed', 'transfer.reversed'):
+            elif event == 'transfer.failed':
                 self._handle_transfer_failure(event, event_data)
 
             else:
-                logger.info("PaystackWebhookView: unhandled event '%s' — ignoring.", event)
+                logger.info("FlutterwaveWebhookView: unhandled event '%s' — ignoring.", event)
 
         except Exception:
-            # Catch-all: log the error but still return 200 so Paystack
-            # doesn't keep retrying an event we can't process.
+            # Catch-all: log but always return 200 so Flutterwave doesn't keep retrying
             logger.exception(
-                "PaystackWebhookView: error processing event '%s'.", event,
+                "FlutterwaveWebhookView: error processing event '%s'.", event,
             )
 
         # Always return 200
         return HttpResponse(status=200)
 
     def get(self, request):
-        """Webhooks only accept POST."""
-        return HttpResponseNotAllowed(['POST'])
+        """Allow GET pings for webhook URL validation from Flutterwave dashboard."""
+        return HttpResponse("Flutterwave webhook endpoint active.", status=200)
 
     # ── Event handlers ───────────────────────────────────────────────────────
 
     @staticmethod
-    def _handle_charge_success(event_data):
-        """Process a successful charge (milestone funding)."""
-        reference = event_data.get('reference')
-        if not reference:
-            logger.warning("_handle_charge_success: no reference in event data.")
+    def _handle_charge_completed(event_data):
+        """Process a successful charge (milestone funding or marketplace order)."""
+        tx_ref = event_data.get('tx_ref', '')
+        transaction_id = str(event_data.get('id', ''))
+        status = event_data.get('status', '')
+
+        if status not in ('successful', 'completed'):
+            logger.info(
+                "_handle_charge_completed: charge status='%s' for tx_ref=%s — ignoring.",
+                status, tx_ref,
+            )
             return
 
-        from jobs.service.escrow_service import verify_milestone_payment
-        result = verify_milestone_payment(reference)
-        logger.info(
-            "_handle_charge_success: verify_milestone_payment(ref=%s) → %s",
-            reference, result,
-        )
+        if not tx_ref:
+            logger.warning("_handle_charge_completed: no tx_ref in event data.")
+            return
+
+        # Route to the appropriate handler based on tx_ref prefix
+        if tx_ref.startswith('mktplace_'):
+            from marketplace.service.market_place_service_escrow import verify_order_payment
+            result = verify_order_payment(tx_ref, transaction_id=transaction_id)
+            logger.info(
+                "_handle_charge_completed: verify_order_payment(tx_ref=%s) → %s",
+                tx_ref, result,
+            )
+        else:
+            from jobs.service.escrow_service import verify_milestone_payment
+            result = verify_milestone_payment(tx_ref)
+            logger.info(
+                "_handle_charge_completed: verify_milestone_payment(tx_ref=%s) → %s",
+                tx_ref, result,
+            )
 
     @staticmethod
-    def _handle_transfer_success(event_data):
+    def _handle_transfer_completed(event_data):
         """
-        Finalises the milestone payout when Paystack confirms the transfer.
-        This fires for both:
-          - Immediate transfers (OTP disabled on Paystack account)
-          - OTP-approved transfers (OTP enabled — webhook fires after OTP accepted)
+        Finalises the milestone payout when Flutterwave confirms the transfer.
+        Transfer ID is used as the lookup key (stored in paystack_transfer_ref field).
         """
-        transfer_code = event_data.get('transfer_code', '')
-        if not transfer_code:
-            logger.warning("_handle_transfer_success: no transfer_code in event.")
+        transfer_id = str(event_data.get('id', ''))
+        transfer_status = (event_data.get('status') or '').lower()
+
+        if not transfer_id:
+            logger.warning("_handle_transfer_completed: no transfer id in event.")
+            return
+
+        if transfer_status != 'successful':
+            logger.info(
+                "_handle_transfer_completed: transfer %s status='%s' — not finalising.",
+                transfer_id, transfer_status,
+            )
             return
 
         from jobs.models import Milestone
@@ -135,18 +150,18 @@ class PaystackWebhookView(View):
                 'contract__worker__user',
                 'contract__employer__user',
                 'contract',
-            ).get(paystack_transfer_ref=transfer_code)
+            ).get(paystack_transfer_ref=transfer_id)
         except Milestone.DoesNotExist:
-            logger.warning(
-                "_handle_transfer_success: no milestone with transfer_ref %s.",
-                transfer_code,
+            logger.info(
+                "_handle_transfer_completed: no milestone with transfer_id %s — may be marketplace order.",
+                transfer_id,
             )
             return
 
         # Only act if not already RELEASED
         if milestone.status == Milestone.Status.RELEASED:
             logger.info(
-                "_handle_transfer_success: milestone %s already RELEASED, skipping.",
+                "_handle_transfer_completed: milestone %s already RELEASED, skipping.",
                 milestone.pk,
             )
             return
@@ -164,25 +179,25 @@ class PaystackWebhookView(View):
         mark_milestone_released(milestone)
 
         logger.info(
-            "_handle_transfer_success: milestone %s marked RELEASED via webhook.",
+            "_handle_transfer_completed: milestone %s marked RELEASED via webhook.",
             milestone.pk,
         )
 
     @staticmethod
     def _handle_transfer_failure(event, event_data):
         """
-        Handle transfer.failed and transfer.reversed events.
+        Handle transfer.failed events.
         Reverts the milestone status to APPROVED and notifies admin + worker.
         """
-        transfer_code = event_data.get('transfer_code', '')
-        reason = event_data.get('reason', 'Unknown')
+        transfer_id = str(event_data.get('id', ''))
+        reason = event_data.get('complete_message') or event_data.get('reason') or 'Unknown'
 
         logger.error(
             "_handle_transfer_failure: event=%s, transfer=%s, reason=%s",
-            event, transfer_code, reason,
+            event, transfer_id, reason,
         )
 
-        if not transfer_code:
+        if not transfer_id:
             return
 
         from jobs.models import Milestone, Notification
@@ -193,11 +208,11 @@ class PaystackWebhookView(View):
             milestone = Milestone.objects.select_related(
                 'contract__worker__user',
                 'contract__employer__user',
-            ).get(paystack_transfer_ref=transfer_code)
+            ).get(paystack_transfer_ref=transfer_id)
         except Milestone.DoesNotExist:
             logger.warning(
-                "_handle_transfer_failure: no milestone with transfer_ref %s.",
-                transfer_code,
+                "_handle_transfer_failure: no milestone with transfer_id %s.",
+                transfer_id,
             )
             return
 
@@ -231,7 +246,7 @@ class PaystackWebhookView(View):
                 notif_type=Notification.NotifType.SYSTEM,
                 title=f'[ADMIN] Transfer failed: {milestone.title}',
                 body=(
-                    f'Paystack transfer {transfer_code} failed for milestone '
+                    f'Flutterwave transfer {transfer_id} failed for milestone '
                     f'"{milestone.title}" (Contract: {contract.title}). '
                     f'Status reverted to APPROVED for retry.'
                 ),
@@ -242,3 +257,7 @@ class PaystackWebhookView(View):
             "_handle_transfer_failure: milestone %s reverted to APPROVED.",
             milestone.pk,
         )
+
+
+# Backward-compat alias so any existing imports still resolve
+PaystackWebhookView = FlutterwaveWebhookView
