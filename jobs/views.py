@@ -1,4 +1,4 @@
-"""
+﻿"""
 marketplace/views.py
 ====================
 All views for the TradeLink NG marketplace app.
@@ -624,9 +624,11 @@ class WorkerDashboardView(WorkerRequiredMixin, View):
             CLIPMatch.objects.filter(
                 worker=worker,
                 job__status=Job.Status.ACTIVE,
+                job__deadline__gte=timezone.now().date(),  # exclude expired jobs
                 is_applied=False,
                 score__gte=0.60,
             )
+            .exclude(job__applications__worker=worker)  # exclude already-applied jobs
             .select_related('job__employer', 'job__trade_category')
             .order_by('-score')[:5]
         )
@@ -985,9 +987,11 @@ class WorkerMatchesView(WorkerRequiredMixin, View):
             CLIPMatch.objects.filter(
                 worker=worker,
                 job__status=Job.Status.ACTIVE,
+                job__deadline__gte=timezone.now().date(),  # exclude expired jobs
                 is_applied=False,
                 score__gte=0.60,          # Only show matches ≥ 60%
             )
+            .exclude(job__applications__worker=worker)     # exclude already-applied jobs
             .select_related('job__employer', 'job__trade_category')
             .prefetch_related('job__required_skills')
             .order_by('-score')

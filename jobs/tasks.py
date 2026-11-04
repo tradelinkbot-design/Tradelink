@@ -1,4 +1,4 @@
-"""
+﻿"""
 marketplace/tasks.py
 =====================
 Celery tasks for async embedding computation and match scoring.
@@ -397,6 +397,139 @@ def compute_matches_for_worker_task(self, worker_profile_id: str) -> None:
     if count:
         from bot.tasks import notify_worker_new_matches_task
         notify_worker_new_matches_task.delay(worker_profile_id)
+        send_job_match_email_task.delay(worker_profile_id)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  EMAIL NOTIFICATION TASKS
+# ──────────────────────────────────────────────────────────────────────────────
+
+@shared_task(
+    bind=True,
+    max_retries=2,
+    acks_late=True,
+    ignore_result=True,
+    retry_backoff=True,
+)
+def send_job_match_email_task(self, worker_profile_id: str) -> None:
+    """
+    Sends a beautifully designed HTML email to a worker listing their top
+    CLIP-matched jobs (score >= 0.65, active, not applied, not expired).
+
+    Called automatically after compute_matches_for_worker_task when new
+    matches are found, or dispatched directly for manual triggers.
+
+    Uses the Resend SDK (resend.Emails.send) so transactional email goes
+    through Resend's infrastructure rather than Django's send_mail.
+    """
+    import resend
+    from django.conf import settings
+    from django.template.loader import render_to_string
+    from jobs.models import WorkerProfile, CLIPMatch, Job
+
+    logger.info(
+        "Task: send_job_match_email_task — sending match email for worker %s",
+        worker_profile_id,
+    )
+
+    # ── Fetch worker ───────────────────────────────────────────────────────────────────
+    try:
+        worker = WorkerProfile.objects.select_related('user').get(pk=worker_profile_id)
+    except WorkerProfile.DoesNotExist:
+        logger.warning(
+            "Task: send_job_match_email_task — WorkerProfile %s not found, skipping.",
+            worker_profile_id,
+        )
+        return
+
+    if not worker.user.email:
+        logger.warning(
+            "Task: send_job_match_email_task — worker %s has no email address, skipping.",
+            worker_profile_id,
+        )
+        return
+
+    # ── Query top 5 strong matches (score >= 0.65, active, not expired) ────
+    matches = (
+        CLIPMatch.objects.filter(
+            worker=worker,
+            job__status=Job.Status.ACTIVE,
+            job__deadline__gte=timezone.now().date(),  # exclude expired
+            is_applied=False,
+            score__gte=0.65,  # Only strong matches for email
+        )
+        .exclude(job__applications__worker=worker)  # double-exclude applied jobs
+        .select_related('job__employer', 'job__trade_category')
+        .prefetch_related('job__required_skills')
+        .order_by('-score')[:5]
+    )
+
+    if not matches:
+        logger.info(
+            "Task: send_job_match_email_task — no strong matches for worker %s, skipping email.",
+            worker_profile_id,
+        )
+        return
+
+    # ── Build template context ──────────────────────────────────────────────────
+    match_data = []
+    for m in matches:
+        job = m.job
+        pay_display = (
+            f"₦{job.pay_min:,.0f}–₦{job.pay_max:,.0f} {job.get_pay_type_display()}"
+            if job.pay_min and job.pay_max
+            else job.get_pay_type_display()
+        )
+        location = ', '.join(filter(None, [job.lga, job.get_state_display()]))
+        match_data.append({
+            'title': job.title,
+            'employer': str(job.employer),
+            'location': location or 'Nigeria',
+            'pay': pay_display,
+            'score': round(m.score * 100),
+            'job_type': job.get_job_type_display(),
+            'job_url': f"https://tradelink.ng/jobs/{job.pk}/",
+        })
+
+    # ── Render HTML email ──────────────────────────────────────────────────────
+    worker_name = worker.user.first_name or worker.user.username
+    html_content = render_to_string('emails/job_matches_notification.html', {
+        'worker_name': worker_name,
+        'matches': match_data,
+        'match_count': len(match_data),
+    })
+
+    # ── Send via Django Email Backend (Gmail SMTP on localhost / DEBUG) ────────
+    try:
+        from django.core.mail import EmailMultiAlternatives
+        from django.utils.html import strip_tags
+
+        match_count = len(match_data)
+        plural_suffix = 'es' if match_count > 1 else ''
+        subject = f"🎯 {match_count} new job match{plural_suffix} for you on TradeLink NG"
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or getattr(settings, 'EMAIL_HOST_USER', 'noreply@tradelink.ng')
+        to_email = [worker.user.email]
+        text_content = strip_tags(html_content)
+
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=from_email,
+            to=to_email,
+        )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send(fail_silently=False)
+
+        logger.info(
+            "Task: send_job_match_email_task — email sent to %s (%d matches).",
+            worker.user.email, match_count,
+        )
+    except Exception as exc:
+        logger.exception(
+            "Task: send_job_match_email_task — failed to send email to %s: %s",
+            worker.user.email, exc,
+        )
+        raise self.retry(exc=exc)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -586,4 +719,4 @@ def create_transfer_recipient_task(self, worker_bank_account_id: str) -> None:
             "Task: create_transfer_recipient failed for %s",
             worker_bank_account_id,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc)

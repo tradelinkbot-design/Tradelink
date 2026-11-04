@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- FOUC Prevention: apply saved theme before page renders -->
+  <script>
+    (function(){
+      var t = localStorage.getItem("tl-theme");
+      if (t === "dark") document.documentElement.setAttribute("data-theme","dark");
+    })();
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{% block title %}TradeLink NG — Nigeria's Skilled Trades Platform{% endblock %}</title>
@@ -25,39 +32,39 @@
     }
 
     :root {
-      --bg-base:        #0C0A08;
-      --bg-raised:      #131008;
-      --bg-card:        #181410;
-      --amber:          #F59E0B;
-      --amber-light:    #FCD34D;
-      --amber-dark:     #D97706;
-      --orange:         #F97316;
-      --emerald:        #10B981;
-      --sky:            #38BDF8;
-      --surface-1:      rgba(245,158,11,0.06);
-      --surface-2:      rgba(245,158,11,0.10);
-      --border-subtle:  rgba(245,158,11,0.12);
-      --border-strong:  rgba(245,158,11,0.28);
-      --text-1:         #FAF5EB;
-      --text-2:         rgba(250,245,235,0.6);
-      --text-3:         rgba(250,245,235,0.32);
+      --bg-base:        #F8F5F0;
+      --bg-raised:      #FFFFFF;
+      --bg-card:        #FFFFFF;
+      --amber:          #D97706;
+      --amber-light:    #F59E0B;
+      --amber-dark:     #B45309;
+      --orange:         #EA580C;
+      --emerald:        #059669;
+      --sky:            #0284C7;
+      --surface-1:      rgba(217,119,6,0.07);
+      --surface-2:      rgba(217,119,6,0.13);
+      --border-subtle:  rgba(217,119,6,0.16);
+      --border-strong:  rgba(217,119,6,0.36);
+      --text-1:         #1C1009;
+      --text-2:         #4B3A1F;
+      --text-3:         #7C6040;
       --nav-h:          72px;
       --r-xl:           24px;
       --r-lg:           16px;
       --r-md:           10px;
       --r-sm:           6px;
       --r-pill:         100px;
-      --shadow-sm:      0 2px 8px rgba(0,0,0,0.4);
-      --shadow-md:      0 8px 32px rgba(0,0,0,0.5);
-      --shadow-lg:      0 24px 64px rgba(0,0,0,0.6);
-      --shadow-amber:   0 8px 32px rgba(245,158,11,0.22);
+      --shadow-sm:      0 2px 8px rgba(0,0,0,0.08);
+      --shadow-md:      0 8px 32px rgba(0,0,0,0.10);
+      --shadow-lg:      0 24px 64px rgba(0,0,0,0.14);
+      --shadow-amber:   0 8px 32px rgba(217,119,6,0.20);
       --ease:           cubic-bezier(0.4,0,0.2,1);
       --t:              all 0.28s cubic-bezier(0.4,0,0.2,1);
 
       /* Verification badge colours */
-      --ver-blue:  #3B82F6;
-      --ver-gold:  #F59E0B;
-      --ver-green: #10B981;
+      --ver-blue:  #1D4ED8;
+      --ver-gold:  #D97706;
+      --ver-green: #059669;
       --ver-grey:  #6B7280;
     }
 
@@ -75,9 +82,9 @@
       content: '';
       position: fixed; inset: 0;
       background:
-        radial-gradient(ellipse 80% 60% at 10% 0%, rgba(245,158,11,0.08) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 50% at 90% 100%, rgba(249,115,22,0.06) 0%, transparent 55%),
-        radial-gradient(ellipse 50% 40% at 50% 50%, rgba(16,185,129,0.03) 0%, transparent 60%);
+        radial-gradient(ellipse 80% 60% at 10% 0%, rgba(217,119,6,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 90% 100%, rgba(234,88,12,0.05) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 40% at 50% 50%, rgba(5,150,105,0.03) 0%, transparent 60%);
       pointer-events: none; z-index: 0;
     }
 
@@ -101,7 +108,7 @@
       justify-content: space-between;
       padding: 0 clamp(16px,5vw,64px);
       /* NO background / backdrop-filter here — moved to ::before */
-      border-bottom: 1px solid var(--border-subtle);
+      border-bottom: 1px solid rgba(217,119,6,0.18);
       transition: border-color 0.28s var(--ease);
       overflow: visible; /* never clip dropdown children */
     }
@@ -110,7 +117,7 @@
     .navbar::before {
       content: '';
       position: absolute; inset: 0;
-      background: rgba(12,10,8,0.78);
+      background: rgba(255,251,245,0.85);
       backdrop-filter: blur(22px) saturate(160%);
       -webkit-backdrop-filter: blur(22px) saturate(160%);
       z-index: 0; /* above body::before glow (z:0), below nav content */
@@ -121,10 +128,10 @@
     .navbar > * { position: relative; z-index: 1; }
     .navbar.scrolled {
       border-bottom-color: var(--border-strong);
-      box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
     }
     .navbar.scrolled::before {
-      background: rgba(12,10,8,0.97);
+      background: rgba(255,251,245,0.98);
     }
 
     .nav-logo {
@@ -137,8 +144,8 @@
       width: 34px; height: 34px; border-radius: 9px;
       background: linear-gradient(135deg, var(--amber), var(--orange));
       display: flex; align-items: center; justify-content: center;
-      font-size: 0.85rem; color: #0C0A08; font-weight: 900;
-      box-shadow: 0 4px 16px rgba(245,158,11,0.35); flex-shrink: 0;
+      font-size: 0.85rem; color: #FFFFFF; font-weight: 900;
+      box-shadow: 0 4px 16px rgba(217,119,6,0.30); flex-shrink: 0;
     }
     .logo-ng {
       background: linear-gradient(to right,
@@ -180,12 +187,12 @@
     /* Base dropdown panel */
     .nd-panel {
       position: absolute; top: calc(100% + 10px); left: 0;
-      background: rgba(15, 11, 8, 0.97);
+      background: rgba(255,251,245,0.98);
       backdrop-filter: blur(28px) saturate(180%);
       -webkit-backdrop-filter: blur(28px) saturate(180%);
       border: 1px solid var(--border-subtle);
       border-radius: var(--r-xl); padding: 10px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(245,158,11,0.06);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.12), 0 0 0 1px rgba(217,119,6,0.08);
       opacity: 0; visibility: hidden;
       transform: translateY(12px) scale(0.98);
       transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
@@ -236,13 +243,13 @@
     .nd-cta {
       margin: 6px 0 0;
       padding: 10px 13px;
-      background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(249,115,22,0.06));
+      background: linear-gradient(135deg, rgba(217,119,6,0.07), rgba(234,88,12,0.05));
       border: 1px solid var(--border-subtle);
       border-radius: var(--r-lg);
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
       text-decoration: none; transition: var(--t);
     }
-    .nd-cta:hover { border-color: var(--border-strong); background: rgba(245,158,11,0.12); }
+    .nd-cta:hover { border-color: var(--border-strong); background: rgba(217,119,6,0.10); }
     .nd-cta-text { font-size: 0.82rem; font-weight: 600; color: var(--text-1); }
     .nd-cta-text span { display: block; font-size: 0.72rem; color: var(--text-3); font-weight: 400; }
     .nd-cta-arrow { color: var(--amber); font-size: 0.75rem; }
@@ -280,11 +287,11 @@
       padding: 7px 14px;
       border-radius: var(--r-pill);
       background: linear-gradient(135deg, var(--amber), var(--orange));
-      color: #0C0A08;
+      color: #FFFFFF;
       font-size: 0.82rem;
       font-weight: 700;
       text-decoration: none;
-      box-shadow: 0 2px 10px rgba(245,158,11,0.25);
+      box-shadow: 0 2px 10px rgba(217,119,6,0.22);
       transition: var(--t);
       white-space: nowrap;
     }
@@ -298,7 +305,7 @@
 
     .mobile-menu {
       position: fixed; top: var(--nav-h); left: 0; right: 0;
-      background: rgba(12,10,8,0.98); backdrop-filter: blur(24px);
+      background: rgba(255,251,245,0.99); backdrop-filter: blur(24px);
       border-bottom: 1px solid var(--border-subtle);
       padding: 16px clamp(14px,4vw,32px) 24px;
       display: none; flex-direction: column; gap: 4px; z-index: 999;
@@ -427,7 +434,7 @@
       flex-direction: column;
       gap: 2px;
       padding: 4px 8px 8px 36px;
-      background: rgba(0, 0, 0, 0.25);
+      background: rgba(217,119,6,0.05);
       border-radius: 0 0 var(--r-md) var(--r-md);
     }
     .m-dropdown.open .m-dropdown-content {
@@ -476,8 +483,8 @@
     }
     .btn-primary {
       background: linear-gradient(135deg, var(--amber), var(--orange));
-      color: #0C0A08; font-weight: 700;
-      box-shadow: 0 4px 20px rgba(245,158,11,0.3);
+      color: #FFFFFF; font-weight: 700;
+      box-shadow: 0 4px 20px rgba(217,119,6,0.25);
     }
     .btn-primary:hover { box-shadow: var(--shadow-amber); transform: translateY(-1px); filter: brightness(1.05); }
     .btn-ghost {
@@ -506,7 +513,7 @@
     }
     .card:hover {
       border-color: var(--border-strong); transform: translateY(-3px);
-      box-shadow: 0 20px 48px rgba(0,0,0,0.4), 0 0 0 1px rgba(245,158,11,0.06);
+      box-shadow: 0 20px 48px rgba(0,0,0,0.10), 0 0 0 1px rgba(217,119,6,0.08);
     }
     .card:hover::before { opacity: 1; }
 
@@ -520,7 +527,7 @@
     }
     .form-control {
       width: 100%; padding: 13px 16px;
-      background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle);
+      background: #FFFFFF; border: 1px solid var(--border-subtle);
       border-radius: var(--r-lg); color: var(--text-1);
       font-family: 'Outfit', sans-serif; font-size: 0.95rem;
       transition: var(--t); outline: none;
@@ -529,7 +536,7 @@
     .form-control::placeholder { color: var(--text-3); }
     .form-control:focus {
       border-color: var(--amber); background: rgba(245,158,11,0.04);
-      box-shadow: 0 0 0 3px rgba(245,158,11,0.12);
+      box-shadow: 0 0 0 3px rgba(217,119,6,0.15);
     }
 
     /* ========== BADGES ========== */
@@ -538,10 +545,10 @@
       padding: 4px 12px; border-radius: var(--r-pill);
       font-size: 0.76rem; font-weight: 600; letter-spacing: 0.2px;
     }
-    .badge-amber  { background: rgba(245,158,11,0.12); color: #FCD34D; border: 1px solid rgba(245,158,11,0.2); }
-    .badge-orange { background: rgba(249,115,22,0.12); color: #FDA975; border: 1px solid rgba(249,115,22,0.2); }
-    .badge-green  { background: rgba(16,185,129,0.12); color: #6EE7B7; border: 1px solid rgba(16,185,129,0.2); }
-    .badge-sky    { background: rgba(56,189,248,0.12); color: #7DD3FC; border: 1px solid rgba(56,189,248,0.2); }
+    .badge-amber  { background: rgba(217,119,6,0.10); color: #92400E; border: 1px solid rgba(245,158,11,0.2); }
+    .badge-orange { background: rgba(234,88,12,0.10); color: #9A3412; border: 1px solid rgba(234,88,12,0.25); }
+    .badge-green  { background: rgba(5,150,105,0.10); color: #065F46; border: 1px solid rgba(5,150,105,0.25); }
+    .badge-sky    { background: rgba(2,132,199,0.10); color: #075985; border: 1px solid rgba(2,132,199,0.25); }
 
     /* ========== UTILS ========== */
     .z1 { position: relative; z-index: 1; }
@@ -672,11 +679,11 @@
       -webkit-backdrop-filter: blur(16px);
     }
     .ver-prompt--warn {
-      background: rgba(19, 16, 8, 0.95);
+      background: rgba(255,251,235,0.97);
       border-color: rgba(245, 158, 11, 0.38);
     }
     .ver-prompt--info {
-      background: rgba(8, 12, 19, 0.95);
+      background: rgba(235,242,255,0.97);
       border-color: rgba(59, 130, 246, 0.38);
     }
     .ver-prompt__inner {
@@ -780,8 +787,8 @@
       50%       { transform: translateY(-10px); }
     }
     @keyframes pulseDot {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.5); }
-      50%       { box-shadow: 0 0 0 8px rgba(245,158,11,0); }
+      0%, 100% { box-shadow: 0 0 0 0 rgba(217,119,6,0.4); }
+      50%       { box-shadow: 0 0 0 8px rgba(217,119,6,0); }
     }
     .fade-up { animation: fadeUp 0.65s cubic-bezier(0.4,0,0.2,1) both; }
     .fade-in { animation: fadeIn 0.5s cubic-bezier(0.4,0,0.2,1) both; }
@@ -812,6 +819,107 @@
       .footer-inner { grid-template-columns: 1fr; gap: 24px; }
       .site-footer  { padding-top: 48px; padding-bottom: 28px; }
     }
+    /* ========== DARK THEME OVERRIDES ========== */
+    [data-theme="dark"] {
+      --bg-base:        #0C0A08;
+      --bg-raised:      #131008;
+      --bg-card:        #181410;
+      --amber:          #F59E0B;
+      --amber-light:    #FCD34D;
+      --amber-dark:     #D97706;
+      --orange:         #F97316;
+      --emerald:        #10B981;
+      --sky:            #38BDF8;
+      --surface-1:      rgba(245,158,11,0.06);
+      --surface-2:      rgba(245,158,11,0.10);
+      --border-subtle:  rgba(245,158,11,0.12);
+      --border-strong:  rgba(245,158,11,0.28);
+      --text-1:         #FAF5EB;
+      --text-2:         rgba(250,245,235,0.72);
+      --text-3:         rgba(250,245,235,0.38);
+      --shadow-sm:      0 2px 8px rgba(0,0,0,0.4);
+      --shadow-md:      0 8px 32px rgba(0,0,0,0.5);
+      --shadow-lg:      0 24px 64px rgba(0,0,0,0.6);
+      --shadow-amber:   0 8px 32px rgba(245,158,11,0.22);
+      --ver-blue:  #3B82F6;
+      --ver-gold:  #F59E0B;
+      --ver-green: #10B981;
+      --ver-grey:  #9CA3AF;
+    }
+
+    /* Dark-only element overrides */
+    [data-theme="dark"] .navbar::before {
+      background: rgba(12,10,8,0.85);
+    }
+    [data-theme="dark"] .navbar.scrolled::before {
+      background: rgba(12,10,8,0.97);
+    }
+    [data-theme="dark"] .navbar {
+      border-bottom-color: rgba(245,158,11,0.12);
+    }
+    [data-theme="dark"] .nd-panel {
+      background: rgba(15,11,8,0.97);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(245,158,11,0.06);
+    }
+    [data-theme="dark"] .mobile-menu {
+      background: rgba(12,10,8,0.98);
+    }
+    [data-theme="dark"] .m-dropdown-content {
+      background: rgba(0,0,0,0.25);
+    }
+    [data-theme="dark"] .form-control {
+      background: rgba(255,255,255,0.04);
+    }
+    [data-theme="dark"] .card:hover {
+      box-shadow: 0 20px 48px rgba(0,0,0,0.4), 0 0 0 1px rgba(245,158,11,0.06);
+    }
+    [data-theme="dark"] .ver-prompt--warn {
+      background: rgba(19,16,8,0.95);
+    }
+    [data-theme="dark"] .ver-prompt--info {
+      background: rgba(8,12,19,0.95);
+    }
+    [data-theme="dark"] .badge-amber  { background: rgba(245,158,11,0.12); color: #FCD34D; border-color: rgba(245,158,11,0.2); }
+    [data-theme="dark"] .badge-orange { background: rgba(249,115,22,0.12); color: #FDA975; border-color: rgba(249,115,22,0.2); }
+    [data-theme="dark"] .badge-green  { background: rgba(16,185,129,0.12); color: #6EE7B7; border-color: rgba(16,185,129,0.2); }
+    [data-theme="dark"] .badge-sky    { background: rgba(56,189,248,0.12); color: #7DD3FC; border-color: rgba(56,189,248,0.2); }
+    [data-theme="dark"] .btn-primary  { color: #0C0A08; }
+    [data-theme="dark"] .mobile-dash-btn { color: #0C0A08; }
+
+    /* ========== THEME TOGGLE BUTTON ========== */
+    .theme-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      border-radius: var(--r-md);
+      background: var(--surface-1);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-2);
+      cursor: pointer;
+      transition: var(--t);
+      font-size: 1rem;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .theme-toggle:hover {
+      background: var(--surface-2);
+      color: var(--amber);
+      border-color: var(--border-strong);
+      transform: translateY(-1px);
+    }
+    .theme-toggle .tl-icon-sun,
+    .theme-toggle .tl-icon-moon {
+      position: absolute;
+      transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+    /* Light mode: show sun */
+    .theme-toggle .tl-icon-sun  { opacity: 1; transform: scale(1) rotate(0deg); }
+    .theme-toggle .tl-icon-moon { opacity: 0; transform: scale(0.6) rotate(30deg); }
+    /* Dark mode: show moon */
+    [data-theme="dark"] .theme-toggle .tl-icon-sun  { opacity: 0; transform: scale(0.6) rotate(-30deg); }
+    [data-theme="dark"] .theme-toggle .tl-icon-moon { opacity: 1; transform: scale(1) rotate(0deg); }
   </style>
 </head>
 <body>
@@ -977,6 +1085,12 @@
         <a href="{% url 'register' %}" class="btn btn-primary">Get Started</a>
       {% endif %}
     </div>
+
+    <!-- Theme Toggle -->
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark/light mode" title="Toggle theme">
+      <i class="fas fa-sun tl-icon-sun"></i>
+      <i class="fas fa-moon tl-icon-moon"></i>
+    </button>
 
     <button class="nav-hamburger" id="hamburger" aria-label="Toggle menu">
       <span></span><span></span><span></span>
@@ -1185,6 +1299,34 @@
         parent.classList.toggle('open', !isOpen);
       });
     });
+
+    // ── THEME TOGGLE ──
+    (function() {
+      const root = document.documentElement;
+      const btn  = document.getElementById('themeToggle');
+      if (!btn) return;
+
+      // Default: light. Respect localStorage.
+      function getTheme() {
+        return localStorage.getItem('tl-theme') || 'light';
+      }
+      function applyTheme(theme) {
+        if (theme === 'dark') {
+          root.setAttribute('data-theme', 'dark');
+        } else {
+          root.removeAttribute('data-theme');
+        }
+        localStorage.setItem('tl-theme', theme);
+      }
+
+      // Apply on load (already done by inline FOUC script, but keep in sync)
+      applyTheme(getTheme());
+
+      btn.addEventListener('click', function() {
+        const current = getTheme();
+        applyTheme(current === 'dark' ? 'light' : 'dark');
+      });
+    })();
   </script>
   {# ── Verification prompt banner ── #}
   {% include "verification/includes/_verification_prompt.html" %}

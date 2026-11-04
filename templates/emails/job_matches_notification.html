@@ -1,0 +1,289 @@
+<!--
+Plain-text fallback (for email clients that strip HTML):
+
+Hi {{ worker_name }}!
+
+We found {{ match_count }} new job match{{ match_count|pluralize }} for you on TradeLink NG.
+
+{% for match in matches %}
+{{ forloop.counter }}. {{ match.title }}
+   Employer : {{ match.employer }}
+   Location : {{ match.location }}
+   Pay      : {{ match.pay }}
+   Match    : {{ match.score }}%
+   Type     : {{ match.job_type }}
+   Apply at : {{ match.job_url }}
+
+{% endfor %}
+
+You're receiving this because you're a registered worker on TradeLink NG.
+To unsubscribe from job-match emails, log in to your account and update your
+notification preferences.
+
+© 2026 TradeLink NG. Nigeria's #1 Skilled Trade Platform.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>New Job Matches — TradeLink NG</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+</head>
+<body style="margin:0;padding:0;background-color:#f0f4f8;font-family:'Segoe UI',Arial,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+
+  <!-- Email wrapper -->
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+         style="background-color:#f0f4f8;min-width:100%;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+
+        <!-- Main card -->
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0"
+               style="max-width:600px;width:100%;background-color:#ffffff;border-radius:12px;
+                      overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+
+          <!-- ── HEADER ── -->
+          <tr>
+            <td style="background-color:#1e3a5f;padding:36px 40px 28px;text-align:center;">
+              <!-- Logo text -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0"
+                     style="margin:0 auto 10px;">
+                <tr>
+                  <td style="background-color:#f59e0b;border-radius:8px;padding:6px 14px;">
+                    <span style="font-size:22px;font-weight:800;color:#1e3a5f;
+                                 letter-spacing:0.5px;font-family:'Segoe UI',Arial,sans-serif;">
+                      TradeLink
+                    </span>
+                  </td>
+                  <td style="padding-left:6px;">
+                    <span style="font-size:22px;font-weight:800;color:#ffffff;
+                                 letter-spacing:0.5px;font-family:'Segoe UI',Arial,sans-serif;">
+                      NG
+                    </span>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:8px 0 0;font-size:13px;color:#93c5fd;
+                         letter-spacing:0.8px;text-transform:uppercase;
+                         font-family:'Segoe UI',Arial,sans-serif;">
+                Nigeria's #1 Skilled Trade Platform
+              </p>
+            </td>
+          </tr>
+
+          <!-- ── GREETING BANNER ── -->
+          <tr>
+            <td style="background-color:#1e3a5f;padding:0 40px 36px;text-align:center;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                     style="background:linear-gradient(135deg,#1e4d8c 0%,#1e3a5f 100%);
+                            border-radius:10px;overflow:hidden;">
+                <tr>
+                  <td style="padding:28px 32px;text-align:center;">
+                    <p style="margin:0 0 8px;font-size:36px;line-height:1;">🎯</p>
+                    <h1 style="margin:0 0 10px;font-size:22px;font-weight:700;
+                               color:#ffffff;line-height:1.3;
+                               font-family:'Segoe UI',Arial,sans-serif;">
+                      Hi {{ worker_name }}!
+                    </h1>
+                    <p style="margin:0;font-size:16px;color:#bfdbfe;line-height:1.5;
+                               font-family:'Segoe UI',Arial,sans-serif;">
+                      We found
+                      <span style="color:#f59e0b;font-weight:700;font-size:20px;">
+                        {{ match_count }}
+                      </span>
+                      new job match{{ match_count|pluralize }} for you!
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ── BODY ── -->
+          <tr>
+            <td style="padding:36px 40px 24px;">
+              <p style="margin:0 0 24px;font-size:15px;color:#4b5563;line-height:1.6;
+                         font-family:'Segoe UI',Arial,sans-serif;">
+                Our AI matching engine found jobs that perfectly align with your skills
+                and experience. Don't miss out — these opportunities are waiting for you!
+              </p>
+
+              <!-- ── MATCH CARDS LOOP ── -->
+              {% for match in matches %}
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                     style="background-color:#f8f9fa;border-radius:10px;
+                            border:1px solid #e5e7eb;margin-bottom:20px;
+                            overflow:hidden;">
+                <tr>
+                  <!-- Left accent bar -->
+                  <td width="5" style="background-color:#1e3a5f;border-radius:10px 0 0 10px;">
+                    &nbsp;
+                  </td>
+                  <td style="padding:20px 20px 20px 18px;">
+
+                    <!-- Title row -->
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td style="vertical-align:top;">
+                          <h2 style="margin:0 0 6px;font-size:17px;font-weight:700;
+                                     color:#1e3a5f;line-height:1.3;
+                                     font-family:'Segoe UI',Arial,sans-serif;">
+                            <a href="{{ match.job_url }}"
+                               style="color:#1e3a5f;text-decoration:none;">
+                              {{ match.title|title }}
+                            </a>
+                          </h2>
+                          <p style="margin:0 0 12px;font-size:13px;color:#6b7280;
+                                     font-family:'Segoe UI',Arial,sans-serif;">
+                            {{ match.employer }}
+                          </p>
+                        </td>
+                        <td width="90" style="vertical-align:top;text-align:right;
+                                              padding-left:12px;">
+                          <!-- Match score badge -->
+                          <span style="display:inline-block;background-color:#fef3c7;
+                                       color:#92400e;font-weight:700;font-size:13px;
+                                       padding:4px 10px;border-radius:20px;
+                                       border:1px solid #f59e0b;
+                                       font-family:'Segoe UI',Arial,sans-serif;
+                                       white-space:nowrap;">
+                            {{ match.score }}% Match
+                          </span>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Details row -->
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                           style="margin-bottom:16px;">
+                      <tr>
+                        <td style="font-size:13px;color:#374151;padding-bottom:6px;
+                                   font-family:'Segoe UI',Arial,sans-serif;">
+                          <!-- Location -->
+                          <span style="margin-right:16px;">
+                            📍 <strong>{{ match.location }}</strong>
+                          </span>
+                          <!-- Job type badge -->
+                          <span style="display:inline-block;background-color:#dbeafe;
+                                       color:#1e40af;font-size:12px;font-weight:600;
+                                       padding:2px 8px;border-radius:12px;
+                                       font-family:'Segoe UI',Arial,sans-serif;">
+                            {{ match.job_type }}
+                          </span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:13px;color:#374151;
+                                   font-family:'Segoe UI',Arial,sans-serif;">
+                          <!-- Pay -->
+                          💰 <strong style="color:#065f46;">{{ match.pay }}</strong>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- CTA button -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td style="border-radius:8px;background-color:#f59e0b;">
+                          <a href="{{ match.job_url }}"
+                             style="display:inline-block;padding:11px 26px;
+                                    font-size:14px;font-weight:700;color:#1e3a5f;
+                                    text-decoration:none;border-radius:8px;
+                                    font-family:'Segoe UI',Arial,sans-serif;
+                                    letter-spacing:0.3px;">
+                            View &amp; Apply →
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+
+                  </td>
+                </tr>
+              </table>
+              {% endfor %}
+
+              <!-- ── CTA FOOTER BLOCK ── -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                     style="background:linear-gradient(135deg,#1e3a5f 0%,#1e4d8c 100%);
+                            border-radius:10px;margin-top:8px;">
+                <tr>
+                  <td style="padding:28px 32px;text-align:center;">
+                    <p style="margin:0 0 16px;font-size:15px;color:#bfdbfe;
+                               font-family:'Segoe UI',Arial,sans-serif;">
+                      Ready to land your next job? View all your personalised matches
+                      on TradeLink NG.
+                    </p>
+                    <a href="https://tradelink.ng/matches/"
+                       style="display:inline-block;padding:13px 32px;
+                              background-color:#f59e0b;color:#1e3a5f;
+                              font-weight:700;font-size:15px;text-decoration:none;
+                              border-radius:8px;
+                              font-family:'Segoe UI',Arial,sans-serif;">
+                      See All My Matches
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- ── FOOTER ── -->
+          <tr>
+            <td style="background-color:#f8f9fa;border-top:1px solid #e5e7eb;
+                        padding:28px 40px;text-align:center;">
+              <p style="margin:0 0 8px;font-size:13px;color:#6b7280;
+                         line-height:1.6;font-family:'Segoe UI',Arial,sans-serif;">
+                You're receiving this email because you're a registered worker on
+                <strong style="color:#1e3a5f;">TradeLink NG</strong>.
+              </p>
+              <p style="margin:0 0 16px;font-size:12px;color:#9ca3af;
+                         line-height:1.5;font-family:'Segoe UI',Arial,sans-serif;">
+                To stop receiving job-match emails, log in to your account and update
+                your <a href="https://tradelink.ng/profile/worker/edit/"
+                         style="color:#1e3a5f;text-decoration:underline;">
+                  notification preferences</a>.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0"
+                     style="margin:0 auto 12px;">
+                <tr>
+                  <td style="background-color:#1e3a5f;border-radius:6px;padding:4px 10px;">
+                    <span style="font-size:13px;font-weight:800;color:#f59e0b;
+                                 font-family:'Segoe UI',Arial,sans-serif;">
+                      TradeLink
+                    </span>
+                    <span style="font-size:13px;font-weight:800;color:#ffffff;
+                                 font-family:'Segoe UI',Arial,sans-serif;">
+                      NG
+                    </span>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0;font-size:12px;color:#9ca3af;
+                         font-family:'Segoe UI',Arial,sans-serif;">
+                © 2026 TradeLink NG. Nigeria's #1 Skilled Trade Platform.<br />
+                All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+        <!-- / Main card -->
+
+      </td>
+    </tr>
+  </table>
+  <!-- / Email wrapper -->
+
+</body>
+</html>
