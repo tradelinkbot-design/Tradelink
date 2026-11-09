@@ -1,4 +1,4 @@
-﻿"""
+"""
 jobs/management/commands/test_match_email.py
 =============================================
 Management command to test the job-match email notification
@@ -182,32 +182,29 @@ class Command(BaseCommand):
             ))
             return
 
-        # -- Inline send (default - synchronous, uses Django Email Backend / Gmail) --
-        from django.conf import settings
-        from django.core.mail import EmailMultiAlternatives
-        from django.utils.html import strip_tags
+        # -- Inline send (default - synchronous) ----------------------------------
+        # Routes automatically: Gmail SMTP in dev, Resend API in production.
+        from core.email import send_email
 
         html_content = render_to_string('emails/job_matches_notification.html', ctx)
 
         count = len(match_data)
         suffix = 'es' if count > 1 else ''
         subject = f"[MATCH] {count} new job match{suffix} for you on TradeLink NG"
-        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or getattr(settings, 'EMAIL_HOST_USER', 'noreply@tradelink.ng')
-        to_email = [worker.user.email]
-        text_content = strip_tags(html_content)
 
-        try:
-            msg = EmailMultiAlternatives(
-                subject=subject,
-                body=text_content,
-                from_email=from_email,
-                to=to_email,
-            )
-            msg.attach_alternative(html_content, "text/html")
-            msg.send(fail_silently=False)
+        success = send_email(
+            subject=subject,
+            to=worker.user.email,
+            html_content=html_content,
+        )
 
+        if success:
+            from django.conf import settings
+            backend = "Resend API" if not settings.DEBUG else settings.EMAIL_BACKEND
             self.stdout.write(self.style.SUCCESS(
-                f"  [OK] Email successfully sent to {worker.user.email} via {settings.EMAIL_BACKEND}!"
+                f"  [OK] Email successfully sent to {worker.user.email} via {backend}!"
             ))
-        except Exception as exc:
-            self.stdout.write(self.style.ERROR(f"  [ERROR] Send failed: {exc}"))
+        else:
+            self.stdout.write(self.style.ERROR(
+                f"  [ERROR] Send failed for {worker.user.email} — check logs for details."
+            ))

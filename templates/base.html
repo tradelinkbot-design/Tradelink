@@ -161,6 +161,9 @@
     .nav-links {
       display: flex; align-items: center; gap: 2px; list-style: none;
       overflow: visible; /* ensure dropdown panels aren't clipped */
+      flex: 1;           /* fill space between logo and actions */
+      justify-content: center; /* centre the nav items */
+      flex-wrap: nowrap;
     }
     .nav-links > li > a {
       font-size: 0.875rem; font-weight: 500; color: var(--text-2);
@@ -254,7 +257,7 @@
     .nd-cta-text span { display: block; font-size: 0.72rem; color: var(--text-3); font-weight: 400; }
     .nd-cta-arrow { color: var(--amber); font-size: 0.75rem; }
 
-    .nav-actions { display: flex; align-items: center; gap: 8px; }
+    .nav-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
     /* ── NAV USER GREETING ── */
     .nav-username {
@@ -799,6 +802,24 @@
     @media (max-width: 1024px) {
       /* FIX: 2-col footer starts earlier */
       .footer-inner { grid-template-columns: 1fr 1fr; gap: 36px; }
+      /* Tighten nav-links gap so items don't spill into the theme toggle */
+      .nav-links { gap: 0; }
+      .nav-links > li > a,
+      .nav-dropdown-trigger { padding: 8px 10px; font-size: 0.82rem; }
+    }
+    /* Intermediate: at ≤900px collapse action button labels to icon-only
+       so the theme-toggle is never pushed off screen */
+    @media (max-width: 900px) {
+      .nav-links > li > a,
+      .nav-dropdown-trigger { padding: 6px 8px; font-size: 0.8rem; }
+      /* Keep icon, hide the text node that follows it */
+      .nav-actions .btn-ghost { padding: 8px 10px; gap: 0; }
+      .nav-actions .signout-form .btn { padding: 8px 10px; gap: 0; }
+      /* Hide text labels, keep icons */
+      .nav-actions .btn-ghost .btn-label,
+      .nav-actions .signout-form .btn .btn-label { display: none; }
+      /* Hide the greeting username at this width */
+      .nav-actions .nav-username { display: none; }
     }
     @media (max-width: 768px) {
       .nav-links { display: none; }
@@ -900,8 +921,9 @@
       cursor: pointer;
       transition: var(--t);
       font-size: 1rem;
-      flex-shrink: 0;
+      flex-shrink: 0; /* never let theme toggle get pushed off-screen */
       position: relative;
+      order: 99; /* always last before hamburger */
     }
     .theme-toggle:hover {
       background: var(--surface-2);
@@ -1067,16 +1089,16 @@
         <!-- Direct Mobile Dashboard button on navbar -->
         
         <a href="{% url 'chats:conversation_list' %}" class="btn btn-ghost" title="Messages">
-          <i class="fas fa-comment-dots"></i> Messages
+          <i class="fas fa-comment-dots"></i> <span class="btn-label">Messages</span>
         </a>
         <a href="{% url 'edit_profile' %}" class="btn btn-ghost" title="Profile">
-          <i class="fas fa-user-circle"></i> Profile
+          <i class="fas fa-user-circle"></i> <span class="btn-label">Profile</span>
         </a>
         <a href="{% url 'marketplace:dashboard' %}" class="nav-username" style="text-decoration:none;">Hi, {{ user.username }}</a>
         <form method="post" action="{% url 'signout' %}" class="signout-form">
           {% csrf_token %}
           <button type="submit" class="btn btn-ghost">
-            <i class="fas fa-sign-out-alt"></i> Sign Out
+            <i class="fas fa-sign-out-alt"></i> <span class="btn-label">Sign Out</span>
           </button>
         </form>
       {% else %}

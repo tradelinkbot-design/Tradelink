@@ -1,4 +1,4 @@
-﻿"""
+"""
 marketplace/tasks.py
 =====================
 Celery tasks for async embedding computation and match scoring.
@@ -499,37 +499,30 @@ def send_job_match_email_task(self, worker_profile_id: str) -> None:
         'match_count': len(match_data),
     })
 
-    # ── Send via Django Email Backend (Gmail SMTP on localhost / DEBUG) ────────
-    try:
-        from django.core.mail import EmailMultiAlternatives
-        from django.utils.html import strip_tags
+    # ── Send email (Gmail in dev · Resend API in production) ──────────────────
+    from core.email import send_email
 
-        match_count = len(match_data)
-        plural_suffix = 'es' if match_count > 1 else ''
-        subject = f"🎯 {match_count} new job match{plural_suffix} for you on TradeLink NG"
-        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or getattr(settings, 'EMAIL_HOST_USER', 'noreply@tradelink.ng')
-        to_email = [worker.user.email]
-        text_content = strip_tags(html_content)
+    match_count = len(match_data)
+    plural_suffix = 'es' if match_count > 1 else ''
+    subject = f"🎯 {match_count} new job match{plural_suffix} for you on TradeLink NG"
 
-        msg = EmailMultiAlternatives(
-            subject=subject,
-            body=text_content,
-            from_email=from_email,
-            to=to_email,
-        )
-        msg.attach_alternative(html_content, "text/html")
-        msg.send(fail_silently=False)
+    success = send_email(
+        subject=subject,
+        to=worker.user.email,
+        html_content=html_content,
+    )
 
+    if success:
         logger.info(
             "Task: send_job_match_email_task — email sent to %s (%d matches).",
             worker.user.email, match_count,
         )
-    except Exception as exc:
-        logger.exception(
-            "Task: send_job_match_email_task — failed to send email to %s: %s",
-            worker.user.email, exc,
+    else:
+        logger.error(
+            "Task: send_job_match_email_task — failed to send email to %s.",
+            worker.user.email,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=RuntimeError(f"Email delivery failed for {worker.user.email}"))
 
 
 # ──────────────────────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Django settings for technicians project.
 """
 
@@ -622,12 +622,22 @@ WHATSAPP_API_VERSION     = 'v19.0'
 # ==================================
 # EMAIL
 # ==================================
+#
+# Strategy:
+#   - Development (DEBUG=True):  Gmail SMTP via Django's built-in backend.
+#   - Production (DEBUG=False):  Resend HTTP API — bypasses all SMTP port
+#                                restrictions that cloud/container hosts enforce.
+#
+# Required env vars:
+#   Development  → EMAIL_HOST_USER, EMAIL_HOST_PASSWORD (Gmail App Password)
+#   Production   → RESEND_API_KEY, EMAIL_FROM (optional, has default)
+# ==================================
 
 RESEND_API_KEY     = os.environ.get('RESEND_API_KEY', '')
 DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_FROM', 'TradeLink NG <noreply@tradelink.ng>')
 
-
 if DEBUG:
+    # ── Development: Gmail SMTP ────────────────────────────────────────────────
     EMAIL_BACKEND       = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
     EMAIL_HOST          = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
     EMAIL_PORT          = int(os.environ.get('EMAIL_PORT', 465))
@@ -636,6 +646,12 @@ if DEBUG:
     EMAIL_HOST_USER     = os.environ.get('EMAIL_HOST_USER', '')
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '').replace(' ', '').strip()
     DEFAULT_FROM_EMAIL  = os.environ.get('DEFAULT_FROM_EMAIL') or EMAIL_HOST_USER
+else:
+    # ── Production: Resend HTTP API (port 443 — never blocked) ────────────────
+    # Django's EMAIL_BACKEND is intentionally NOT set here; all email in
+    # production must go through the send_email() helper in core/email.py
+    # which calls the Resend SDK directly over HTTPS.
+    EMAIL_BACKEND = 'django.core.mail.backends.dummy.EmailBackend'  # safety net — blocks accidental SMTP fallback
 
 
 
