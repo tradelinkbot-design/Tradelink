@@ -590,6 +590,25 @@ _default_callback = (
     else 'http://127.0.0.1:8000/escrow/flutterwave/callback/'
 )
 FLW_REDIRECT_URL  = os.environ.get('FLW_REDIRECT_URL', _default_callback)
+
+# ==================================
+# SITE BASE URL
+# ==================================
+# Used wherever an absolute URL is needed outside of a request context
+# (e.g. email templates, Celery tasks).
+#
+# Resolution order:
+#   1. SITE_BASE_URL env var  — set this in production when you have a custom
+#                               domain (e.g. https://tradelink.ng)
+#   2. Railway public domain  — auto-detected from RAILWAY_PUBLIC_DOMAIN
+#   3. Render hostname        — auto-detected from RENDER_EXTERNAL_HOSTNAME
+#   4. http://localhost:8000  — local development fallback
+_site_host = (
+    os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+    or os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+)
+_auto_base_url = f'https://{_site_host}' if _site_host else 'http://localhost:8000'
+SITE_BASE_URL = os.environ.get('SITE_BASE_URL', _auto_base_url).rstrip('/')
 # ==================================
 # DOJAH (KYC / VERIFICATION)
 # ==================================

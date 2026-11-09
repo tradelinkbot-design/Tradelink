@@ -81,12 +81,16 @@ class Command(BaseCommand):
     # --------------------------------------------------------------------------
 
     def _process(self, worker, options):
+        from django.conf import settings
         from jobs.models import CLIPMatch, Job
         from django.template.loader import render_to_string
+
+        site_url = settings.SITE_BASE_URL  # e.g. https://xyz.up.railway.app or http://localhost:8000
 
         self.stdout.write(self.style.MIGRATE_HEADING(
             f"\n>  Worker: {worker.user.username} <{worker.user.email}>"
         ))
+        self.stdout.write(f"   Site URL: {site_url}")
 
         # -- Build match data --------------------------------------------------
         # Try real CLIPMatch rows first; fall back to fake data for testing
@@ -120,7 +124,7 @@ class Command(BaseCommand):
                 'pay':      pay_display,
                 'score':    round(m.score * 100),
                 'job_type': job.get_job_type_display(),
-                'job_url':  f"https://tradelink.ng/jobs/{job.pk}/",
+                'job_url':  f"{site_url}/jobs/{job.pk}/",
             })
 
         # -- Use fake data when no real matches exist --------------------------
@@ -138,7 +142,7 @@ class Command(BaseCommand):
                     'pay':      'NGN 45,000-NGN 60,000 Per Day',
                     'score':    94,
                     'job_type': 'Contract',
-                    'job_url':  'https://tradelink.ng/jobs/test-1/',
+                    'job_url':  f"{site_url}/jobs/test-1/",
                 },
                 {
                     'title':    'Lead Plumber - New Housing Project',
@@ -147,7 +151,7 @@ class Command(BaseCommand):
                     'pay':      'NGN 30,000-NGN 50,000 Per Day',
                     'score':    88,
                     'job_type': 'Contract',
-                    'job_url':  'https://tradelink.ng/jobs/test-2/',
+                    'job_url':  f"{site_url}/jobs/test-2/",
                 },
                 {
                     'title':    'CCTV & Security Systems Technician',
@@ -156,7 +160,7 @@ class Command(BaseCommand):
                     'pay':      'Negotiable',
                     'score':    81,
                     'job_type': 'Full-Time',
-                    'job_url':  'https://tradelink.ng/jobs/test-3/',
+                    'job_url':  f"{site_url}/jobs/test-3/",
                 },
             ]
 
@@ -164,6 +168,7 @@ class Command(BaseCommand):
             'worker_name': worker.user.first_name or worker.user.username,
             'matches':     match_data,
             'match_count': len(match_data),
+            'site_url':    site_url,
         }
 
         # -- Dry run: just print the rendered HTML ----------------------------─

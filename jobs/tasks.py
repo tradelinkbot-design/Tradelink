@@ -472,6 +472,7 @@ def send_job_match_email_task(self, worker_profile_id: str) -> None:
         return
 
     # ── Build template context ──────────────────────────────────────────────────
+    site_url = settings.SITE_BASE_URL  # e.g. https://xyz.up.railway.app or https://tradelink.ng
     match_data = []
     for m in matches:
         job = m.job
@@ -488,7 +489,7 @@ def send_job_match_email_task(self, worker_profile_id: str) -> None:
             'pay': pay_display,
             'score': round(m.score * 100),
             'job_type': job.get_job_type_display(),
-            'job_url': f"https://tradelink.ng/jobs/{job.pk}/",
+            'job_url': f"{site_url}/jobs/{job.pk}/",
         })
 
     # ── Render HTML email ──────────────────────────────────────────────────────
@@ -497,6 +498,7 @@ def send_job_match_email_task(self, worker_profile_id: str) -> None:
         'worker_name': worker_name,
         'matches': match_data,
         'match_count': len(match_data),
+        'site_url': site_url,
     })
 
     # ── Send email (Gmail in dev · Resend API in production) ──────────────────
