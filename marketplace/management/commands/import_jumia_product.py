@@ -204,6 +204,59 @@ def _parse_discount(value) -> int | None:
 
 # ── Format detection & normalisation ──────────────────────────────────────────
 
+
+def _extract_image_urls(raw: dict, p: dict | None = None) -> list[str]:
+    """
+    Extract all image URLs from a scraped product record, checking all known
+    field names across various Apify Jumia and e-commerce scrapers.
+    """
+    candidates = []
+    sources = [p, raw] if p else [raw]
+
+    for src in sources:
+        if not isinstance(src, dict):
+            continue
+        for key in [
+            "main_image", "mainImage", "image", "imageUrl", "image_url",
+            "thumbnail", "thumbnailUrl", "photo", "photoUrl", "picture",
+            "cover_image", "coverImage",
+        ]:
+            val = src.get(key)
+            if isinstance(val, str) and val.strip():
+                candidates.append(val.strip())
+            elif isinstance(val, dict):
+                url = val.get("url") or val.get("src") or val.get("href") or ""
+                if url:
+                    candidates.append(url.strip())
+
+    for src in sources:
+        if not isinstance(src, dict):
+            continue
+        for key in [
+            "images", "imageUrls", "image_urls", "photos", "pictures",
+            "gallery", "thumbnails", "media",
+        ]:
+            val = src.get(key)
+            if isinstance(val, str) and val.strip():
+                candidates.append(val.strip())
+            elif isinstance(val, list):
+                for item in val:
+                    if isinstance(item, str) and item.strip():
+                        candidates.append(item.strip())
+                    elif isinstance(item, dict):
+                        url = item.get("url") or item.get("src") or item.get("href") or ""
+                        if url:
+                            candidates.append(url.strip())
+
+    seen = set()
+    deduped = []
+    for u in candidates:
+        if u and u not in seen:
+            seen.add(u)
+            deduped.append(u)
+    return deduped
+
+
 def normalize_item(raw: dict) -> dict:
     """
     Normalize a raw Apify item from EITHER Jumia scraper into a uniform dict.
@@ -232,19 +285,8 @@ def _normalize_format_a(raw: dict) -> dict:
     old_price_ngn = _parse_ngn_price(prices.get("oldPrice"))
     discount_pct  = _parse_discount(prices.get("discount"))
 
-    # Images may be under several keys depending on scraper version
-    raw_imgs = (p.get("images") or p.get("imageUrls")
-                or p.get("photos") or [])
-    if isinstance(raw_imgs, str):
-        raw_imgs = [raw_imgs] if raw_imgs else []
-    image_urls: list[str] = []
-    for img in raw_imgs:
-        if isinstance(img, str) and img:
-            image_urls.append(img)
-        elif isinstance(img, dict):
-            url = img.get("url") or img.get("src") or ""
-            if url:
-                image_urls.append(url)
+    # Images extracted across all known keys
+    image_urls = _extract_image_urls(raw, p)
 
     # Categories list from the product object
     categories = [str(c) for c in (p.get("categories") or []) if c]
@@ -292,14 +334,8 @@ def _normalize_format_b(raw: dict) -> dict:
     if price_ngn and old_price_ngn and old_price_ngn > price_ngn:
         discount_pct = int((1 - price_ngn / old_price_ngn) * 100)
 
-    # Build a deduplicated image list: main_image first, then images[]
-    image_urls: list[str] = []
-    main_image = raw.get("main_image") or ""
-    if main_image:
-        image_urls.append(main_image)
-    for img in (raw.get("images") or []):
-        if isinstance(img, str) and img and img not in image_urls:
-            image_urls.append(img)
+    # Build a deduplicated image list across all known keys
+    image_urls = _extract_image_urls(raw)
 
     # Prefer breadcrumbs (full chain) over the flat category string
     breadcrumbs  = raw.get("breadcrumbs") or []
@@ -459,11 +495,24 @@ def fetch_apify_dataset(dataset_id: str, token: str | None) -> list:
 
 def download_image(url: str) -> ContentFile | None:
     """Download an image with exponential back-off on failure."""
+    if url.startswith("//"):
+        url = "https:" + url
+    elif url.startswith("/"):
+        url = "https://www.jumia.com.ng" + url
+
     for attempt in range(1, IMAGE_MAX_RETRIES + 1):
         try:
             resp = requests.get(url, headers=IMAGE_HEADERS, timeout=20)
             resp.raise_for_status()
-            if not resp.headers.get("content-type", "").startswith("image/"):
+            ct = resp.headers.get("content-type", "").lower()
+            is_image = (
+                ct.startswith("image/")
+                or resp.content.startswith(b"\xff\xd8\xff")
+                or resp.content.startswith(b"\x89PNG")
+                or resp.content.startswith(b"GIF8")
+                or (resp.content.startswith(b"RIFF") and b"WEBP" in resp.content[:16])
+            )
+            if not is_image:
                 return None
             return ContentFile(resp.content)
         except Exception:
@@ -624,6 +673,11 @@ class Command(BaseCommand):
                 "Update price, title, description, and brand of already-imported "
                 "products instead of skipping them."
             ),
+        )
+        parser.add_argument(
+            "--force-images",
+            action="store_true",
+            help="Re-download images even if product already has images in DB.",
         )
         parser.add_argument(
             "--skip-images",
@@ -865,13 +919,26 @@ class Command(BaseCommand):
             existing.brand       = item["brand"][:100] if item["brand"] else ""
             existing.status      = opts["status"]
             existing.save(update_fields=["title", "description", "price", "brand", "status"])
-            # Download images only if this product currently has none
+            # Download images if:
+            # 1. Product has no images in DB, OR
+            # 2. --force-images is passed, OR
+            # 3. Existing images in DB point to missing/inaccessible files
+            should_fetch_images = False
+            if not opts["skip_images"] and item["image_urls"]:
+                if opts.get("force_images") or not existing.images.exists():
+                    should_fetch_images = True
+                else:
+                    first_img = existing.images.first()
+                    try:
+                        if not first_img or not first_img.image or not first_img.image.storage.exists(first_img.image.name):
+                            should_fetch_images = True
+                    except Exception:
+                        should_fetch_images = True
+
             img_saved = img_failed = 0
-            if (
-                not opts["skip_images"]
-                and item["image_urls"]
-                and not existing.images.exists()
-            ):
+            if should_fetch_images:
+                if opts.get("force_images") or (existing.images.exists() and not existing.images.first().image.storage.exists(existing.images.first().image.name)):
+                    existing.images.all().delete()
                 img_saved, img_failed = self._save_images(
                     existing, item["image_urls"], item["product_id"]
                 )
@@ -879,7 +946,7 @@ class Command(BaseCommand):
                 stats["images_failed"] += img_failed
 
             self.stdout.write(
-                f"  [UPDATED] {existing.title[:55]} - ?{price_ngn:,.2f}"
+                f"  [UPDATED] {existing.title[:55]} — ₦{price_ngn:,.2f}"
                 + (f" | {img_saved} img(s)" if img_saved else "")
             )
             stats["updated"] += 1

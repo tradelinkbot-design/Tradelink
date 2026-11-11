@@ -1,4 +1,4 @@
-"""
+﻿"""
 Django settings for technicians project.
 """
 
@@ -247,6 +247,9 @@ else:
         # Setting this forces Django to use client-side cursors (fetchall)
         # which are not tied to a single connection.
         DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
+        DATABASES['default']['OPTIONS'] = {
+            'options': '-c search_path=public'
+        }
     else:
         # Build-time or unconfigured fallback (allows collectstatic to succeed without DB connection)
         DATABASES = {
