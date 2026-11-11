@@ -97,3 +97,14 @@ def about_us(request):
         'total_trades':          total_trades or 36,
         'nigerian_states_count': len(NIGERIAN_STATES) if NIGERIAN_STATES else 37,
     })
+
+def privacy_policy(request):
+    return render(request, 'privacy_policy.html', {
+        'page_title': 'Privacy Policy - TradeLink NG',
+    })
+
+
+def terms_of_use(request):
+    return render(request, 'terms_of_use.html', {
+        'page_title': 'Terms of Use - TradeLink NG',
+    })

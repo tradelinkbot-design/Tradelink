@@ -1081,6 +1081,7 @@
         </div>
       </li>
 
+      <li><a href="{% url 'blog:index' %}" class="{% block nav_blog_link %}{% endblock %}">Blog</a></li>
       <li><a href="{% url 'contacts:contact_us' %}" class="{% block nav_contacts %}{% endblock %}">Contact</a></li>
     </ul>
 
@@ -1198,6 +1199,7 @@
     </div>
 
     <a href="{% url 'verify:dashboard' %}" class="m-nav-link"><i class="fas fa-shield-alt"></i> Verification</a>
+    <a href="{% url 'blog:index' %}" class="m-nav-link"><i class="fas fa-rss"></i> Blog</a>
     <a href="{% url 'contacts:contact_us' %}" class="m-nav-link"><i class="fas fa-headset"></i> Contact &amp; Support</a>
 
     <div class="m-actions">
@@ -1269,18 +1271,18 @@
         <ul class="footer-links">
           <li><a href="{% url 'about' %}">About Us</a></li>
           <li><a href="{% url 'contacts:contact_us' %}">Help & Support</a></li>
-          <li><a href="#">Blog</a></li>
+          <li><a href="{% url 'blog:index' %}">Blog</a></li>
           <li><a href="#">Careers</a></li>
-          <li><a href="#">Privacy Policy</a></li>
-          <li><a href="#">Terms of Use</a></li>
+          <li><a href="{% url 'privacy_policy' %}">Privacy Policy</a></li>
+          <li><a href="{% url 'terms_of_use' %}">Terms of Use</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
       <span>© 2025 TradeLink NG Ltd. All rights reserved. Built in Nigeria 🇳🇬</span>
       <span style="display:flex;gap:20px;">
-        <a href="#">Privacy</a>
-        <a href="#">Terms</a>
+        <a href="{% url 'privacy_policy' %}">Privacy</a>
+        <a href="{% url 'terms_of_use' %}">Terms</a>
         <a href="{% url 'contacts:contact_us' %}">Contact</a>
       </span>
     </div>

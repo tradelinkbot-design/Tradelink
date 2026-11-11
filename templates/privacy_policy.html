@@ -1,0 +1,463 @@
+{% extends "base.html" %}
+
+{% block title %}Privacy Policy — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<meta name="description" content="TradeLink NG Privacy Policy — how we collect, use, store and protect your personal data on Nigeria's skilled trades platform.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="{{ request.build_absolute_uri }}">
+<style>
+/* ═══════════════════════════════════════════════
+   LEGAL PAGES — SHARED STYLES
+═══════════════════════════════════════════════ */
+.legal-hero {
+  padding: calc(var(--nav-h) + 56px) clamp(16px,5vw,64px) 48px;
+  position: relative; z-index: 1; max-width: 900px; margin: 0 auto;
+}
+.legal-hero .eyebrow { margin-bottom: 12px; }
+.legal-effective {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-pill); padding: 6px 14px;
+  font-size: 0.8rem; color: var(--text-3); margin-top: 18px;
+}
+.legal-effective i { color: var(--amber); }
+
+.legal-layout {
+  display: grid; grid-template-columns: 220px 1fr; gap: 48px;
+  max-width: 1100px; margin: 0 auto; padding: 0 clamp(16px,4vw,48px) 100px;
+  position: relative; z-index: 1; align-items: start;
+}
+@media (max-width: 860px) { .legal-layout { grid-template-columns: 1fr; } }
+
+/* Sticky TOC sidebar */
+.legal-toc {
+  position: sticky; top: calc(var(--nav-h) + 24px);
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 22px; font-size: 0.84rem;
+}
+@media (max-width: 860px) { .legal-toc { position: static; } }
+.legal-toc-title {
+  font-size: 0.65rem; font-weight: 800; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--amber); margin-bottom: 14px;
+}
+.legal-toc a {
+  display: block; padding: 6px 10px; border-radius: var(--r-sm);
+  color: var(--text-2); text-decoration: none; transition: var(--t);
+  font-weight: 500; line-height: 1.4;
+}
+.legal-toc a:hover { color: var(--amber); background: var(--surface-1); }
+.legal-toc .sub { padding-left: 20px; font-size: 0.8rem; color: var(--text-3); }
+.legal-toc .sub:hover { color: var(--amber); }
+
+/* Body content */
+.legal-body { max-width: 720px; }
+.legal-section {
+  margin-bottom: 52px; scroll-margin-top: calc(var(--nav-h) + 20px);
+}
+.legal-section-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  color: #fff; font-size: 0.75rem; font-weight: 800; flex-shrink: 0;
+}
+.legal-h2 {
+  font-family: 'Fraunces', serif; font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+  font-weight: 700; color: var(--text-1); margin-bottom: 18px;
+  display: flex; align-items: center; gap: 12px;
+  padding-bottom: 14px; border-bottom: 1px solid var(--border-subtle);
+}
+.legal-h3 {
+  font-weight: 700; font-size: 1rem; color: var(--text-1); margin: 24px 0 10px;
+}
+.legal-body p {
+  color: var(--text-2); font-size: 0.95rem; line-height: 1.8; margin-bottom: 14px;
+}
+.legal-body ul, .legal-body ol {
+  padding-left: 22px; margin-bottom: 16px;
+}
+.legal-body li {
+  color: var(--text-2); font-size: 0.95rem; line-height: 1.75; margin-bottom: 6px;
+}
+.legal-body strong { color: var(--text-1); font-weight: 700; }
+.legal-body a { color: var(--amber); text-decoration: none; transition: var(--t); }
+.legal-body a:hover { color: var(--orange); text-decoration: underline; }
+
+/* Highlight box */
+.legal-highlight {
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-left: 4px solid var(--amber); border-radius: 0 var(--r-lg) var(--r-lg) 0;
+  padding: 16px 20px; margin: 20px 0;
+}
+.legal-highlight p { margin-bottom: 0; color: var(--text-1); font-weight: 500; }
+
+/* Table */
+.legal-table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.88rem; }
+.legal-table th {
+  background: var(--surface-1); padding: 10px 14px;
+  text-align: left; font-weight: 700; color: var(--text-1);
+  border: 1px solid var(--border-subtle);
+}
+.legal-table td {
+  padding: 10px 14px; color: var(--text-2); line-height: 1.6;
+  border: 1px solid var(--border-subtle); vertical-align: top;
+}
+.legal-table tr:nth-child(even) td { background: rgba(217,119,6,0.03); }
+
+/* Contact card */
+.legal-contact-card {
+  background: linear-gradient(135deg, rgba(217,119,6,0.07), rgba(234,88,12,0.04));
+  border: 1px solid var(--border-strong); border-radius: var(--r-xl);
+  padding: 28px; margin-top: 48px;
+}
+.legal-contact-card h3 {
+  font-family: 'Fraunces', serif; font-weight: 700; font-size: 1.1rem;
+  color: var(--text-1); margin-bottom: 12px;
+}
+
+/* Last updated ribbon */
+.legal-updated-bar {
+  background: var(--surface-1); border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 10px clamp(16px,5vw,64px); text-align: center;
+  font-size: 0.8rem; color: var(--text-3); margin-bottom: 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="legal-updated-bar" style="margin-top: var(--nav-h);">
+  <i class="fas fa-calendar-alt" style="color: var(--amber);"></i>
+  Last Updated: <strong>November 2026</strong> &nbsp;·&nbsp;
+  Effective Date: <strong>November 1, 2026</strong>
+</div>
+
+<!-- Hero -->
+<div class="legal-hero fade-up">
+  <span class="eyebrow"><i class="fas fa-shield-alt"></i> Legal</span>
+  <h1 class="section-title">Privacy Policy</h1>
+  <p class="section-sub">
+    How TradeLink NG collects, uses, and safeguards your personal data.
+    We are dedicated to safeguarding user confidentiality and maintaining complete transparency.
+  </p>
+  <div class="legal-effective">
+    <i class="fas fa-info-circle"></i>
+    This policy applies to all users of TradeLink NG — artisans, employers, buyers, sellers and visitors.
+  </div>
+</div>
+
+<!-- Layout: TOC + Body -->
+<div class="legal-layout">
+
+  <!-- Sticky TOC -->
+  <nav class="legal-toc" aria-label="Privacy Policy Sections">
+    <div class="legal-toc-title"><i class="fas fa-list"></i> Contents</div>
+    <a href="#who-we-are">1. Who We Are</a>
+    <a href="#data-we-collect">2. Data We Collect</a>
+    <a href="#how-we-use">3. How We Use Your Data</a>
+    <a href="#data-sharing">4. Data Sharing &amp; Processors</a>
+    <a href="#identity-verification">5. Identity Verification (KYC)</a>
+    <a href="#payments">6. Payments &amp; Escrow</a>
+    <a href="#cookies">7. Cookies &amp; Tracking</a>
+    <a href="#automated-matching">8. Automated Matching</a>
+    <a href="#chat-data">9. Communications &amp; Messaging</a>
+    <a href="#data-retention">10. Data Retention</a>
+    <a href="#your-rights">11. Your Rights</a>
+    <a href="#children">12. Children's Privacy</a>
+    <a href="#security">13. Information Security</a>
+    <a href="#third-parties">14. External Service Providers</a>
+    <a href="#nigeria-law">15. Applicable Law &amp; NDPA</a>
+    <a href="#changes">16. Policy Changes</a>
+    <a href="#contact-us">17. Contact Us</a>
+  </nav>
+
+  <!-- Body -->
+  <article class="legal-body">
+
+    <!-- 1 -->
+    <section class="legal-section" id="who-we-are">
+      <h2 class="legal-h2"><span class="legal-section-num">1</span> Who We Are</h2>
+      <p><strong>TradeLink NG</strong> ("we", "us", "our", or "the Company") is a digital platform connecting verified skilled tradespeople — including electricians, plumbers, carpenters, welders, technicians, and construction artisans — with clients, homeowners, and commercial employers across Nigeria.</p>
+      <p>Our services encompass: a <strong>job board</strong> for posting and managing work opportunities; a <strong>verified artisan directory</strong>; a <strong>marketplace</strong> for trade tools and equipment; a <strong>direct messaging service</strong>; a <strong>secure escrow payment mechanism</strong>; and a <strong>structured identity verification process</strong>.</p>
+      <p>We operate as the data controller regarding the personal information collected through our web applications and digital communication channels.</p>
+    </section>
+
+    <!-- 2 -->
+    <section class="legal-section" id="data-we-collect">
+      <h2 class="legal-h2"><span class="legal-section-num">2</span> Data We Collect</h2>
+
+      <h3 class="legal-h3">2.1 Account Registration Data</h3>
+      <p>When you create an account, we collect:</p>
+      <ul>
+        <li><strong>Full name</strong> (first name, last name)</li>
+        <li><strong>Email address</strong> — used as your primary account identifier</li>
+        <li><strong>Username</strong> — public display name</li>
+        <li><strong>Phone number</strong> — required for contact verification and service notices</li>
+        <li><strong>Profile photo</strong> — optional, uploaded to assist identity confirmation</li>
+        <li><strong>Password credentials</strong> — securely transformed using robust, one-way cryptographic algorithms; we never store or have access to plain-text passwords</li>
+      </ul>
+      <p>If you choose to sign in via authorized third-party authentication providers, we receive profile information (such as your name and verified email address) solely as permitted by your settings with that provider.</p>
+
+      <h3 class="legal-h3">2.2 Worker Profile Data</h3>
+      <p>Artisans and technicians may choose to provide professional details:</p>
+      <ul>
+        <li>Trade classifications and specialized technical skills</li>
+        <li>Years of professional experience and trade credentials</li>
+        <li>Professional summary and service descriptions</li>
+        <li>Operational State and Local Government Area (LGA) in Nigeria</li>
+        <li>Billing rates and pricing structures in Naira (₦)</li>
+        <li>Work availability, scheduling preferences, and relocation preferences</li>
+        <li>Portfolio media displaying verified project history</li>
+        <li>Professional references and verified certificates</li>
+      </ul>
+
+      <h3 class="legal-h3">2.3 Employer &amp; Client Profile Data</h3>
+      <ul>
+        <li>Business, company, or individual client name</li>
+        <li>Industry classification and operational location</li>
+        <li>Job descriptions, project specifications, timelines, and budgets</li>
+      </ul>
+
+      <h3 class="legal-h3">2.4 Marketplace &amp; Transaction Information</h3>
+      <ul>
+        <li>Tool and equipment listings (specifications, photographs, pricing, condition)</li>
+        <li>Order, transaction, and contract history</li>
+        <li>Agreed service terms, milestones, and deliverables</li>
+        <li>Dispute documentation and records required for formal mediation</li>
+      </ul>
+
+      <h3 class="legal-h3">2.5 Communication Records</h3>
+      <ul>
+        <li>In-platform messages and file attachments exchanged regarding projects or transactions</li>
+        <li>Message delivery status and interaction timestamps</li>
+        <li>Customer support enquiries and communications across our official channels</li>
+      </ul>
+
+      <h3 class="legal-h3">2.6 Identity Verification Data (Sensitive)</h3>
+      <p>To promote safety and eliminate impersonation, users may voluntarily complete identity verification:</p>
+      <ul>
+        <li><strong>National Identification Number (NIN)</strong> — securely transmitted to accredited government-authorized identity verification providers for confirmation; we retain solely the last 4 digits for administrative audit</li>
+        <li><strong>Bank Verification Number (BVN)</strong> — verified through accredited banking identity gateways for financial account validation; only the last 4 digits are retained</li>
+        <li><strong>Corporate Registration (CAC)</strong> — official registration number and entity name for business accounts</li>
+        <li>Transaction reference identifiers and validation timestamps confirming identity status</li>
+      </ul>
+      <div class="legal-highlight">
+        <p>🔒 <strong>Data Minimization Standard:</strong> Complete identification numbers (full NIN or full BVN) are never permanently stored in our active application databases. Transmissions occur strictly through encrypted channels directly to accredited verification partners.</p>
+      </div>
+
+      <h3 class="legal-h3">2.7 Technical &amp; Operational Logs</h3>
+      <ul>
+        <li>Internet Protocol (IP) addresses utilized for access controls and fraud mitigation</li>
+        <li>Device parameters, operating system, and browser classifications</li>
+        <li>Platform interactions, page navigation, and search queries</li>
+        <li>Aggregated performance, security, and diagnostic data</li>
+      </ul>
+    </section>
+
+    <!-- 3 -->
+    <section class="legal-section" id="how-we-use">
+      <h2 class="legal-h2"><span class="legal-section-num">3</span> How We Use Your Data</h2>
+      <table class="legal-table">
+        <thead>
+          <tr><th>Purpose</th><th>Data Used</th><th>Legal Basis</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Create and administer user accounts</td><td>Name, email, password, phone</td><td>Contractual Necessity</td></tr>
+          <tr><td>Match artisans with relevant projects</td><td>Skills, trade classifications, location</td><td>Contractual Necessity</td></tr>
+          <tr><td>Display public artisan portfolios to clients</td><td>Professional profile, media, reviews</td><td>Consent / Contract</td></tr>
+          <tr><td>Process escrow transactions and payouts</td><td>Transaction details, payment references</td><td>Contractual Necessity</td></tr>
+          <tr><td>Identity verification and fraud prevention</td><td>Government IDs via accredited partners</td><td>Consent / Legal Obligation</td></tr>
+          <tr><td>Facilitate in-app communications</td><td>Direct messages and attachments</td><td>Contractual Necessity</td></tr>
+          <tr><td>Customer care and automated assistance</td><td>Contact details, support tickets</td><td>Contractual Necessity</td></tr>
+          <tr><td>Deliver important platform notifications</td><td>Email, SMS, or messaging contacts</td><td>Contractual Necessity</td></tr>
+          <tr><td>Platform security and abuse prevention</td><td>IP addresses, diagnostic telemetry</td><td>Legitimate Interest / Security</td></tr>
+          <tr><td>Statutory and regulatory compliance</td><td>Financial records, legal documentation</td><td>Legal Obligation</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 4 -->
+    <section class="legal-section" id="data-sharing">
+      <h2 class="legal-h2"><span class="legal-section-num">4</span> Data Sharing &amp; Processors</h2>
+      <p>We <strong>do not sell, rent, or trade your personal data</strong> to third parties for marketing purposes. Data sharing is limited to the following circumstances:</p>
+
+      <h3 class="legal-h3">4.1 Platform Visibility Between Users</h3>
+      <ul>
+        <li>Verified worker profiles (name, skills, bio, service location, and ratings) are accessible to clients looking to hire.</li>
+        <li>Marketplace listings and public job postings are viewable across the platform.</li>
+        <li>Direct communications remain private to the parties involved in that transaction or project.</li>
+      </ul>
+
+      <h3 class="legal-h3">4.2 Service Processors &amp; Operational Partners</h3>
+      <table class="legal-table">
+        <thead><tr><th>Service Category</th><th>Operational Purpose</th><th>Data Entrusted</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Payment Gateway Partners</strong></td><td>Secure payment collection, escrow custody, and disbursement</td><td>Transaction amounts, payment tokens, verification references</td></tr>
+          <tr><td><strong>Identity Verification Partners</strong></td><td>Validation of government-issued credentials (NIN, BVN, CAC)</td><td>Submitted identity numbers (not retained by us)</td></tr>
+          <tr><td><strong>Communications Providers</strong></td><td>Transactional notifications, authentication codes, customer support</td><td>Recipient contact address, message text</td></tr>
+          <tr><td><strong>Cloud Hosting &amp; Storage</strong></td><td>Secure hosting, encrypted database storage, media delivery</td><td>Encrypted application records and media assets</td></tr>
+          <tr><td><strong>Authentication Partners</strong></td><td>Optional federated single sign-on</td><td>Authorized identity tokens</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="legal-h3">4.3 Legal &amp; Regulatory Disclosures</h3>
+      <p>We may disclose relevant user data if mandated by applicable Nigerian laws, a lawful court order, regulatory directives from data protection authorities, or law enforcement bodies investigating fraudulent activity.</p>
+    </section>
+
+    <!-- 5 -->
+    <section class="legal-section" id="identity-verification">
+      <h2 class="legal-h2"><span class="legal-section-num">5</span> Identity Verification (KYC)</h2>
+      <p>TradeLink NG offers a <strong>multi-tier trust and safety verification model</strong>:</p>
+      <ul>
+        <li><strong>Level 1 — Identity Verified:</strong> Validated against official national identity databases.</li>
+        <li><strong>Level 2 — Enhanced Financial Verification:</strong> Validated against official banking identity registries for escrow transactions.</li>
+        <li><strong>Level 3 — Verified Business:</strong> Validated against corporate registry databases for registered commercial entities.</li>
+      </ul>
+      <p>All verification processing is conducted via accredited, licensed identity verification partners operating in Nigeria. We receive confirmation tokens indicating verification status without archiving sensitive full credential numbers on our application servers.</p>
+    </section>
+
+    <!-- 6 -->
+    <section class="legal-section" id="payments">
+      <h2 class="legal-h2"><span class="legal-section-num">6</span> Payments &amp; Escrow</h2>
+      <p>Financial transactions are administered through <strong>licensed, Central Bank of Nigeria (CBN)-regulated payment service providers</strong>.</p>
+      <ul>
+        <li>TradeLink NG does not store full credit card numbers, sensitive card verification values (CVV), or banking PINs.</li>
+        <li>Escrow deposits remain under the custody of licensed payment partners until the designated project milestones are authorized by the client.</li>
+        <li>Our platform maintains transaction references, timestamps, and settlement amounts for legal auditing, taxation compliance, and dispute mediation.</li>
+        <li>Financial transaction histories are preserved in accordance with statutory accounting and financial record retention regulations.</li>
+      </ul>
+    </section>
+
+    <!-- 7 -->
+    <section class="legal-section" id="cookies">
+      <h2 class="legal-h2"><span class="legal-section-num">7</span> Cookies &amp; Tracking</h2>
+      <p>We utilize essential and functional cookies necessary for system operation:</p>
+      <table class="legal-table">
+        <thead><tr><th>Cookie Category</th><th>Purpose</th><th>Lifespan</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Session Cookies</strong></td><td>Maintain active authenticated sessions</td><td>Duration of browser session</td></tr>
+          <tr><td><strong>Security Tokens</strong></td><td>Prevent Cross-Site Request Forgery (CSRF)</td><td>Duration of browser session</td></tr>
+          <tr><td><strong>Preference Cookies</strong></td><td>Preserve UI themes and regional display preferences</td><td>Persistent (up to 12 months)</td></tr>
+        </tbody>
+      </table>
+      <p>We do not operate third-party tracking pixels that monitor your browsing activities across unrelated external websites.</p>
+    </section>
+
+    <!-- 8 -->
+    <section class="legal-section" id="automated-matching">
+      <h2 class="legal-h2"><span class="legal-section-num">8</span> Automated Matching &amp; Recommendations</h2>
+      <p>To assist employers in locating qualified technicians quickly and ensure relevant opportunities reach artisans, TradeLink NG employs automated matching systems.</p>
+      <ul>
+        <li>Job specifications (trade type, required skills, location) are algorithmically compared with worker profile descriptions and demonstrated capabilities.</li>
+        <li>Matching calculations occur within our secure platform infrastructure.</li>
+        <li>Profile information is not submitted to external public artificial intelligence platforms for training or data harvesting.</li>
+        <li>You retain full autonomy to apply for any job or decline any job matches regardless of algorithmic rankings.</li>
+      </ul>
+    </section>
+
+    <!-- 9 -->
+    <section class="legal-section" id="chat-data">
+      <h2 class="legal-h2"><span class="legal-section-num">9</span> Communications &amp; Messaging</h2>
+      <ul>
+        <li>Communications conducted through the platform are transmitted over encrypted connections.</li>
+        <li>Messages are accessible strictly to the conversation participants, except where authorized platform moderators must review records in connection with a formal dispute or safety investigation.</li>
+        <li>Unsent media files uploaded to temporary staging are routinely purged.</li>
+        <li>Communications initiated through authorized messaging integrations are processed strictly to facilitate client-worker coordination.</li>
+      </ul>
+    </section>
+
+    <!-- 10 -->
+    <section class="legal-section" id="data-retention">
+      <h2 class="legal-h2"><span class="legal-section-num">10</span> Data Retention</h2>
+      <table class="legal-table">
+        <thead><tr><th>Information Type</th><th>Standard Retention Period</th><th>Statutory / Operational Rationale</th></tr></thead>
+        <tbody>
+          <tr><td>Active Account Records</td><td>Maintained while account remains active</td><td>Service delivery</td></tr>
+          <tr><td>Closed Account Records</td><td>30 days following deletion confirmation</td><td>Grace period for accidental closure</td></tr>
+          <tr><td>Financial Transaction Histories</td><td>7 years</td><td>Statutory financial and tax compliance</td></tr>
+          <tr><td>Identity Audit Confirmations</td><td>7 years</td><td>Anti-fraud and regulatory standards</td></tr>
+          <tr><td>System Diagnostic Logs</td><td>90 days</td><td>Security monitoring and fault resolution</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 11 -->
+    <section class="legal-section" id="your-rights">
+      <h2 class="legal-h2"><span class="legal-section-num">11</span> Your Rights</h2>
+      <p>Under the <strong>Nigeria Data Protection Act (NDPA) 2023</strong> and applicable data privacy regulations, you possess comprehensive data rights:</p>
+      <ul>
+        <li><strong>Right to Access:</strong> Request verification and copies of personal data held about you.</li>
+        <li><strong>Right to Rectification:</strong> Correct inaccurate, outdated, or incomplete personal details.</li>
+        <li><strong>Right to Erasure:</strong> Request the deletion of your account and personal records, subject to mandatory legal and financial compliance retention periods.</li>
+        <li><strong>Right to Data Portability:</strong> Obtain a portable copy of information you provided directly.</li>
+        <li><strong>Right to Object &amp; Restrict:</strong> Request limitations on specific non-essential data processing.</li>
+        <li><strong>Right to Withdraw Consent:</strong> Revoke consent previously granted for optional features without affecting prior lawful processing.</li>
+      </ul>
+      <p>Requests can be submitted directly to <a href="mailto:privacy@tradelink.ng">privacy@tradelink.ng</a>. We process verified privacy requests within <strong>30 days</strong>.</p>
+    </section>
+
+    <!-- 12 -->
+    <section class="legal-section" id="children">
+      <h2 class="legal-h2"><span class="legal-section-num">12</span> Children's Privacy</h2>
+      <p>TradeLink NG is strictly designated for individuals who are <strong>18 years of age or older</strong>. We do not intentionally collect or process data from minors. If you become aware that an individual under 18 has established an account, notify us immediately for investigation and account closure.</p>
+    </section>
+
+    <!-- 13 -->
+    <section class="legal-section" id="security">
+      <h2 class="legal-h2"><span class="legal-section-num">13</span> Information Security</h2>
+      <p>We maintain comprehensive administrative, organizational, and technical safeguards designed to preserve data confidentiality, integrity, and availability:</p>
+      <ul>
+        <li><strong>Transport Layer Security:</strong> All data transmitted between client devices and our platform is encrypted using modern cryptographic protocols (TLS/HTTPS).</li>
+        <li><strong>Storage Protections:</strong> Platform databases and persistent storage volumes utilize robust encryption-at-rest standards.</li>
+        <li><strong>Authentication Controls:</strong> User credentials are protected using industry-standard one-way password hashing techniques.</li>
+        <li><strong>Access Governance:</strong> Administrative capabilities are strictly segregated based on minimum necessary privilege principles, requiring multi-factor authentication.</li>
+        <li><strong>Defensive Controls:</strong> Automated traffic filtering, input validation, CSRF defense, and rate-limiting protections are active to mitigate unauthorized access attempts.</li>
+        <li><strong>Incident Management:</strong> In the unlikely event of a security incident affecting personal data, notifications will be delivered to affected users and regulatory bodies within mandatory statutory timeframes.</li>
+      </ul>
+    </section>
+
+    <!-- 14 -->
+    <section class="legal-section" id="third-parties">
+      <h2 class="legal-h2"><span class="legal-section-num">14</span> External Service Providers</h2>
+      <p>To deliver robust marketplace and escrow capabilities, TradeLink NG partners with reputable, vetted service providers specializing in banking-grade payments, secure identity verification, and communications delivery. Each partner is contractually bound to process data solely under our instruction and in compliance with Nigerian data protection legislation.</p>
+    </section>
+
+    <!-- 15 -->
+    <section class="legal-section" id="nigeria-law">
+      <h2 class="legal-h2"><span class="legal-section-num">15</span> Applicable Law &amp; NDPA Compliance</h2>
+      <p>This Privacy Policy is interpreted and enforced under the laws of the Federal Republic of Nigeria, including:</p>
+      <ul>
+        <li><strong>Nigeria Data Protection Act (NDPA) 2023</strong></li>
+        <li><strong>Cybercrimes (Prohibition, Prevention, etc.) Act 2015</strong></li>
+        <li><strong>Central Bank of Nigeria (CBN) Electronic Payments Directives</strong></li>
+      </ul>
+      <p>Users maintain the right to register concerns with the <strong>Nigeria Data Protection Commission (NDPC)</strong> at <a href="https://ndpc.gov.ng" target="_blank" rel="noopener">ndpc.gov.ng</a>.</p>
+    </section>
+
+    <!-- 16 -->
+    <section class="legal-section" id="changes">
+      <h2 class="legal-h2"><span class="legal-section-num">16</span> Policy Changes</h2>
+      <p>We may modify this policy periodically to reflect evolving platform operations or regulatory requirements. Material revisions will be highlighted via in-platform notices or email communications prior to taking effect.</p>
+    </section>
+
+    <!-- 17 -->
+    <section class="legal-section" id="contact-us">
+      <h2 class="legal-h2"><span class="legal-section-num">17</span> Contact Us</h2>
+      <p>For inquiries, rights requests, or data protection questions, please reach out to our privacy team:</p>
+      <div class="legal-contact-card">
+        <h3><i class="fas fa-shield-alt" style="color:var(--amber); margin-right:8px;"></i> Data Protection — TradeLink NG</h3>
+        <ul style="list-style:none; padding:0;">
+          <li style="margin-bottom:10px;"><i class="fas fa-envelope" style="color:var(--amber); width:20px;"></i> <a href="mailto:privacy@tradelink.ng">privacy@tradelink.ng</a></li>
+          <li style="margin-bottom:10px;"><i class="fas fa-globe" style="color:var(--amber); width:20px;"></i> <a href="{% url 'contacts:contact_us' %}">Contact Form</a></li>
+          <li style="margin-bottom:10px;"><i class="fas fa-map-marker-alt" style="color:var(--amber); width:20px;"></i> Federal Republic of Nigeria</li>
+        </ul>
+        <p style="font-size:0.85rem; color:var(--text-3); margin-top:12px; margin-bottom:0;">
+          We respond to verified privacy inquiries within <strong>30 days</strong> in accordance with NDPA standards.
+        </p>
+      </div>
+    </section>
+
+  </article>
+</div>
+{% endblock %}

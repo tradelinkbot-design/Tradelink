@@ -1,0 +1,457 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_head %}
+<meta name="description" content="{{ page_desc }}">
+<meta property="og:title"       content="{{ page_title }}">
+<meta property="og:description" content="{{ page_desc }}">
+<meta property="og:type"        content="website">
+<link rel="canonical" href="{{ request.build_absolute_uri }}">
+<style>
+/* ═══════════════════════════════════════════════
+   BLOG INDEX
+═══════════════════════════════════════════════ */
+.blog-hero {
+  padding: calc(var(--nav-h) + 56px) clamp(16px,5vw,64px) 56px;
+  position: relative; z-index: 1; text-align: center;
+}
+.blog-hero .eyebrow { justify-content: center; }
+.blog-search-bar {
+  display: flex; gap: 10px; max-width: 540px; margin: 32px auto 0;
+}
+.blog-search-bar input {
+  flex: 1; padding: 13px 18px;
+  border: 1px solid var(--border-subtle); border-radius: var(--r-lg);
+  background: #fff; font-family: 'Outfit', sans-serif; font-size: 0.95rem;
+  outline: none; transition: var(--t); color: var(--text-1);
+}
+.blog-search-bar input:focus {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px rgba(217,119,6,0.14);
+}
+.blog-search-bar button {
+  padding: 13px 22px; border-radius: var(--r-lg);
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  color: #fff; font-weight: 700; border: none; cursor: pointer;
+  font-family: 'Outfit', sans-serif; font-size: 0.9rem; transition: var(--t);
+}
+.blog-search-bar button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+/* Featured strip */
+.featured-strip {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 24px; max-width: 1200px; margin: 0 auto;
+  padding: 0 clamp(16px,4vw,48px) 48px;
+  position: relative; z-index: 1;
+}
+.featured-main { grid-row: span 2; }
+@media (max-width: 860px) {
+  .featured-strip { grid-template-columns: 1fr; }
+  .featured-main  { grid-row: auto; }
+}
+
+/* Post card variants */
+.post-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); overflow: hidden; transition: var(--t);
+  display: flex; flex-direction: column;
+}
+.post-card:hover {
+  border-color: var(--border-strong); transform: translateY(-4px);
+  box-shadow: 0 20px 48px rgba(0,0,0,0.10);
+}
+.post-card-img {
+  width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block;
+}
+.post-card-img-placeholder {
+  width: 100%; aspect-ratio: 16/9;
+  background: linear-gradient(135deg, var(--surface-1), var(--surface-2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.5rem; color: var(--amber);
+}
+.post-card-body { padding: 22px; flex: 1; display: flex; flex-direction: column; }
+.post-meta {
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap; margin-bottom: 10px;
+}
+.post-meta-cat {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--amber);
+  text-decoration: none; transition: var(--t);
+}
+.post-meta-cat:hover { color: var(--orange); }
+.post-meta-sep { color: var(--border-strong); }
+.post-meta-date, .post-meta-read {
+  font-size: 0.78rem; color: var(--text-3);
+}
+.post-card-title {
+  font-family: 'Fraunces', serif; font-weight: 700;
+  color: var(--text-1); text-decoration: none; line-height: 1.25;
+  display: block; margin-bottom: 10px; transition: var(--t);
+}
+.post-card-title:hover { color: var(--amber); }
+.post-card-title.large { font-size: clamp(1.3rem, 2.5vw, 2rem); }
+.post-card-title.medium { font-size: clamp(1rem, 1.8vw, 1.3rem); }
+.post-card-title.small  { font-size: 1rem; }
+.post-card-excerpt { color: var(--text-2); font-size: 0.9rem; line-height: 1.65; flex: 1; }
+.post-card-footer {
+  margin-top: 18px; display: flex; align-items: center; justify-content: space-between;
+}
+.author-mini {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.8rem; color: var(--text-3);
+}
+.author-mini-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; color: #fff; font-weight: 700; flex-shrink: 0;
+}
+.read-more-link {
+  font-size: 0.8rem; font-weight: 700; color: var(--amber);
+  text-decoration: none; display: flex; align-items: center; gap: 5px;
+  transition: var(--t);
+}
+.read-more-link:hover { color: var(--orange); gap: 8px; }
+
+/* Horizontal mini card for sidebar recent */
+.mini-card {
+  display: flex; gap: 14px; align-items: flex-start;
+  padding: 14px 0; border-bottom: 1px solid var(--border-subtle);
+  text-decoration: none; transition: var(--t);
+}
+.mini-card:last-child { border-bottom: none; }
+.mini-card:hover .mini-card-title { color: var(--amber); }
+.mini-card-thumb {
+  width: 64px; height: 50px; border-radius: var(--r-md);
+  object-fit: cover; flex-shrink: 0;
+}
+.mini-card-thumb-ph {
+  width: 64px; height: 50px; border-radius: var(--r-md);
+  background: var(--surface-1); display: flex; align-items: center;
+  justify-content: center; color: var(--amber); font-size: 1.2rem; flex-shrink: 0;
+}
+.mini-card-title {
+  font-size: 0.85rem; font-weight: 600; color: var(--text-1);
+  line-height: 1.35; transition: var(--t); margin-bottom: 4px;
+}
+.mini-card-date { font-size: 0.74rem; color: var(--text-3); }
+
+/* Grid + layout */
+.blog-layout {
+  display: grid; grid-template-columns: 1fr 320px; gap: 36px;
+  max-width: 1200px; margin: 0 auto; padding: 0 clamp(16px,4vw,48px) 80px;
+  position: relative; z-index: 1;
+}
+@media (max-width: 1024px) { .blog-layout { grid-template-columns: 1fr; } }
+
+.posts-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px;
+}
+
+/* Sidebar */
+.sidebar-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 24px; margin-bottom: 24px;
+}
+.sidebar-title {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 700;
+  color: var(--text-1); margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.sidebar-title i { color: var(--amber); font-size: 0.9rem; }
+
+.cat-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 14px; border-radius: var(--r-pill);
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  color: var(--text-2); font-size: 0.82rem; font-weight: 600;
+  text-decoration: none; transition: var(--t); margin: 4px;
+}
+.cat-pill:hover { background: var(--surface-2); border-color: var(--border-strong); color: var(--amber); }
+.cat-count {
+  background: var(--amber); color: #fff; font-size: 0.65rem; font-weight: 800;
+  border-radius: 100px; padding: 1px 6px; margin-left: 2px;
+}
+
+.tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-link {
+  font-size: 0.78rem; font-weight: 600; padding: 5px 12px;
+  border-radius: var(--r-pill); background: var(--surface-1);
+  border: 1px solid var(--border-subtle); color: var(--text-2);
+  text-decoration: none; transition: var(--t);
+}
+.tag-link:hover { border-color: var(--amber); color: var(--amber); background: rgba(217,119,6,0.07); }
+
+/* Pagination */
+.pagination-row {
+  display: flex; align-items: center; gap: 8px; margin-top: 36px; flex-wrap: wrap;
+}
+.page-btn {
+  padding: 9px 16px; border-radius: var(--r-md);
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  color: var(--text-2); font-size: 0.85rem; font-weight: 600;
+  text-decoration: none; transition: var(--t);
+}
+.page-btn:hover, .page-btn.active {
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  color: #fff; border-color: transparent;
+}
+.page-btn.disabled { opacity: 0.4; pointer-events: none; }
+
+/* Search result banner */
+.search-banner {
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); padding: 14px 20px;
+  margin-bottom: 24px; font-size: 0.9rem; color: var(--text-2);
+}
+.search-banner strong { color: var(--text-1); }
+.search-banner a { color: var(--amber); text-decoration: none; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Hero ── -->
+<section class="blog-hero fade-up">
+  <span class="eyebrow"><i class="fas fa-rss"></i> TradeLink NG Blog</span>
+  <h1 class="section-title">
+    Trades Tips, Hiring Guides<br>
+    &amp; <span class="amber-text">Industry Insights</span>
+  </h1>
+  <p class="section-sub" style="margin: 0 auto 0;">
+    Expert articles for artisans, employers, and everyone building the
+    Nigerian skilled-trades economy.
+  </p>
+  <form method="get" action="{% url 'blog:index' %}" class="blog-search-bar">
+    <input type="search" name="q" value="{{ search_q }}"
+           placeholder="Search articles… e.g. plumbing, Lagos, apprenticeship">
+    <button type="submit"><i class="fas fa-search"></i> Search</button>
+  </form>
+</section>
+
+<!-- ── Featured posts ── -->
+{% if featured and not search_q %}
+<div class="featured-strip fade-up d2">
+  {% with featured.0 as fp %}
+  <article class="post-card featured-main">
+    <a href="{{ fp.get_absolute_url }}">
+      {% if fp.featured_image %}
+        <img src="{{ fp.featured_image.url }}" alt="{{ fp.featured_image_alt|default:fp.title }}"
+             class="post-card-img" loading="lazy">
+      {% else %}
+        <div class="post-card-img-placeholder">
+          <i class="{{ fp.category.icon_class|default:'fas fa-newspaper' }}"></i>
+        </div>
+      {% endif %}
+    </a>
+    <div class="post-card-body">
+      <div class="post-meta">
+        {% if fp.category %}
+          <a href="{{ fp.category.get_absolute_url }}" class="post-meta-cat">{{ fp.category.name }}</a>
+          <span class="post-meta-sep">·</span>
+        {% endif %}
+        <span class="post-meta-date">{{ fp.published_at|date:"M j, Y" }}</span>
+        <span class="post-meta-sep">·</span>
+        <span class="post-meta-read"><i class="fas fa-clock"></i> {{ fp.reading_time }} min read</span>
+      </div>
+      <a href="{{ fp.get_absolute_url }}" class="post-card-title large">{{ fp.title }}</a>
+      <p class="post-card-excerpt">{{ fp.excerpt|truncatechars:200 }}</p>
+      <div class="post-card-footer">
+        <div class="author-mini">
+          <div class="author-mini-avatar">{{ fp.author.get_full_name|default:fp.author.username|first|upper }}</div>
+          <span>{{ fp.author.get_full_name|default:fp.author.username }}</span>
+        </div>
+        <a href="{{ fp.get_absolute_url }}" class="read-more-link">Read article <i class="fas fa-arrow-right"></i></a>
+      </div>
+    </div>
+  </article>
+  {% endwith %}
+
+  {% for fp in featured|slice:"1:3" %}
+  <article class="post-card">
+    <a href="{{ fp.get_absolute_url }}">
+      {% if fp.featured_image %}
+        <img src="{{ fp.featured_image.url }}" alt="{{ fp.featured_image_alt|default:fp.title }}"
+             class="post-card-img" loading="lazy" style="aspect-ratio: 16/7;">
+      {% else %}
+        <div class="post-card-img-placeholder" style="aspect-ratio: 16/7; font-size: 1.8rem;">
+          <i class="{{ fp.category.icon_class|default:'fas fa-newspaper' }}"></i>
+        </div>
+      {% endif %}
+    </a>
+    <div class="post-card-body">
+      <div class="post-meta">
+        {% if fp.category %}
+          <a href="{{ fp.category.get_absolute_url }}" class="post-meta-cat">{{ fp.category.name }}</a>
+          <span class="post-meta-sep">·</span>
+        {% endif %}
+        <span class="post-meta-read"><i class="fas fa-clock"></i> {{ fp.reading_time }} min</span>
+      </div>
+      <a href="{{ fp.get_absolute_url }}" class="post-card-title medium">{{ fp.title }}</a>
+      <div class="post-card-footer" style="margin-top: 10px;">
+        <span class="post-meta-date">{{ fp.published_at|date:"M j, Y" }}</span>
+        <a href="{{ fp.get_absolute_url }}" class="read-more-link">Read <i class="fas fa-arrow-right"></i></a>
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- ── Main layout: grid + sidebar ── -->
+<div class="blog-layout">
+  <main>
+    <!-- Search result banner -->
+    {% if search_q %}
+    <div class="search-banner">
+      {% if page_obj.paginator.count %}
+        Found <strong>{{ page_obj.paginator.count }} article{{ page_obj.paginator.count|pluralize }}</strong>
+        for <strong>"{{ search_q }}"</strong> —
+      {% else %}
+        No results for <strong>"{{ search_q }}"</strong> —
+      {% endif %}
+      <a href="{% url 'blog:index' %}">clear search</a>
+    </div>
+    {% endif %}
+
+    <!-- Posts grid -->
+    <div class="posts-grid">
+      {% for post in page_obj %}
+      <article class="post-card fade-up" style="animation-delay: {{ forloop.counter0|add:1 }}00ms">
+        <a href="{{ post.get_absolute_url }}">
+          {% if post.featured_image %}
+            <img src="{{ post.featured_image.url }}" alt="{{ post.featured_image_alt|default:post.title }}"
+                 class="post-card-img" loading="lazy">
+          {% else %}
+            <div class="post-card-img-placeholder">
+              <i class="{{ post.category.icon_class|default:'fas fa-newspaper' }}"></i>
+            </div>
+          {% endif %}
+        </a>
+        <div class="post-card-body">
+          <div class="post-meta">
+            {% if post.category %}
+              <a href="{{ post.category.get_absolute_url }}" class="post-meta-cat">{{ post.category.name }}</a>
+              <span class="post-meta-sep">·</span>
+            {% endif %}
+            <span class="post-meta-read"><i class="fas fa-clock"></i> {{ post.reading_time }} min</span>
+          </div>
+          <a href="{{ post.get_absolute_url }}" class="post-card-title small">{{ post.title }}</a>
+          <p class="post-card-excerpt">{{ post.excerpt|truncatechars:120 }}</p>
+          <div class="post-card-footer">
+            <div class="author-mini">
+              <div class="author-mini-avatar">{{ post.author.get_full_name|default:post.author.username|first|upper }}</div>
+              <span>{{ post.published_at|date:"M j, Y" }}</span>
+            </div>
+            <a href="{{ post.get_absolute_url }}" class="read-more-link">Read <i class="fas fa-arrow-right"></i></a>
+          </div>
+        </div>
+      </article>
+      {% empty %}
+      <div style="grid-column: 1/-1; text-align: center; padding: 60px 0; color: var(--text-3);">
+        <i class="fas fa-search" style="font-size: 3rem; margin-bottom: 16px; display: block;"></i>
+        <p style="font-size: 1.1rem;">No articles found{% if search_q %} for "{{ search_q }}"{% endif %}.</p>
+        {% if search_q %}<a href="{% url 'blog:index' %}" class="btn btn-outline" style="margin-top: 16px;">View all posts</a>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="pagination-row" aria-label="Blog pagination">
+      {% if page_obj.has_previous %}
+        <a href="?{% if search_q %}q={{ search_q }}&{% endif %}page={{ page_obj.previous_page_number }}"
+           class="page-btn" rel="prev"><i class="fas fa-chevron-left"></i> Prev</a>
+      {% else %}
+        <span class="page-btn disabled"><i class="fas fa-chevron-left"></i> Prev</span>
+      {% endif %}
+
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+          <span class="page-btn active">{{ num }}</span>
+        {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
+          <a href="?{% if search_q %}q={{ search_q }}&{% endif %}page={{ num }}" class="page-btn">{{ num }}</a>
+        {% endif %}
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+        <a href="?{% if search_q %}q={{ search_q }}&{% endif %}page={{ page_obj.next_page_number }}"
+           class="page-btn" rel="next">Next <i class="fas fa-chevron-right"></i></a>
+      {% else %}
+        <span class="page-btn disabled">Next <i class="fas fa-chevron-right"></i></span>
+      {% endif %}
+    </nav>
+    {% endif %}
+  </main>
+
+  <!-- Sidebar -->
+  <aside>
+    <!-- Categories -->
+    {% if sidebar_categories %}
+    <div class="sidebar-card">
+      <h2 class="sidebar-title"><i class="fas fa-th-large"></i> Categories</h2>
+      <div>
+        {% for cat in sidebar_categories %}
+        <a href="{{ cat.get_absolute_url }}" class="cat-pill">
+          {% if cat.icon_class %}<i class="{{ cat.icon_class }}"></i>{% endif %}
+          {{ cat.name }}
+          <span class="cat-count">{{ cat.post_count }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent posts -->
+    {% if sidebar_recent %}
+    <div class="sidebar-card">
+      <h2 class="sidebar-title"><i class="fas fa-fire"></i> Recent Articles</h2>
+      {% for post in sidebar_recent %}
+      <a href="{{ post.get_absolute_url }}" class="mini-card">
+        {% if post.featured_image %}
+          <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" class="mini-card-thumb" loading="lazy">
+        {% else %}
+          <div class="mini-card-thumb-ph">
+            <i class="{{ post.category.icon_class|default:'fas fa-newspaper' }}"></i>
+          </div>
+        {% endif %}
+        <div>
+          <div class="mini-card-title">{{ post.title|truncatechars:65 }}</div>
+          <div class="mini-card-date">{{ post.published_at|date:"M j, Y" }}</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Tags -->
+    {% if sidebar_tags %}
+    <div class="sidebar-card">
+      <h2 class="sidebar-title"><i class="fas fa-tags"></i> Popular Tags</h2>
+      <div class="tag-cloud">
+        {% for tag in sidebar_tags %}
+        <a href="{{ tag.get_absolute_url }}" class="tag-link">#{{ tag.name }}</a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- CTA -->
+    <div class="sidebar-card" style="background: linear-gradient(135deg, rgba(217,119,6,0.07), rgba(234,88,12,0.05)); border-color: var(--border-strong); text-align: center;">
+      <i class="fas fa-tools" style="font-size: 2rem; color: var(--amber); margin-bottom: 12px; display: block;"></i>
+      <h3 style="font-family: 'Fraunces', serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 8px;">Find Skilled Workers</h3>
+      <p style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 16px; line-height: 1.6;">
+        Connect with verified artisans across Nigeria — plumbers, electricians, carpenters &amp; more.
+      </p>
+      <a href="{% url 'marketplace:job_list' %}" class="btn btn-primary" style="width: 100%; justify-content: center;">
+        <i class="fas fa-search"></i> Find a Technician
+      </a>
+    </div>
+  </aside>
+</div>
+
+{% endblock %}

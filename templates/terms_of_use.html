@@ -1,0 +1,494 @@
+{% extends "base.html" %}
+
+{% block title %}Terms of Use — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<meta name="description" content="TradeLink NG Terms of Use — the rules governing your use of Nigeria's skilled trades marketplace, escrow payments, and verification system.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="{{ request.build_absolute_uri }}">
+<style>
+.legal-hero {
+  padding: calc(var(--nav-h) + 56px) clamp(16px,5vw,64px) 48px;
+  position: relative; z-index: 1; max-width: 900px; margin: 0 auto;
+}
+.legal-effective {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-pill); padding: 6px 14px;
+  font-size: 0.8rem; color: var(--text-3); margin-top: 18px;
+}
+.legal-effective i { color: var(--amber); }
+.legal-layout {
+  display: grid; grid-template-columns: 220px 1fr; gap: 48px;
+  max-width: 1100px; margin: 0 auto; padding: 0 clamp(16px,4vw,48px) 100px;
+  position: relative; z-index: 1; align-items: start;
+}
+@media (max-width: 860px) { .legal-layout { grid-template-columns: 1fr; } }
+.legal-toc {
+  position: sticky; top: calc(var(--nav-h) + 24px);
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); padding: 22px; font-size: 0.84rem;
+}
+@media (max-width: 860px) { .legal-toc { position: static; } }
+.legal-toc-title { font-size: 0.65rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--amber); margin-bottom: 14px; }
+.legal-toc a { display: block; padding: 6px 10px; border-radius: var(--r-sm); color: var(--text-2); text-decoration: none; transition: var(--t); font-weight: 500; line-height: 1.4; }
+.legal-toc a:hover { color: var(--amber); background: var(--surface-1); }
+.legal-body { max-width: 720px; }
+.legal-section { margin-bottom: 52px; scroll-margin-top: calc(var(--nav-h) + 20px); }
+.legal-section-num { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--amber), var(--orange)); color: #fff; font-size: 0.75rem; font-weight: 800; flex-shrink: 0; }
+.legal-h2 { font-family: 'Fraunces', serif; font-size: clamp(1.2rem, 2.5vw, 1.6rem); font-weight: 700; color: var(--text-1); margin-bottom: 18px; display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--border-subtle); }
+.legal-h3 { font-weight: 700; font-size: 1rem; color: var(--text-1); margin: 24px 0 10px; }
+.legal-body p { color: var(--text-2); font-size: 0.95rem; line-height: 1.8; margin-bottom: 14px; }
+.legal-body ul, .legal-body ol { padding-left: 22px; margin-bottom: 16px; }
+.legal-body li { color: var(--text-2); font-size: 0.95rem; line-height: 1.75; margin-bottom: 6px; }
+.legal-body strong { color: var(--text-1); font-weight: 700; }
+.legal-body a { color: var(--amber); text-decoration: none; transition: var(--t); }
+.legal-body a:hover { color: var(--orange); text-decoration: underline; }
+.legal-highlight { background: var(--surface-1); border: 1px solid var(--border-subtle); border-left: 4px solid var(--amber); border-radius: 0 var(--r-lg) var(--r-lg) 0; padding: 16px 20px; margin: 20px 0; }
+.legal-highlight p { margin-bottom: 0; color: var(--text-1); font-weight: 500; }
+.legal-warning { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); border-left: 4px solid #EF4444; border-radius: 0 var(--r-lg) var(--r-lg) 0; padding: 16px 20px; margin: 20px 0; }
+.legal-warning p { margin-bottom: 0; color: var(--text-1); font-weight: 500; }
+.legal-contact-card { background: linear-gradient(135deg, rgba(217,119,6,0.07), rgba(234,88,12,0.04)); border: 1px solid var(--border-strong); border-radius: var(--r-xl); padding: 28px; margin-top: 48px; }
+.legal-contact-card h3 { font-family: 'Fraunces', serif; font-weight: 700; font-size: 1.1rem; color: var(--text-1); margin-bottom: 12px; }
+.legal-updated-bar { background: var(--surface-1); border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); padding: 10px clamp(16px,5vw,64px); text-align: center; font-size: 0.8rem; color: var(--text-3); }
+.fee-box { background: var(--surface-1); border: 1px solid var(--border-subtle); border-radius: var(--r-xl); padding: 20px 24px; margin: 20px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 540px) { .fee-box { grid-template-columns: 1fr; } }
+.fee-item { text-align: center; }
+.fee-item .fee-num { font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 800; color: var(--amber); }
+.fee-item .fee-label { font-size: 0.82rem; color: var(--text-2); margin-top: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="legal-updated-bar" style="margin-top: var(--nav-h);">
+  <i class="fas fa-calendar-alt" style="color: var(--amber);"></i>
+  Last Updated: <strong>November 2026</strong> &nbsp;·&nbsp;
+  Effective Date: <strong>November 1, 2026</strong>
+</div>
+
+<!-- Hero -->
+<div class="legal-hero fade-up">
+  <span class="eyebrow"><i class="fas fa-file-contract"></i> Legal</span>
+  <h1 class="section-title">Terms of Use</h1>
+  <p class="section-sub">
+    Please read these terms carefully. By using TradeLink NG, you agree to be bound by them.
+    These terms govern all use of our platform, marketplace, and services.
+  </p>
+  <div class="legal-effective">
+    <i class="fas fa-info-circle"></i>
+    Questions? Contact us at <a href="mailto:legal@tradelink.ng" style="color:var(--amber);">legal@tradelink.ng</a>
+  </div>
+</div>
+
+<div class="legal-layout">
+
+  <!-- Sticky TOC -->
+  <nav class="legal-toc" aria-label="Terms of Use Sections">
+    <div class="legal-toc-title"><i class="fas fa-list"></i> Contents</div>
+    <a href="#acceptance">1. Acceptance of Terms</a>
+    <a href="#eligibility">2. Eligibility</a>
+    <a href="#accounts">3. User Accounts</a>
+    <a href="#user-types">4. User Types &amp; Roles</a>
+    <a href="#prohibited">5. Prohibited Conduct</a>
+    <a href="#worker-rules">6. Worker / Artisan Rules</a>
+    <a href="#employer-rules">7. Employer / Buyer Rules</a>
+    <a href="#marketplace">8. Marketplace Rules</a>
+    <a href="#escrow-payments">9. Escrow &amp; Payments</a>
+    <a href="#disputes">10. Disputes &amp; Mediation</a>
+    <a href="#verification">11. Verification System</a>
+    <a href="#reviews">12. Reviews &amp; Ratings</a>
+    <a href="#chat-conduct">13. Chat Conduct</a>
+    <a href="#ip">14. Intellectual Property</a>
+    <a href="#disclaimers">15. Disclaimers</a>
+    <a href="#liability">16. Limitation of Liability</a>
+    <a href="#indemnification">17. Indemnification</a>
+    <a href="#termination">18. Termination</a>
+    <a href="#governing-law">19. Governing Law</a>
+    <a href="#changes">20. Changes to Terms</a>
+    <a href="#contact">21. Contact</a>
+  </nav>
+
+  <!-- Body -->
+  <article class="legal-body">
+
+    <!-- 1 -->
+    <section class="legal-section" id="acceptance">
+      <h2 class="legal-h2"><span class="legal-section-num">1</span> Acceptance of Terms</h2>
+      <p>By accessing or using TradeLink NG (tradelink.ng and all associated subdomains, mobile experiences, and APIs), you confirm that you have read, understood, and agree to be legally bound by these Terms of Use ("Terms"), our <a href="{% url 'privacy_policy' %}">Privacy Policy</a>, and any additional guidelines or policies posted on the platform.</p>
+      <p>If you do not agree to any part of these Terms, you must immediately stop using the platform and delete your account.</p>
+      <div class="legal-highlight">
+        <p>These Terms constitute a legally binding agreement between you and TradeLink NG under Nigerian law. Keep a copy for your records.</p>
+      </div>
+    </section>
+
+    <!-- 2 -->
+    <section class="legal-section" id="eligibility">
+      <h2 class="legal-h2"><span class="legal-section-num">2</span> Eligibility</h2>
+      <p>To use TradeLink NG, you must:</p>
+      <ul>
+        <li>Be at least <strong>18 years of age</strong></li>
+        <li>Have the legal capacity to enter into binding contracts under Nigerian law</li>
+        <li>Not have been previously suspended or permanently banned from TradeLink NG</li>
+        <li>Provide accurate and truthful information during registration and verification</li>
+        <li>Have a valid Nigerian phone number (required for full profile completion)</li>
+      </ul>
+      <p>Businesses may register on behalf of their organisation, in which case the registering individual warrants that they have authority to bind the organisation to these Terms.</p>
+    </section>
+
+    <!-- 3 -->
+    <section class="legal-section" id="accounts">
+      <h2 class="legal-h2"><span class="legal-section-num">3</span> User Accounts</h2>
+
+      <h3 class="legal-h3">3.1 Registration</h3>
+      <p>You may register using your email address and password, or via authorized third-party authentication providers ("Social Sign-In"). All registration methods create a single unified account on our platform.</p>
+
+      <h3 class="legal-h3">3.2 Account Security</h3>
+      <ul>
+        <li>You are solely responsible for maintaining the confidentiality of your password and account credentials.</li>
+        <li>You must notify us immediately at <a href="mailto:security@tradelink.ng">security@tradelink.ng</a> if you suspect unauthorised access to your account.</li>
+        <li>TradeLink NG will never ask for your password via email, chat, or phone.</li>
+        <li>You may not share your account with any other person or allow others to use your account.</li>
+      </ul>
+
+      <h3 class="legal-h3">3.3 Account Accuracy</h3>
+      <p>You agree to keep your account information — including contact details, skill descriptions, rates, and availability — accurate and up-to-date. Providing false or misleading information is a material breach of these Terms and may result in immediate account suspension.</p>
+
+      <h3 class="legal-h3">3.4 One Account Per Person</h3>
+      <p>Each individual may hold only one account. Creating multiple accounts to circumvent a suspension, manipulation of reviews, or any other purpose is strictly prohibited.</p>
+    </section>
+
+    <!-- 4 -->
+    <section class="legal-section" id="user-types">
+      <h2 class="legal-h2"><span class="legal-section-num">4</span> User Types &amp; Roles</h2>
+      <p>TradeLink NG recognises the following distinct user roles:</p>
+      <ul>
+        <li><strong>Worker / Artisan:</strong> A skilled tradesperson who creates a worker profile to find jobs, receive hiring offers, and sell trade tools on the marketplace.</li>
+        <li><strong>Employer / Client:</strong> An individual or business that posts job listings and hires artisans.</li>
+        <li><strong>Buyer:</strong> A user who purchases trade tools and equipment on the marketplace.</li>
+        <li><strong>Seller:</strong> A verified worker who lists tools and equipment for sale.</li>
+      </ul>
+      <p>A single account may serve multiple roles (e.g. an artisan who is also a buyer). Each role comes with specific responsibilities set out in Sections 6, 7, and 8.</p>
+    </section>
+
+    <!-- 5 -->
+    <section class="legal-section" id="prohibited">
+      <h2 class="legal-h2"><span class="legal-section-num">5</span> Prohibited Conduct</h2>
+      <p>The following are strictly prohibited on TradeLink NG:</p>
+
+      <h3 class="legal-h3">5.1 Fraud &amp; Deception</h3>
+      <ul>
+        <li>Impersonating any person, company, or government agency</li>
+        <li>Using fraudulent, stolen, or someone else's NIN, BVN, or CAC registration number</li>
+        <li>Creating fake job listings or worker profiles</li>
+        <li>Manipulating reviews, ratings, or testimonials</li>
+        <li>Conducting transactions designed to launder money through the escrow system</li>
+      </ul>
+
+      <h3 class="legal-h3">5.2 Harassment &amp; Harmful Content</h3>
+      <ul>
+        <li>Harassing, threatening, or intimidating any user</li>
+        <li>Sending unsolicited bulk messages (spam)</li>
+        <li>Sharing sexually explicit, violent, or otherwise offensive content</li>
+        <li>Discriminating against users based on tribe, religion, gender, disability, or any other protected characteristic under Nigerian law</li>
+      </ul>
+
+      <h3 class="legal-h3">5.3 Platform Abuse</h3>
+      <ul>
+        <li>Attempting to circumvent our rate-limiting, security systems, or authentication</li>
+        <li>Scraping, crawling, or bulk downloading platform data without authorisation</li>
+        <li>Reverse-engineering, decompiling, or attempting to access our source code</li>
+        <li>Introducing malware, viruses, or any malicious code</li>
+        <li>Using automated bots or scripts to interact with the platform in a deceptive manner</li>
+      </ul>
+
+      <h3 class="legal-h3">5.4 Off-Platform Transactions</h3>
+      <ul>
+        <li>Soliciting or accepting payment for services found through TradeLink NG outside of our escrow system (this voids all dispute protections)</li>
+        <li>Sharing personal bank account details in chat messages to request direct transfers</li>
+      </ul>
+      <div class="legal-warning">
+        <p>⚠️ <strong>Warning:</strong> Off-platform transactions are conducted entirely at your own risk. TradeLink NG cannot mediate disputes, refund money, or take any enforcement action for transactions made outside our escrow system.</p>
+      </div>
+    </section>
+
+    <!-- 6 -->
+    <section class="legal-section" id="worker-rules">
+      <h2 class="legal-h2"><span class="legal-section-num">6</span> Worker / Artisan Rules</h2>
+      <ul>
+        <li><strong>Truthful profiles:</strong> Your bio, skills, experience level, and certifications must be accurate and genuinely representative of your abilities.</li>
+        <li><strong>Portfolio authenticity:</strong> Photos and videos in your portfolio must be your own work. Using others' work without attribution or permission is prohibited.</li>
+        <li><strong>Availability accuracy:</strong> Keep your availability status current. Persistent non-response to employer offers without updating your availability may result in a reduced match score.</li>
+        <li><strong>Professional conduct:</strong> You must behave professionally toward employers, clients, and other platform users. Rude, threatening, or abusive behaviour is grounds for account suspension.</li>
+        <li><strong>Service delivery:</strong> When hired through TradeLink NG, you are expected to deliver the agreed service to the standard described in your profile and confirmed in the job agreement.</li>
+        <li><strong>Rates:</strong> Rates shown on your profile (hourly/daily) are indicative. Final rates must be agreed with the employer before work commences and confirmed via the platform's escrow milestone system.</li>
+        <li><strong>Verification:</strong> Workers are encouraged to complete at minimum NIN (Level 1) verification. Verification status is prominently displayed to employers and directly affects your discoverability.</li>
+      </ul>
+    </section>
+
+    <!-- 7 -->
+    <section class="legal-section" id="employer-rules">
+      <h2 class="legal-h2"><span class="legal-section-num">7</span> Employer / Client Rules</h2>
+      <ul>
+        <li><strong>Truthful job listings:</strong> Job descriptions, budgets, locations, and requirements must be accurate. Misleading job posts will be removed.</li>
+        <li><strong>Legitimate jobs only:</strong> Only post lawful employment or service opportunities. Illegal activities, pyramid schemes, or exploitative arrangements are prohibited.</li>
+        <li><strong>No data harvesting:</strong> Employer profiles and job listings may not be used to harvest worker contact information for purposes unrelated to the posted job.</li>
+        <li><strong>Prompt communication:</strong> Engage with applications and hiring outreach within a reasonable time. Persistent non-response without closing a job listing may result in auto-expiry.</li>
+        <li><strong>Escrow funding:</strong> Escrow funds must be deposited before work commences on any milestone-based engagement. Promising payment without funding the escrow exposes you to dispute proceedings.</li>
+        <li><strong>Fair treatment:</strong> All workers hired through the platform must be treated with dignity and in compliance with applicable Nigerian labour standards.</li>
+      </ul>
+    </section>
+
+    <!-- 8 -->
+    <section class="legal-section" id="marketplace">
+      <h2 class="legal-h2"><span class="legal-section-num">8</span> Marketplace Rules</h2>
+
+      <h3 class="legal-h3">8.1 Listing Requirements</h3>
+      <ul>
+        <li>Only <strong>verified workers</strong> (NIN Level 1 minimum) may list products on the marketplace.</li>
+        <li>Products must be real, accurately described, and in the stated condition (New, Like New, Good, Fair, Poor).</li>
+        <li>Prohibited items include: stolen goods, counterfeit tools, illegal firearms or weapons, restricted chemicals, and any items prohibited under Nigerian law.</li>
+        <li>Prices must be in Nigerian Naira (₦) and reflect a genuine asking price.</li>
+        <li>Product photos must be actual photos of the specific item being sold — not stock images or photos of similar items.</li>
+      </ul>
+
+      <h3 class="legal-h3">8.2 Buyer Rules</h3>
+      <ul>
+        <li>Make offers in good faith. Frivolous or bad-faith offers designed to waste sellers' time are prohibited.</li>
+        <li>Once an offer is accepted and you proceed to payment, you are legally committed to completing the transaction.</li>
+        <li>Confirm receipt of goods honestly. Falsely claiming non-receipt to initiate a refund while retaining the goods constitutes fraud.</li>
+        <li>Items must be inspected at the agreed meetup location before confirming receipt.</li>
+      </ul>
+
+      <h3 class="legal-h3">8.3 Seller Rules</h3>
+      <ul>
+        <li>Once you accept an offer, you are obligated to complete the sale and hand over the item at the agreed meetup.</li>
+        <li>Cancelling accepted orders repeatedly without valid reason may result in account restrictions.</li>
+        <li>You must meet buyers at the agreed location and time for item handover.</li>
+      </ul>
+    </section>
+
+    <!-- 9 -->
+    <section class="legal-section" id="escrow-payments">
+      <h2 class="legal-h2"><span class="legal-section-num">9</span> Escrow &amp; Payments</h2>
+
+      <h3 class="legal-h3">9.1 How Escrow Works</h3>
+      <p>TradeLink NG operates through <strong>licensed, Central Bank of Nigeria (CBN)-regulated escrow payment partners</strong>. The process for marketplace transactions:</p>
+      <ol>
+        <li>Buyer initiates payment → funds held securely in escrow</li>
+        <li>Both parties meet and hand over the item</li>
+        <li>Buyer confirms receipt on the platform</li>
+        <li>TradeLink NG deducts a 5% platform fee; remaining amount transferred to seller</li>
+        <li>Transaction automatically completes 7 days after buyer confirmation (if no dispute is raised)</li>
+      </ol>
+
+      <h3 class="legal-h3">9.2 Platform Fees</h3>
+      <div class="fee-box">
+        <div class="fee-item">
+          <div class="fee-num">5%</div>
+          <div class="fee-label">Marketplace transaction fee<br>(deducted from seller payout)</div>
+        </div>
+        <div class="fee-item">
+          <div class="fee-num">Free</div>
+          <div class="fee-label">Job posting &amp; profile creation<br>(no charge to list or apply)</div>
+        </div>
+      </div>
+      <p>TradeLink NG reserves the right to introduce or modify fees with <strong>30 days' advance notice</strong> to users. Fee changes will not apply to in-progress transactions.</p>
+
+      <h3 class="legal-h3">9.3 Refunds</h3>
+      <ul>
+        <li>Refunds are issued at the discretion of TradeLink NG's admin team following a resolved dispute.</li>
+        <li>Standard banking and payment gateway processing timelines apply (typically 5–10 business days for electronic card settlements).</li>
+        <li>Platform fees are non-refundable once a transaction is marked as completed.</li>
+        <li>If TradeLink NG cancels a transaction due to a policy violation, any escrow funds are returned to the buyer in full.</li>
+      </ul>
+
+      <h3 class="legal-h3">9.4 Tax Responsibility</h3>
+      <p>Users are solely responsible for declaring and paying any applicable Nigerian taxes (VAT, personal income tax, or corporate tax) on transactions conducted through the platform. TradeLink NG does not deduct taxes on behalf of users.</p>
+    </section>
+
+    <!-- 10 -->
+    <section class="legal-section" id="disputes">
+      <h2 class="legal-h2"><span class="legal-section-num">10</span> Disputes &amp; Mediation</h2>
+
+      <h3 class="legal-h3">10.1 Raising a Dispute</h3>
+      <p>Either party (buyer or seller) may raise a dispute on a completed or in-progress order. Disputes must be raised <strong>within 7 days of the buyer's confirmation of receipt</strong> (or within 7 days of the agreed meetup date if receipt was never confirmed).</p>
+
+      <h3 class="legal-h3">10.2 Mediation Period</h3>
+      <p>Upon a dispute being raised, both parties have <strong>5 days</strong> to reach a mutually agreed resolution within the platform's mediation tool. During this period, escrow funds remain frozen.</p>
+
+      <h3 class="legal-h3">10.3 Admin Resolution</h3>
+      <p>If mediation fails, TradeLink NG's admin team will review the dispute within <strong>72 hours of escalation</strong>. Our team will consider:</p>
+      <ul>
+        <li>Chat message history between the parties</li>
+        <li>Uploaded evidence (photos, receipts, documents)</li>
+        <li>Transaction timestamps and order history</li>
+        <li>Both parties' accounts of events</li>
+      </ul>
+      <p>Possible resolutions include: full release to seller, full refund to buyer, or a split settlement. <strong>Our decision is final and binding.</strong></p>
+
+      <h3 class="legal-h3">10.4 Auto-Release</h3>
+      <p>If no dispute is raised within 7 days of buyer confirmation, escrow funds are automatically released to the seller. If a buyer fails to confirm or deny receipt within 14 days of the agreed meetup, funds are automatically released to the seller.</p>
+    </section>
+
+    <!-- 11 -->
+    <section class="legal-section" id="verification">
+      <h2 class="legal-h2"><span class="legal-section-num">11</span> Verification System</h2>
+      <ul>
+        <li>Verification is <strong>voluntary</strong>. Unverified users can browse and apply for jobs but have restricted access to marketplace selling and large escrow transactions.</li>
+        <li>By submitting your NIN or BVN for verification, you consent to TradeLink NG transmitting that number to our accredited identity verification partners for real-time verification against official identity and banking records.</li>
+        <li>Your verification badge is attached to your account and may be reviewed or revoked if we discover fraudulent verification activity.</li>
+        <li>Attempting to verify using another person's NIN, BVN, or CAC number constitutes identity fraud and will result in immediate permanent account suspension and may be reported to law enforcement.</li>
+        <li>TradeLink NG makes no guarantee that a verified badge means a user is free from professional malpractice or fraud in their trade activities. Verification confirms identity, not competence or character.</li>
+      </ul>
+    </section>
+
+    <!-- 12 -->
+    <section class="legal-section" id="reviews">
+      <h2 class="legal-h2"><span class="legal-section-num">12</span> Reviews &amp; Ratings</h2>
+      <ul>
+        <li>Reviews may only be submitted by users who have completed a genuine transaction (job completion or marketplace order) with the reviewed party.</li>
+        <li>Reviews must be honest, based on your direct experience, and free from personal attacks, discriminatory language, or falsehoods.</li>
+        <li>TradeLink NG does not edit or remove negative reviews provided they comply with these Terms. We will remove reviews that are fraudulent, spam, or violate our community standards.</li>
+        <li>Attempting to solicit, purchase, or coerce a positive review is a prohibited act that may result in account suspension.</li>
+        <li>Workers and sellers may respond to reviews publicly. Responses must remain professional and factual.</li>
+      </ul>
+    </section>
+
+    <!-- 13 -->
+    <section class="legal-section" id="chat-conduct">
+      <h2 class="legal-h2"><span class="legal-section-num">13</span> Chat Conduct</h2>
+      <ul>
+        <li>Chat messages must relate to the product listing, job, or order context in which the conversation was initiated.</li>
+        <li>Using chat to solicit off-platform transactions, share bank account details to bypass escrow, or send spam is prohibited.</li>
+        <li>Threatening, abusive, or harassing messages will result in immediate account suspension.</li>
+        <li>Chat messages may be accessed by our admin team for <strong>dispute resolution and fraud investigation</strong> only. See our <a href="{% url 'privacy_policy' %}">Privacy Policy</a> for details.</li>
+        <li>Using the messaging system to transmit spam, unsolicited commercial offers, malicious scripts, or deceptive links is strictly prohibited.</li>
+        <li>Shared image attachments must not contain illegal, sexually explicit, or harmful content.</li>
+      </ul>
+    </section>
+
+    <!-- 14 -->
+    <section class="legal-section" id="ip">
+      <h2 class="legal-h2"><span class="legal-section-num">14</span> Intellectual Property</h2>
+
+      <h3 class="legal-h3">14.1 Platform Content</h3>
+      <p>All content, design elements, source code, trademarks, logos, and software comprising the TradeLink NG platform are the exclusive property of TradeLink NG and are protected by Nigerian and international copyright, trademark, and intellectual property laws.</p>
+
+      <h3 class="legal-h3">14.2 Your Content</h3>
+      <p>By uploading content (photos, portfolio items, job descriptions, product listings, review text, chat messages) to TradeLink NG, you grant us a <strong>non-exclusive, royalty-free, worldwide licence</strong> to host, display, adapt, and distribute that content solely for the purpose of operating the platform.</p>
+      <p>You retain full ownership of your content. We will not license your content to third parties for commercial gain. You may delete your content at any time, subject to our data retention obligations.</p>
+
+      <h3 class="legal-h3">14.3 Prohibited Use</h3>
+      <p>You may not reproduce, copy, resell, or distribute any part of our platform without express written permission from TradeLink NG.</p>
+    </section>
+
+    <!-- 15 -->
+    <section class="legal-section" id="disclaimers">
+      <h2 class="legal-h2"><span class="legal-section-num">15</span> Disclaimers</h2>
+      <div class="legal-warning">
+        <p>⚠️ TradeLink NG is a <strong>marketplace and technology platform</strong>. We are not an employment agency, staffing firm, contractor, or guarantor of any service.</p>
+      </div>
+      <ul>
+        <li><strong>No employment relationship:</strong> TradeLink NG does not employ artisans. Workers and employers form independent contractual relationships through the platform.</li>
+        <li><strong>No quality guarantee:</strong> We do not guarantee the quality, safety, or legality of any service performed or product sold by our users. Verification confirms identity, not professional competence.</li>
+        <li><strong>No background checks beyond KYC:</strong> Our verification system confirms NIN/BVN/CAC identity only. We do not conduct criminal background checks or professional licence verification.</li>
+        <li><strong>Automated matching:</strong> Automated recommendations and matching results are suggestions provided for user convenience. TradeLink NG does not warrant that suggested profiles represent the sole or optimal candidates for any specific project.</li>
+        <li><strong>Service availability:</strong> The platform is provided "as-is" and "as available." We do not guarantee uninterrupted, error-free access and may carry out maintenance at any time.</li>
+      </ul>
+    </section>
+
+    <!-- 16 -->
+    <section class="legal-section" id="liability">
+      <h2 class="legal-h2"><span class="legal-section-num">16</span> Limitation of Liability</h2>
+      <p>To the maximum extent permitted by Nigerian law:</p>
+      <ul>
+        <li>TradeLink NG's total aggregate liability to you for any claim arising from or related to these Terms or your use of the platform shall not exceed the <strong>total platform fees paid by you in the 3 months preceding the claim</strong>, or ₦10,000 (ten thousand Naira), whichever is greater.</li>
+        <li>We are not liable for: loss of profits; loss of data; indirect, incidental, or consequential damages; losses arising from transactions conducted off-platform; or losses caused by external service provider outages or payment gateway disruptions.</li>
+        <li>We are not liable for the actions, omissions, or negligence of any artisan, employer, buyer, or seller using our platform.</li>
+        <li>We are not liable for any failure or delay in performance caused by events outside our reasonable control (force majeure), including but not limited to: internet outages, government actions, natural disasters, or civil unrest.</li>
+      </ul>
+      <p>Nothing in these Terms limits liability for fraud, gross negligence, or any liability that cannot be limited by law.</p>
+    </section>
+
+    <!-- 17 -->
+    <section class="legal-section" id="indemnification">
+      <h2 class="legal-h2"><span class="legal-section-num">17</span> Indemnification</h2>
+      <p>You agree to indemnify, defend, and hold harmless TradeLink NG, its directors, employees, agents, and partners from and against any claims, liabilities, damages, losses, and expenses (including legal fees) arising from:</p>
+      <ul>
+        <li>Your breach of these Terms</li>
+        <li>Your violation of any applicable law or regulation</li>
+        <li>Your infringement of the rights (including intellectual property rights) of any third party</li>
+        <li>Any content you post or transmit through the platform</li>
+        <li>Any dispute between you and another user of the platform</li>
+      </ul>
+    </section>
+
+    <!-- 18 -->
+    <section class="legal-section" id="termination">
+      <h2 class="legal-h2"><span class="legal-section-num">18</span> Termination</h2>
+
+      <h3 class="legal-h3">18.1 By You</h3>
+      <p>You may delete your account at any time. Account deletion removes your profile from public view. Some data is retained per our <a href="{% url 'privacy_policy' %}#data-retention">data retention schedule</a> (financial records, verification logs). Active escrow transactions must be resolved before account deletion is finalised.</p>
+
+      <h3 class="legal-h3">18.2 By TradeLink NG</h3>
+      <p>We may suspend or permanently terminate your account, without prior notice, for:</p>
+      <ul>
+        <li>Material breach of these Terms</li>
+        <li>Fraudulent, deceptive, or illegal activity</li>
+        <li>Repeated policy violations after formal warnings</li>
+        <li>Submission of false identity verification documents</li>
+        <li>Court order or regulatory directive</li>
+      </ul>
+      <p>Upon termination, your right to access the platform ceases immediately. We will retain a record of the reason for termination for our internal audit and abuse prevention systems.</p>
+
+      <h3 class="legal-h3">18.3 Effect of Termination</h3>
+      <p>Sections 14 (Intellectual Property), 15 (Disclaimers), 16 (Limitation of Liability), 17 (Indemnification), and 19 (Governing Law) survive termination of your account and these Terms.</p>
+    </section>
+
+    <!-- 19 -->
+    <section class="legal-section" id="governing-law">
+      <h2 class="legal-h2"><span class="legal-section-num">19</span> Governing Law &amp; Jurisdiction</h2>
+      <p>These Terms and any dispute arising from them shall be governed by and construed in accordance with the <strong>laws of the Federal Republic of Nigeria</strong>.</p>
+      <p>Any dispute not resolved by good-faith negotiation shall be submitted to mediation through the <strong>Lagos Multi-Door Courthouse (LMDC)</strong> or such other mutually agreed dispute resolution body. If mediation fails, disputes shall be resolved by the <strong>Federal High Court of Nigeria</strong> or such other court of competent jurisdiction.</p>
+    </section>
+
+    <!-- 20 -->
+    <section class="legal-section" id="changes">
+      <h2 class="legal-h2"><span class="legal-section-num">20</span> Changes to These Terms</h2>
+      <p>We may amend these Terms at any time. For <strong>material changes</strong> (those affecting your rights, fees, or core platform rules), we will:</p>
+      <ul>
+        <li>Update the "Last Updated" date at the top of this page</li>
+        <li>Send a notice to your registered email address at least <strong>14 days before</strong> the changes take effect</li>
+        <li>Require your explicit re-acceptance if changes are significant (e.g. fee introductions)</li>
+      </ul>
+      <p>Continued use of the platform after the effective date of revised Terms constitutes acceptance of those Terms. If you object to any change, you must delete your account before the effective date.</p>
+    </section>
+
+    <!-- 21 -->
+    <section class="legal-section" id="contact">
+      <h2 class="legal-h2"><span class="legal-section-num">21</span> Contact</h2>
+      <p>For any questions about these Terms, to report a violation, or to make a legal inquiry:</p>
+      <div class="legal-contact-card">
+        <h3><i class="fas fa-file-contract" style="color:var(--amber); margin-right:8px;"></i> Legal &amp; Compliance — TradeLink NG</h3>
+        <ul style="list-style:none; padding:0;">
+          <li style="margin-bottom:10px;"><i class="fas fa-envelope" style="color:var(--amber); width:20px;"></i> <a href="mailto:legal@tradelink.ng">legal@tradelink.ng</a></li>
+          <li style="margin-bottom:10px;"><i class="fas fa-shield-alt" style="color:var(--amber); width:20px;"></i> <a href="mailto:security@tradelink.ng">security@tradelink.ng</a> (security issues)</li>
+          <li style="margin-bottom:10px;"><i class="fas fa-globe" style="color:var(--amber); width:20px;"></i> <a href="{% url 'contacts:contact_us' %}">Contact Form</a></li>
+          <li style="margin-bottom:0;"><i class="fas fa-map-marker-alt" style="color:var(--amber); width:20px;"></i> Federal Republic of Nigeria</li>
+        </ul>
+        <p style="font-size:0.85rem; color:var(--text-3); margin-top:16px; margin-bottom:0;">
+          We aim to respond to all legal enquiries within <strong>5 business days</strong>.
+          Please include your registered email address and account username in all correspondence.
+        </p>
+      </div>
+
+      <div style="display:flex; gap:12px; margin-top:28px; flex-wrap:wrap;">
+        <a href="{% url 'privacy_policy' %}" class="btn btn-ghost"><i class="fas fa-shield-alt"></i> Privacy Policy</a>
+        <a href="{% url 'contacts:contact_us' %}" class="btn btn-primary"><i class="fas fa-headset"></i> Contact Support</a>
+      </div>
+    </section>
+
+  </article>
+</div>
+{% endblock %}

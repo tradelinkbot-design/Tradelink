@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_head %}
+<meta name="description" content="{{ page_desc }}">
+<link rel="canonical" href="{{ request.build_absolute_uri }}">
+<meta property="og:title"       content="{{ page_title }}">
+<meta property="og:description" content="{{ page_desc }}">
+<meta property="og:type"        content="website">
+<style>
+.cat-hero {
+  padding: calc(var(--nav-h) + 48px) clamp(16px,5vw,64px) 48px;
+  position: relative; z-index: 1;
+  max-width: 1200px; margin: 0 auto;
+}
+.cat-icon-wrap {
+  width: 60px; height: 60px; border-radius: 16px;
+  background: linear-gradient(135deg, var(--amber), var(--orange));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem; color: #fff; margin-bottom: 18px;
+  box-shadow: 0 8px 24px rgba(217,119,6,0.3);
+}
+.blog-layout {
+  display: grid; grid-template-columns: 1fr 300px; gap: 36px;
+  max-width: 1200px; margin: 0 auto; padding: 0 clamp(16px,4vw,48px) 80px;
+  position: relative; z-index: 1;
+}
+@media (max-width: 1024px) { .blog-layout { grid-template-columns: 1fr; } }
+.posts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 22px; }
+.post-card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl); overflow: hidden; transition: var(--t);
+  display: flex; flex-direction: column;
+}
+.post-card:hover { border-color: var(--border-strong); transform: translateY(-4px); box-shadow: 0 20px 48px rgba(0,0,0,0.10); }
+.post-card-img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
+.post-card-img-ph { width: 100%; aspect-ratio: 16/9; background: var(--surface-1); display: flex; align-items: center; justify-content: center; font-size: 2rem; color: var(--amber); }
+.post-card-body { padding: 18px; flex: 1; display: flex; flex-direction: column; }
+.post-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.post-meta-date, .post-meta-read { font-size: 0.78rem; color: var(--text-3); }
+.post-card-title { font-family:'Fraunces',serif; font-size:1rem; font-weight:700; color:var(--text-1); text-decoration:none; display:block; margin-bottom:8px; line-height:1.3; transition:var(--t); }
+.post-card-title:hover { color: var(--amber); }
+.post-card-excerpt { color:var(--text-2); font-size:0.87rem; line-height:1.6; flex:1; }
+.post-card-footer { margin-top:14px; display:flex; align-items:center; justify-content:space-between; }
+.author-mini { display:flex; align-items:center; gap:7px; font-size:0.78rem; color:var(--text-3); }
+.author-mini-avatar { width:24px; height:24px; border-radius:50%; background:linear-gradient(135deg,var(--amber),var(--orange)); display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:#fff; font-weight:700; }
+.read-more-link { font-size:0.78rem; font-weight:700; color:var(--amber); text-decoration:none; display:flex; align-items:center; gap:5px; transition:var(--t); }
+.read-more-link:hover { color:var(--orange); gap:8px; }
+.pagination-row { display:flex; align-items:center; gap:8px; margin-top:32px; flex-wrap:wrap; }
+.page-btn { padding:9px 16px; border-radius:var(--r-md); background:var(--bg-card); border:1px solid var(--border-subtle); color:var(--text-2); font-size:0.85rem; font-weight:600; text-decoration:none; transition:var(--t); }
+.page-btn:hover, .page-btn.active { background:linear-gradient(135deg,var(--amber),var(--orange)); color:#fff; border-color:transparent; }
+.page-btn.disabled { opacity:0.4; pointer-events:none; }
+.sidebar-card { background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:var(--r-xl); padding:22px; margin-bottom:22px; }
+.sidebar-title { font-family:'Fraunces',serif; font-size:1rem; font-weight:700; color:var(--text-1); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+.sidebar-title i { color:var(--amber); font-size:0.9rem; }
+.cat-pill { display:inline-flex; align-items:center; gap:7px; padding:7px 13px; border-radius:var(--r-pill); background:var(--surface-1); border:1px solid var(--border-subtle); color:var(--text-2); font-size:0.8rem; font-weight:600; text-decoration:none; transition:var(--t); margin:3px; }
+.cat-pill:hover { background:var(--surface-2); color:var(--amber); }
+.cat-count { background:var(--amber); color:#fff; font-size:0.65rem; font-weight:800; border-radius:100px; padding:1px 5px; }
+.mini-card { display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--border-subtle); text-decoration:none; transition:var(--t); }
+.mini-card:last-child { border-bottom:none; }
+.mini-card:hover .mini-card-title { color:var(--amber); }
+.mini-card-thumb { width:56px; height:44px; border-radius:var(--r-md); object-fit:cover; flex-shrink:0; }
+.mini-card-thumb-ph { width:56px; height:44px; border-radius:var(--r-md); background:var(--surface-1); display:flex; align-items:center; justify-content:center; color:var(--amber); font-size:1rem; flex-shrink:0; }
+.mini-card-title { font-size:0.82rem; font-weight:600; color:var(--text-1); line-height:1.35; transition:var(--t); }
+.mini-card-date  { font-size:0.72rem; color:var(--text-3); margin-top:3px; }
+.tag-link { font-size:0.78rem; font-weight:600; padding:5px 12px; border-radius:var(--r-pill); background:var(--surface-1); border:1px solid var(--border-subtle); color:var(--text-2); text-decoration:none; transition:var(--t); }
+.tag-link:hover { border-color:var(--amber); color:var(--amber); }
+.tag-cloud { display:flex; flex-wrap:wrap; gap:6px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cat-hero fade-up">
+  <nav style="display:flex; gap:8px; align-items:center; font-size:0.8rem; color:var(--text-3); margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{% url 'home' %}" style="color:var(--amber); text-decoration:none;"><i class="fas fa-home"></i> Home</a>
+    <i class="fas fa-chevron-right" style="font-size:0.6rem;"></i>
+    <a href="{% url 'blog:index' %}" style="color:var(--amber); text-decoration:none;">Blog</a>
+    <i class="fas fa-chevron-right" style="font-size:0.6rem;"></i>
+    <span>{{ category.name }}</span>
+  </nav>
+
+  <div class="cat-icon-wrap">
+    <i class="{{ category.icon_class|default:'fas fa-folder-open' }}"></i>
+  </div>
+  <span class="eyebrow">Category</span>
+  <h1 class="section-title">{{ category.name }}</h1>
+  {% if category.description %}
+  <p class="section-sub">{{ category.description }}</p>
+  {% endif %}
+</div>
+
+<div class="blog-layout">
+  <main>
+    <div class="posts-grid">
+      {% for post in page_obj %}
+      <article class="post-card fade-up">
+        <a href="{{ post.get_absolute_url }}">
+          {% if post.featured_image %}
+            <img src="{{ post.featured_image.url }}" alt="{{ post.featured_image_alt|default:post.title }}" class="post-card-img" loading="lazy">
+          {% else %}
+            <div class="post-card-img-ph"><i class="{{ post.category.icon_class|default:'fas fa-newspaper' }}"></i></div>
+          {% endif %}
+        </a>
+        <div class="post-card-body">
+          <div class="post-meta">
+            <span class="post-meta-date">{{ post.published_at|date:"M j, Y" }}</span>
+            <span style="color:var(--border-strong)">·</span>
+            <span class="post-meta-read"><i class="fas fa-clock"></i> {{ post.reading_time }} min</span>
+          </div>
+          <a href="{{ post.get_absolute_url }}" class="post-card-title">{{ post.title }}</a>
+          <p class="post-card-excerpt">{{ post.excerpt|truncatechars:120 }}</p>
+          <div class="post-card-footer">
+            <div class="author-mini">
+              <div class="author-mini-avatar">{{ post.author.get_full_name|default:post.author.username|first|upper }}</div>
+              <span>{{ post.author.get_full_name|default:post.author.username|truncatechars:20 }}</span>
+            </div>
+            <a href="{{ post.get_absolute_url }}" class="read-more-link">Read <i class="fas fa-arrow-right"></i></a>
+          </div>
+        </div>
+      </article>
+      {% empty %}
+      <div style="grid-column:1/-1; text-align:center; padding:60px 0; color:var(--text-3);">
+        <i class="fas fa-inbox" style="font-size:3rem; margin-bottom:16px; display:block;"></i>
+        <p>No articles in this category yet.</p>
+        <a href="{% url 'blog:index' %}" class="btn btn-outline" style="margin-top:16px;">View all posts</a>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="pagination-row" aria-label="Category pagination">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="page-btn" rel="prev"><i class="fas fa-chevron-left"></i> Prev</a>
+      {% else %}
+        <span class="page-btn disabled"><i class="fas fa-chevron-left"></i> Prev</span>
+      {% endif %}
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+          <span class="page-btn active">{{ num }}</span>
+        {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
+          <a href="?page={{ num }}" class="page-btn">{{ num }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="page-btn" rel="next">Next <i class="fas fa-chevron-right"></i></a>
+      {% else %}
+        <span class="page-btn disabled">Next <i class="fas fa-chevron-right"></i></span>
+      {% endif %}
+    </nav>
+    {% endif %}
+  </main>
+
+  <aside>
+    {% if sidebar_categories %}
+    <div class="sidebar-card">
+      <h2 class="sidebar-title"><i class="fas fa-th-large"></i> All Categories</h2>
+      {% for cat in sidebar_categories %}
+      <a href="{{ cat.get_absolute_url }}" class="cat-pill {% if cat.slug == category.slug %}active{% endif %}" style="{% if cat.slug == category.slug %}background:linear-gradient(135deg,var(--amber),var(--orange)); color:#fff; border-color:transparent;{% endif %}">
+        {% if cat.icon_class %}<i class="{{ cat.icon_class }}"></i>{% endif %}
+        {{ cat.name }}
+        <span class="cat-count" style="{% if cat.slug == category.slug %}background:rgba(255,255,255,0.3);{% endif %}">{{ cat.post_count }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if sidebar_recent %}
+    <div class="sidebar-card">
+      <h2 class="sidebar-title"><i class="fas fa-fire"></i> Recent Articles</h2>
+      {% for rp in sidebar_recent %}
+      <a href="{{ rp.get_absolute_url }}" class="mini-card">
+        {% if rp.featured_image %}
+          <img src="{{ rp.featured_image.url }}" alt="{{ rp.title }}" class="mini-card-thumb" loading="lazy">
+        {% else %}
+          <div class="mini-card-thumb-ph"><i class="{{ rp.category.icon_class|default:'fas fa-newspaper' }}"></i></div>
+        {% endif %}
+        <div>
+          <div class="mini-card-title">{{ rp.title|truncatechars:55 }}</div>
+          <div class="mini-card-date">{{ rp.published_at|date:"M j, Y" }}</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if sidebar_tags %}
+    <div class="sidebar-card">
+      <h2 class="sidebar-title"><i class="fas fa-tags"></i> Tags</h2>
+      <div class="tag-cloud">
+        {% for tag in sidebar_tags %}<a href="{{ tag.get_absolute_url }}" class="tag-link">#{{ tag.name }}</a>{% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

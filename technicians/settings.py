@@ -127,6 +127,7 @@ INSTALLED_APPS = [
     'bot.apps.BotConfig',
     'hiring.apps.HiringConfig',
     'contacts.apps.ContactsConfig',
+    'blog.apps.BlogConfig',
 ]
 
 
