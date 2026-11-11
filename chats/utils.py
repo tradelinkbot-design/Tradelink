@@ -1,17 +1,68 @@
 """
 chats/utils.py
 ==============
-Presence & last-seen formatting helpers for the TradeLink NG chat system.
+Presence, last-seen formatting, and message-safety helpers for the
+TradeLink NG chat system.
 """
 
 from datetime import timedelta
 import logging
+import re
 from typing import Optional, Tuple
 
 from django.core.cache import cache
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
+
+
+# ── Sensitive-data masking ────────────────────────────────────────────────────
+
+# Nigerian mobile number patterns
+_PHONE_PATTERNS = [
+    # International with optional +  e.g. +2348012345678 / 2348012345678
+    re.compile(r'\+?234\s?[7-9][0-1]\d{8}', re.IGNORECASE),
+    # Local 11-digit  e.g. 08012345678  09123456789
+    re.compile(r'\b0[7-9][0-1]\d{8}\b'),
+    # Spaced/hyphenated  e.g. 0801 234 5678  0801-234-5678  080-1234-5678
+    re.compile(r'\b0[7-9][0-1]\d[\s\-]?\d{3}[\s\-]\d{4}\b'),
+]
+
+# NUBAN bank account: exactly 10 consecutive digits not adjacent to more digits
+_ACCOUNT_RE = re.compile(r'(?<!\d)\d{10}(?!\d)')
+
+_PHONE_MASK   = '[phone number removed]'
+_ACCOUNT_MASK = '[account number removed]'
+
+
+def mask_sensitive_data(text: str) -> str:
+    """
+    Detect and replace Nigerian phone numbers and NUBAN bank account numbers
+    in *text* with safe placeholder strings.
+
+    Phone patterns matched
+    ─────────────────────
+      • +2348012345678  / 2348012345678   (international, with/without +)
+      • 08012345678  / 09123456789        (local 11-digit)
+      • 0801 234 5678  / 0801-234-5678   (spaced or hyphenated)
+
+    Account pattern matched
+    ───────────────────────
+      • Any standalone run of exactly 10 digits (Nigerian NUBAN format).
+
+    Returns the sanitised string.
+    """
+    if not text:
+        return text
+
+    for pattern in _PHONE_PATTERNS:
+        text = pattern.sub(_PHONE_MASK, text)
+
+    # Account masking runs after phone masking so the replacement strings
+    # (which contain no digit runs) are never accidentally re-matched.
+    text = _ACCOUNT_RE.sub(_ACCOUNT_MASK, text)
+
+    return text
 
 
 def format_last_seen(dt, now=None) -> str:

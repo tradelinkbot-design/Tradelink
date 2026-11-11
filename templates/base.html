@@ -105,13 +105,16 @@
       position: fixed; top: 0; left: 0; right: 0;
       height: var(--nav-h); z-index: 1000;
       display: flex; align-items: center;
-      justify-content: space-between;
+      justify-content: center;
       padding: 0 clamp(16px,5vw,64px);
       /* NO background / backdrop-filter here — moved to ::before */
       border-bottom: 1px solid rgba(217,119,6,0.18);
       transition: border-color 0.28s var(--ease);
       overflow: visible; /* never clip dropdown children */
     }
+    /* Nav items: allow nav-links to shrink, keep logo and actions fixed */
+    .nav-logo   { flex-shrink: 0; }
+    .nav-actions { flex-shrink: 0; }
     /* Glassmorphism blur on a pseudo-element — keeps the navbar element itself
        free of context-creating properties so .nd-panel can overflow freely */
     .navbar::before {
@@ -125,13 +128,25 @@
       pointer-events: none;
     }
     /* Lift all direct nav children above the ::before layer */
-    .navbar > * { position: relative; z-index: 1; }
+    .nav-inner > * { position: relative; z-index: 1; }
     .navbar.scrolled {
       border-bottom-color: var(--border-strong);
       box-shadow: 0 4px 24px rgba(0,0,0,0.08);
     }
     .navbar.scrolled::before {
       background: rgba(255,251,245,0.98);
+    }
+
+    /* Nav inner: constrain all nav content to max-width on ultra-wide screens */
+    .nav-inner {
+      position: relative; z-index: 1; /* above navbar::before glass layer */
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 1400px;
+      margin: 0 auto;
+      gap: 0;
     }
 
     .nav-logo {
@@ -161,7 +176,8 @@
     .nav-links {
       display: flex; align-items: center; gap: 2px; list-style: none;
       overflow: visible; /* ensure dropdown panels aren't clipped */
-      flex: 1;           /* fill space between logo and actions */
+      flex: 1 1 auto;    /* fill space between logo and actions, but can shrink */
+      min-width: 0;      /* FIX: allow flex child to shrink below content width */
       justify-content: center; /* centre the nav items */
       flex-wrap: nowrap;
     }
@@ -257,7 +273,7 @@
     .nd-cta-text span { display: block; font-size: 0.72rem; color: var(--text-3); font-weight: 400; }
     .nd-cta-arrow { color: var(--amber); font-size: 0.75rem; }
 
-    .nav-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .nav-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; min-width: 0; }
 
     /* ── NAV USER GREETING ── */
     .nav-username {
@@ -799,13 +815,29 @@
     .d4{animation-delay:.4s} .d5{animation-delay:.5s} .d6{animation-delay:.6s}
 
     /* ========== RESPONSIVE ========== */
+    /* ── Navbar large-screen safety: at ≥1200px make sure the whole bar stays within bounds */
+    @media (min-width: 1200px) {
+      .navbar {
+        padding: 0 clamp(32px, 4vw, 72px);
+      }
+    }
+
+    @media (max-width: 1150px) {
+      /* Tighten nav-links gap so items don't spill */
+      .nav-links { gap: 0; }
+      .nav-links > li > a,
+      .nav-dropdown-trigger { padding: 8px 9px; font-size: 0.83rem; }
+      .nav-actions { gap: 4px; }
+    }
+
     @media (max-width: 1024px) {
       /* FIX: 2-col footer starts earlier */
       .footer-inner { grid-template-columns: 1fr 1fr; gap: 36px; }
       /* Tighten nav-links gap so items don't spill into the theme toggle */
       .nav-links { gap: 0; }
       .nav-links > li > a,
-      .nav-dropdown-trigger { padding: 8px 10px; font-size: 0.82rem; }
+      .nav-dropdown-trigger { padding: 8px 8px; font-size: 0.81rem; }
+      .nav-actions { gap: 3px; }
     }
     /* Intermediate: at ≤900px collapse action button labels to icon-only
        so the theme-toggle is never pushed off screen */
@@ -947,6 +979,7 @@
 <body>
 
   <nav class="navbar" id="navbar">
+    <div class="nav-inner">
     <a href="{% url 'home' %}" class="nav-logo">
       <div class="logo-mark">T</div>
       TradeLink<span class="logo-ng">NG</span>
@@ -1118,6 +1151,7 @@
     <button class="nav-hamburger" id="hamburger" aria-label="Toggle menu">
       <span></span><span></span><span></span>
     </button>
+    </div><!-- /nav-inner -->
   </nav>
 
   <!-- MOBILE MENU WITH ACCORDION DROPDOWNS -->

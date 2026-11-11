@@ -1,4 +1,4 @@
-"""
+﻿"""
 chats/views.py
 ===============
 HTTP views for the TradeLink NG chat system.
@@ -277,6 +277,8 @@ class StartConversationView(LoginRequiredMixin, View):
 
         # ── Optional initial message ──────────────────────────────────────────
         if initial_message:
+            from chats.utils import mask_sensitive_data
+            initial_message = mask_sensitive_data(initial_message)
             Message.objects.create(
                 conversation=conversation,
                 sender=request.user,
@@ -312,6 +314,9 @@ class StartConversationView(LoginRequiredMixin, View):
             )
             if product is not None:
                 qs = qs.filter(product=product)
+            else:
+                # Direct-message: scope to product-less conversations only
+                qs = qs.filter(product__isnull=True)
 
             existing = qs.first()
             if existing:

@@ -5,9 +5,9 @@
 {% block extra_head %}
 <style>
 /* ═══════════════════════════════════════════════════════════════════════════
-   EMPLOYER DASHBOARD v4 — TradeLink NG
-   Layout: sticky left sidebar + scrollable main content
-   Design: dark amber system, Fraunces serif + Outfit sans
+   EMPLOYER DASHBOARD v5 — TradeLink NG
+   Fully responsive + dual-mode (light & dark) using CSS design tokens only
+   Breakpoints: 1200 | 1024 | 860 | 600 | 400
 ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Shell ─────────────────────────────────────────────────────────────── */
@@ -46,7 +46,7 @@
   align-items: center;
   gap: 12px;
   padding: 14px 10px 18px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid var(--border-subtle);
   margin-bottom: 10px;
 }
 .emp-sb-logo {
@@ -150,7 +150,7 @@
 }
 .emp-sb-divider {
   height: 1px;
-  background: rgba(255,255,255,0.05);
+  background: var(--border-subtle);
   margin: 8px 12px;
 }
 .emp-sb-spacer { flex: 1; min-height: 16px; }
@@ -158,7 +158,7 @@
 /* Sidebar bottom — verified badge */
 .emp-sb-footer {
   padding: 12px 10px 4px;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  border-top: 1px solid var(--border-subtle);
   margin-top: 8px;
 }
 .emp-sb-verified {
@@ -167,7 +167,7 @@
   gap: 6px;
   font-size: 0.72rem;
   font-weight: 600;
-  color: #34d399;
+  color: var(--emerald);
   background: rgba(16,185,129,0.1);
   border: 1px solid rgba(16,185,129,0.2);
   border-radius: var(--r-pill);
@@ -263,8 +263,8 @@
   align-items: center;
   gap: 7px;
   padding: 10px 18px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
   color: var(--text-2);
   font-family: 'Outfit', sans-serif;
   font-size: 0.875rem;
@@ -276,8 +276,8 @@
   white-space: nowrap;
 }
 .btn-outline:hover {
-  background: rgba(255,255,255,0.07);
-  border-color: rgba(255,255,255,0.2);
+  background: var(--surface-1);
+  border-color: var(--border-strong);
   color: var(--text-1);
   transform: translateY(-1px);
 }
@@ -292,7 +292,7 @@
 }
 .emp-stat {
   background: var(--bg-card);
-  border: 1px solid rgba(255,255,255,0.055);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--r-xl);
   padding: 20px 22px;
   position: relative;
@@ -336,7 +336,7 @@
 /* ── Section card ──────────────────────────────────────────────────────── */
 .emp-card {
   background: var(--bg-card);
-  border: 1px solid rgba(255,255,255,0.055);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--r-xl);
   overflow: hidden;
   margin-bottom: 28px;
@@ -346,7 +346,7 @@
   align-items: center;
   gap: 10px;
   padding: 18px 22px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid var(--border-subtle);
   flex-wrap: wrap;
   gap: 10px;
 }
@@ -372,9 +372,9 @@
   display: flex;
   gap: 4px;
   padding: 14px 22px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid var(--border-subtle);
   flex-wrap: wrap;
-  background: rgba(0,0,0,0.15);
+  background: var(--bg-base);
 }
 .emp-tab {
   display: inline-flex;
@@ -391,8 +391,8 @@
 }
 .emp-tab:hover {
   color: var(--text-1);
-  background: rgba(255,255,255,0.04);
-  border-color: rgba(255,255,255,0.08);
+  background: var(--surface-1);
+  border-color: var(--border-subtle);
 }
 .emp-tab.active {
   color: var(--amber);
@@ -419,13 +419,13 @@
   color: var(--text-3);
   padding: 12px 20px;
   text-align: left;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid var(--border-subtle);
   white-space: nowrap;
 }
 .emp-job-table th:last-child { text-align: right; }
 .emp-job-table td {
   padding: 0;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid var(--border-subtle);
   vertical-align: middle;
 }
 .emp-job-table tr:last-child td { border-bottom: none; }
@@ -433,7 +433,7 @@
   transition: background 0.2s ease;
 }
 .emp-job-table tbody tr:hover {
-  background: rgba(255,255,255,0.025);
+  background: var(--surface-1);
 }
 
 /* Job row inner padding wrapper */
@@ -453,7 +453,7 @@
 }
 .js-active  { background: var(--emerald); box-shadow: 0 0 8px rgba(16,185,129,0.35); }
 .js-paused  { background: var(--amber); }
-.js-draft   { background: rgba(255,255,255,0.2); }
+.js-draft   { background: var(--border-strong); }
 .js-filled  { background: var(--sky); box-shadow: 0 0 8px rgba(56,189,248,0.3); }
 .js-closed,
 .js-expired { background: rgba(239,68,68,0.6); }
@@ -496,12 +496,12 @@
   font-size: 0.68rem;
   font-weight: 700;
 }
-.et-default { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--text-2); }
-.et-green   { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: #34d399; }
-.et-amber   { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); color: #fcd34d; }
-.et-sky     { background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.2); color: #7dd3fc; }
-.et-red     { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.2);  color: #fca5a5; }
-.et-orange  { background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.2); color: #fb923c; }
+.et-default { background: var(--surface-1); border: 1px solid var(--border-subtle); color: var(--text-2); }
+.et-green   { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: var(--emerald); }
+.et-amber   { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); color: var(--amber); }
+.et-sky     { background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.2); color: var(--sky); }
+.et-red     { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.2);  color: #dc2626; }
+.et-orange  { background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.2); color: var(--orange); }
 .emp-tag i  { font-size: 0.5rem; }
 
 /* App count */
@@ -548,12 +548,12 @@
   text-decoration: none;
   transition: var(--t);
   cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-1);
   color: var(--text-2);
   white-space: nowrap;
 }
-.emp-jbtn:hover { background: rgba(255,255,255,0.07); color: var(--text-1); border-color: rgba(255,255,255,0.16); }
+.emp-jbtn:hover { background: var(--surface-1); color: var(--text-1); border-color: var(--border-strong); }
 .emp-jbtn-amber { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.22); color: var(--amber); }
 .emp-jbtn-amber:hover { background: rgba(245,158,11,0.18); }
 .emp-jbtn-danger { background: rgba(239,68,68,0.07); border-color: rgba(239,68,68,0.18); color: #fca5a5; }
@@ -573,9 +573,9 @@
   align-items: center;
   gap: 4px;
 }
-.emp-toggle-on  { background: rgba(16,185,129,0.09); color: #34d399; border-color: rgba(16,185,129,0.22); }
+.emp-toggle-on  { background: rgba(16,185,129,0.09); color: var(--emerald); border-color: rgba(16,185,129,0.22); }
 .emp-toggle-on:hover  { background: rgba(16,185,129,0.18); }
-.emp-toggle-off { background: rgba(245,158,11,0.09); color: #fcd34d; border-color: rgba(245,158,11,0.22); }
+.emp-toggle-off { background: rgba(245,158,11,0.09); color: var(--amber); border-color: rgba(245,158,11,0.22); }
 .emp-toggle-off:hover { background: rgba(245,158,11,0.18); }
 
 /* Empty state */
@@ -617,7 +617,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 22px;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  border-top: 1px solid var(--border-subtle);
   gap: 12px;
   flex-wrap: wrap;
 }
@@ -643,14 +643,14 @@
   font-weight: 600;
   text-decoration: none;
   color: var(--text-2);
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.07);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
   transition: var(--t);
 }
 .emp-pag-btn:hover {
-  background: rgba(255,255,255,0.07);
+  background: var(--surface-1);
   color: var(--text-1);
-  border-color: rgba(255,255,255,0.15);
+  border-color: var(--border-strong);
 }
 .emp-pag-btn.current {
   background: rgba(245,158,11,0.15);
@@ -677,11 +677,11 @@
   gap: 12px;
   align-items: center;
   padding: 14px 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid var(--border-subtle);
   transition: background 0.2s;
 }
 .emp-app-row:last-child { border-bottom: none; }
-.emp-app-row:hover { background: rgba(255,255,255,0.025); }
+.emp-app-row:hover { background: var(--surface-1); }
 .emp-app-avatar {
   width: 40px;
   height: 40px;
@@ -716,15 +716,15 @@
   font-size: 0.68rem;
   font-weight: 700;
   text-decoration: none;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-1);
   color: var(--text-2);
   transition: var(--t);
   display: flex;
   align-items: center;
   gap: 3px;
 }
-.emp-alink:hover { background: rgba(255,255,255,0.07); color: var(--text-1); }
+.emp-alink:hover { background: var(--surface-1); color: var(--text-1); }
 .emp-alink-primary { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.22); color: var(--amber); }
 .emp-alink-primary:hover { background: rgba(245,158,11,0.18); color: var(--amber); }
 
@@ -750,7 +750,7 @@
   color: var(--text-2);
   transition: var(--t);
 }
-.emp-qlink:hover { background: rgba(255,255,255,0.045); color: var(--text-1); transform: translateX(3px); }
+.emp-qlink:hover { background: var(--surface-1); color: var(--text-1); transform: translateX(3px); }
 .emp-qlink i { width: 16px; text-align: center; font-size: 0.8rem; color: var(--text-3); flex-shrink: 0; transition: var(--t); }
 .emp-qlink:hover i { color: var(--amber); }
 .emp-qlink-badge {
@@ -770,11 +770,11 @@
   gap: 12px;
   align-items: center;
   padding: 14px 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid var(--border-subtle);
   transition: background 0.2s;
 }
 .emp-milestone-row:last-child { border-bottom: none; }
-.emp-milestone-row:hover { background: rgba(255,255,255,0.02); }
+.emp-milestone-row:hover { background: var(--surface-1); }
 .emp-ms-name { font-size: 0.85rem; font-weight: 700; color: var(--text-1); margin-bottom: 2px; }
 .emp-ms-sub  { font-size: 0.7rem; color: var(--text-3); }
 .emp-ms-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
@@ -812,12 +812,12 @@
   background: rgba(56,189,248,0.1);
   border: 1px solid rgba(56,189,248,0.2);
   display: flex; align-items: center; justify-content: center;
-  font-size: 0.75rem; color: #7dd3fc;
+  font-size: 0.75rem; color: var(--sky);
   flex-shrink: 0;
 }
 .emp-nudge-text { font-size: 0.78rem; color: var(--text-2); line-height: 1.6; }
 .emp-nudge-text strong { color: var(--text-1); }
-.emp-nudge-text a { color: #7dd3fc; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; margin-top: 5px; }
+.emp-nudge-text a { color: var(--sky); text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; margin-top: 5px; }
 
 /* ── AI card ───────────────────────────────────────────────────────────── */
 .emp-ai-body { padding: 14px 20px; }
@@ -851,9 +851,9 @@
   animation: toastIn 0.3s cubic-bezier(0.175,0.885,0.32,1.275) both;
 }
 @keyframes toastIn { from { opacity:0; transform:translateX(16px) scale(0.97); } to { opacity:1; transform:none; } }
-.emp-toast-success { background: rgba(16,185,129,0.18); border: 1px solid rgba(16,185,129,0.32); color: #6ee7b7; }
-.emp-toast-error   { background: rgba(239,68,68,0.18);  border: 1px solid rgba(239,68,68,0.32);  color: #fca5a5; }
-.emp-toast-info    { background: rgba(56,189,248,0.14); border: 1px solid rgba(56,189,248,0.28); color: #7dd3fc; }
+.emp-toast-success { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: var(--emerald); }
+.emp-toast-error   { background: rgba(239,68,68,0.12);  border: 1px solid rgba(239,68,68,0.3);  color: #dc2626; }
+.emp-toast-info    { background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.25); color: var(--sky); }
 
 /* ── Hamburger (mobile sidebar toggle) ─────────────────────────────────── */
 .emp-hamburger {
@@ -863,13 +863,13 @@
   width: 38px;
   height: 38px;
   border-radius: var(--r-md);
-  border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-raised);
   color: var(--text-2);
   cursor: pointer;
   transition: var(--t);
 }
-.emp-hamburger:hover { background: rgba(255,255,255,0.07); color: var(--text-1); }
+.emp-hamburger:hover { background: var(--surface-1); color: var(--text-1); }
 
 /* ── RESPONSIVE ─────────────────────────────────────────────────────────── */
 @media (max-width: 1200px) {
@@ -896,7 +896,7 @@
   }
   .emp-sidebar.open {
     left: 0;
-    box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.3);
   }
   .emp-sidebar-overlay {
     display: none;
@@ -1183,7 +1183,7 @@
         </a>
         <a href="{{ base_url }}?status=draft"
            class="emp-tab {% if status_filter == 'draft' %}active{% endif %}">
-          <span class="emp-tab-dot" style="background:rgba(255,255,255,0.3);"></span> Draft
+          <span class="emp-tab-dot" style="background:var(--border-strong);"></span> Draft
         </a>
         <a href="{{ base_url }}?status=filled"
            class="emp-tab {% if status_filter == 'filled' %}active{% endif %}">
@@ -1454,7 +1454,7 @@
     </div>
 
     {# ── Quick Links + AI matching (2-col grid on large screens) ── #}
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(min(320px,100%),1fr)); gap:20px;">
 
       <div class="emp-card" style="margin-bottom:0;">
         <div class="emp-card-head">

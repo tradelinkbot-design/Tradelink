@@ -1,4 +1,4 @@
-"""
+﻿"""
 chats/consumers.py
 ===================
 Django Channels WebSocket consumers for the TradeLink NG chat system.
@@ -234,7 +234,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             body           — str   (can be empty if attachment_ids present)
             attachment_ids — list  (UUIDs of pre-uploaded MessageAttachments)
         """
-        body           = data.get('body', '').strip()
+        from chats.utils import mask_sensitive_data
+        body           = mask_sensitive_data(data.get('body', '').strip())
         attachment_ids = data.get('attachment_ids') or []
 
         if not body and not attachment_ids:
@@ -318,6 +319,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self._send_error('edit_message requires a non-empty body.')
             return
 
+        from chats.utils import mask_sensitive_data
+        new_body = mask_sensitive_data(new_body)
         success, edited_at = await self._edit_message(message_id, new_body)
         if not success:
             await self._send_error(

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}Privacy Policy — TradeLink NG{% endblock %}
 
@@ -92,6 +92,7 @@
 .legal-highlight p { margin-bottom: 0; color: var(--text-1); font-weight: 500; }
 
 /* Table */
+.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; margin: 20px 0; }
 .legal-table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.88rem; }
 .legal-table th {
   background: var(--surface-1); padding: 10px 14px;
@@ -258,7 +259,7 @@
     <!-- 3 -->
     <section class="legal-section" id="how-we-use">
       <h2 class="legal-h2"><span class="legal-section-num">3</span> How We Use Your Data</h2>
-      <table class="legal-table">
+      <div class="table-responsive"><table class="legal-table">
         <thead>
           <tr><th>Purpose</th><th>Data Used</th><th>Legal Basis</th></tr>
         </thead>
@@ -274,7 +275,7 @@
           <tr><td>Platform security and abuse prevention</td><td>IP addresses, diagnostic telemetry</td><td>Legitimate Interest / Security</td></tr>
           <tr><td>Statutory and regulatory compliance</td><td>Financial records, legal documentation</td><td>Legal Obligation</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </section>
 
     <!-- 4 -->
@@ -290,7 +291,7 @@
       </ul>
 
       <h3 class="legal-h3">4.2 Service Processors &amp; Operational Partners</h3>
-      <table class="legal-table">
+      <div class="table-responsive"><table class="legal-table">
         <thead><tr><th>Service Category</th><th>Operational Purpose</th><th>Data Entrusted</th></tr></thead>
         <tbody>
           <tr><td><strong>Payment Gateway Partners</strong></td><td>Secure payment collection, escrow custody, and disbursement</td><td>Transaction amounts, payment tokens, verification references</td></tr>
@@ -299,7 +300,7 @@
           <tr><td><strong>Cloud Hosting &amp; Storage</strong></td><td>Secure hosting, encrypted database storage, media delivery</td><td>Encrypted application records and media assets</td></tr>
           <tr><td><strong>Authentication Partners</strong></td><td>Optional federated single sign-on</td><td>Authorized identity tokens</td></tr>
         </tbody>
-      </table>
+      </table></div>
 
       <h3 class="legal-h3">4.3 Legal &amp; Regulatory Disclosures</h3>
       <p>We may disclose relevant user data if mandated by applicable Nigerian laws, a lawful court order, regulatory directives from data protection authorities, or law enforcement bodies investigating fraudulent activity.</p>
@@ -333,14 +334,14 @@
     <section class="legal-section" id="cookies">
       <h2 class="legal-h2"><span class="legal-section-num">7</span> Cookies &amp; Tracking</h2>
       <p>We utilize essential and functional cookies necessary for system operation:</p>
-      <table class="legal-table">
+      <div class="table-responsive"><table class="legal-table">
         <thead><tr><th>Cookie Category</th><th>Purpose</th><th>Lifespan</th></tr></thead>
         <tbody>
           <tr><td><strong>Session Cookies</strong></td><td>Maintain active authenticated sessions</td><td>Duration of browser session</td></tr>
           <tr><td><strong>Security Tokens</strong></td><td>Prevent Cross-Site Request Forgery (CSRF)</td><td>Duration of browser session</td></tr>
           <tr><td><strong>Preference Cookies</strong></td><td>Preserve UI themes and regional display preferences</td><td>Persistent (up to 12 months)</td></tr>
         </tbody>
-      </table>
+      </table></div>
       <p>We do not operate third-party tracking pixels that monitor your browsing activities across unrelated external websites.</p>
     </section>
 
@@ -370,7 +371,7 @@
     <!-- 10 -->
     <section class="legal-section" id="data-retention">
       <h2 class="legal-h2"><span class="legal-section-num">10</span> Data Retention</h2>
-      <table class="legal-table">
+      <div class="table-responsive"><table class="legal-table">
         <thead><tr><th>Information Type</th><th>Standard Retention Period</th><th>Statutory / Operational Rationale</th></tr></thead>
         <tbody>
           <tr><td>Active Account Records</td><td>Maintained while account remains active</td><td>Service delivery</td></tr>
@@ -379,7 +380,7 @@
           <tr><td>Identity Audit Confirmations</td><td>7 years</td><td>Anti-fraud and regulatory standards</td></tr>
           <tr><td>System Diagnostic Logs</td><td>90 days</td><td>Security monitoring and fault resolution</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </section>
 
     <!-- 11 -->

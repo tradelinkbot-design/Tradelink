@@ -416,8 +416,8 @@
   box-shadow: var(--shadow-md); pointer-events: all; cursor: pointer;
   animation: msgSlide 0.35s var(--ease) both;
 }
-.jd-msg-success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #6EE7B7; }
-.jd-msg-error   { background: rgba(239,68,68,0.15);  border: 1px solid rgba(239,68,68,0.3);  color: #FCA5A5; }
+.jd-msg-success { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: var(--emerald); }
+.jd-msg-error   { background: rgba(239,68,68,0.12);  border: 1px solid rgba(239,68,68,0.3);  color: #dc2626; }
 .jd-msg-info    { background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.25); color: var(--sky); }
 @keyframes msgSlide { from { opacity:0; transform: translateX(20px); } to { opacity:1; transform: translateX(0); } }
 
@@ -872,7 +872,7 @@
                 {% endwith %}
               </div>
               {% if application.employer_note %}
-              <div style="margin-top:14px;padding:12px 16px;background:rgba(255,255,255,0.02);border-radius:var(--r-md);border-left:3px solid var(--amber);font-size:0.85rem;color:var(--text-2);">
+              <div style="margin-top:14px;padding:12px 16px;background:var(--surface-1);border-radius:var(--r-md);border-left:3px solid var(--amber);font-size:0.85rem;color:var(--text-2);">
                 <strong style="display:block;color:var(--text-1);font-size:0.78rem;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Employer Note</strong>
                 {{ application.employer_note }}
               </div>
