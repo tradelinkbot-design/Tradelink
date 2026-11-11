@@ -388,6 +388,10 @@ def build_description(item: dict) -> str:
         review_str = f" ({item['review_count']} reviews)" if item["review_count"] else ""
         parts.append(f"Jumia rating: {item['rating']}/5 ★{review_str}")
 
+    # SKU line — secondary duplicate detection key (see duplicate-detection block)
+    if item["product_id"]:
+        parts.append(f"SKU: {item['product_id']}")
+
     # Always append the URL last — duplicate detection keys off it
     if item["url"]:
         parts.append(f"[Jumia listing: {item['url']}]")
@@ -559,8 +563,8 @@ class Command(BaseCommand):
         parser.add_argument(
             "--status",
             choices=[s.value for s in Product.Status],
-            default=Product.Status.DRAFT,
-            help="Product status after import. Default: draft",
+            default=Product.Status.ACTIVE,
+            help="Product status after import. Default: active",
         )
         parser.add_argument(
             "--state",
@@ -827,12 +831,16 @@ class Command(BaseCommand):
         # the product_id/SKU as a secondary check.
         existing = None
         if item["url"]:
+            # Match the full bracketed marker so a bare URL substring cannot
+            # false-positive against unrelated text in other descriptions.
             existing = Product.objects.filter(
-                description__contains=item["url"]
+                description__contains=f"[Jumia listing: {item['url']}]"
             ).first()
-        if existing is None and item["product_id"]:
+        if existing is None and item["product_id"] and len(item["product_id"]) >= 6:
+            # Require the "SKU: " prefix so short SKUs like "123" never match
+            # random words elsewhere in a product description.
             existing = Product.objects.filter(
-                description__contains=item["product_id"]
+                description__contains=f"SKU: {item['product_id']}"
             ).first()
 
         # ── UPDATE existing product ────────────────────────────────────────────
@@ -855,11 +863,27 @@ class Command(BaseCommand):
             existing.description = description
             existing.price       = price_ngn
             existing.brand       = item["brand"][:100] if item["brand"] else ""
-            existing.save(update_fields=["title", "description", "price", "brand"])
+            existing.status      = opts["status"]
+            existing.save(update_fields=["title", "description", "price", "brand", "status"])
+            # Download images only if this product currently has none
+            img_saved = img_failed = 0
+            if (
+                not opts["skip_images"]
+                and item["image_urls"]
+                and not existing.images.exists()
+            ):
+                img_saved, img_failed = self._save_images(
+                    existing, item["image_urls"], item["product_id"]
+                )
+                stats["images_saved"]  += img_saved
+                stats["images_failed"] += img_failed
+
             self.stdout.write(
-                f"  [UPDATED] {existing.title[:55]} — ₦{price_ngn:,.2f}"
+                f"  [UPDATED] {existing.title[:55]} - ?{price_ngn:,.2f}"
+                + (f" | {img_saved} img(s)" if img_saved else "")
             )
             stats["updated"] += 1
+
             return
 
         # ── DRY RUN preview ────────────────────────────────────────────────────
