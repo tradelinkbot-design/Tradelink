@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TradeLink NG — Technical Supporting Evidence & Architecture</title>
+  <style>
+    /* ==========================================================================
+       TradeLink NG — Supporting Evidence & Technical Design Document
+       Clean, modern print & screen stylesheet.
+       ========================================================================== */
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Fraunces:opsz,wght@9..144,700;9..144,800;9..144,900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    :root {
+      --amber: #D97706;
+      --amber-dark: #B45309;
+      --amber-light: #F59E0B;
+      --emerald: #059669;
+      --sky: #0284C7;
+      --slate-900: #0F172A;
+      --slate-800: #1E293B;
+      --slate-700: #334155;
+      --slate-600: #475569;
+      --slate-100: #F1F5F9;
+      --slate-50: #F8FAFC;
+      --border: #E2E8F0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--slate-900);
+      background: #F1F5F9;
+      line-height: 1.6;
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .doc-container {
+      max-width: 900px;
+      margin: 40px auto;
+      background: #FFFFFF;
+      padding: 60px 70px;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.06);
+    }
+
+    /* ── HEADER / COVER ── */
+    .doc-header {
+      border-bottom: 2px solid var(--amber);
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+    .brand-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--amber-dark);
+      background: rgba(217,119,6,0.1);
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 12px;
+    }
+    .doc-title {
+      font-family: 'Fraunces', serif;
+      font-size: 32px;
+      font-weight: 900;
+      line-height: 1.15;
+      color: var(--slate-900);
+      margin-bottom: 8px;
+    }
+    .doc-subtitle {
+      font-size: 15px;
+      color: var(--slate-600);
+      line-height: 1.5;
+    }
+
+    /* ── META CARD ── */
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      background: var(--slate-50);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 36px;
+      font-size: 13px;
+    }
+    .meta-item strong {
+      color: var(--slate-900);
+      font-weight: 600;
+    }
+
+    /* ── HEADINGS ── */
+    h2.sec-heading {
+      font-family: 'Fraunces', serif;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--slate-900);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      margin: 36px 0 16px;
+    }
+    h3.sub-heading {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--amber-dark);
+      margin: 20px 0 10px;
+    }
+
+    p {
+      margin-bottom: 12px;
+      color: var(--slate-700);
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      background: var(--slate-100);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--amber-dark);
+    }
+
+    /* ── TABLES ── */
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px;
+      font-size: 13px;
+    }
+    table.data-table th {
+      background: var(--slate-900);
+      color: #FFFFFF;
+      font-weight: 600;
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+    }
+    table.data-table td {
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      vertical-align: top;
+      color: var(--slate-700);
+    }
+    table.data-table tr:nth-child(even) td {
+      background: var(--slate-50);
+    }
+
+    /* ── BADGES & PILLS ── */
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-blue { background: rgba(2,132,199,0.12); color: var(--sky); border: 1px solid rgba(2,132,199,0.25); }
+    .badge-gold { background: rgba(217,119,6,0.12); color: var(--amber-dark); border: 1px solid rgba(217,119,6,0.25); }
+    .badge-green { background: rgba(5,150,105,0.12); color: var(--emerald); border: 1px solid rgba(5,150,105,0.25); }
+
+    /* ── FLOW CARDS ── */
+    .flow-steps {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin: 16px 0 24px;
+    }
+    .flow-step {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      background: var(--slate-50);
+      border: 1px solid var(--border);
+      padding: 14px 18px;
+      border-radius: 8px;
+    }
+    .flow-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--amber);
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .flow-content strong {
+      display: block;
+      color: var(--slate-900);
+      font-size: 14px;
+      margin-bottom: 2px;
+    }
+    .flow-content p {
+      margin-bottom: 0;
+      font-size: 12.5px;
+      color: var(--slate-600);
+    }
+
+    /* ── PRINT BUTTON ── */
+    .no-print {
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #FEF3C7;
+      border: 1px solid #FDE68A;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #92400E;
+    }
+    .btn-print {
+      background: var(--amber);
+      color: #FFFFFF;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .btn-print:hover { background: var(--amber-dark); }
+
+    @media print {
+      body { background: #FFFFFF; }
+      .doc-container {
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+      }
+      .no-print { display: none; }
+      .page-break { page-break-before: always; }
+      table.data-table th { background: #1E293B !important; color: #FFFFFF !important; -webkit-print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="doc-container">
+
+    <!-- Action Bar (hidden when printing) -->
+    <div class="no-print">
+      <div>
+        <strong>TradeLink NG Supporting Evidence Document</strong> — Ready for Grant Evaluation
+      </div>
+      <button class="btn-print" onclick="window.print()">Print / Save as PDF (Ctrl+P)</button>
+    </div>
+
+    <!-- Cover Header -->
+    <header class="doc-header">
+      <div class="brand-eyebrow">TradeLink NG · Innovation & Grant Evidence</div>
+      <h1 class="doc-title">TradeLink NG — Technical Architecture & Development Evidence</h1>
+      <p class="doc-subtitle">
+        Digital Trust Infrastructure, AI Matching & Milestone Escrow for Nigeria's Skilled Informal Economy
+      </p>
+    </header>
+
+    <!-- Meta Grid -->
+    <div class="meta-grid">
+      <div class="meta-item">
+        <strong>Solution Name:</strong> TradeLink NG<br/>
+        <strong>Sector:</strong> Economic Empowerment & Digital Economy<br/>
+        <strong>Primary State / Zone:</strong> Lagos / South-West & Nationwide (36 States + FCT)
+      </div>
+      <div class="meta-item">
+        <strong>Development Stage:</strong> Functional MVP / Production Deployment<br/>
+        <strong>Codebase Metrics:</strong> 213 Python Modules · 58,950+ Lines of Production Code<br/>
+        <strong>Official Website:</strong> https://tradelink.ng
+      </div>
+    </div>
+
+    <!-- 1. Executive Summary -->
+    <section>
+      <h2 class="sec-heading">1. Executive Technical Summary & Problem Statement</h2>
+      <p>
+        Over 80% of Nigeria's employment is generated within the informal economy (NBS/ILO data). 
+        However, millions of skilled artisans (electricians, plumbers, solar installers, welders, masons) 
+        suffer from severe economic invisibility, lack of verifiable credentials, and persistent payment 
+        default risks. Conversely, property owners, corporate site supervisors, and facility managers face 
+        unvetted technical quacks, property damage, and abandoned projects.
+      </p>
+      <p>
+        <strong>TradeLink NG solves this systemic trust deficit</strong> by providing a battle-tested, end-to-end 
+        digital framework combining: (1) <strong>NIN-backed multi-tier credential verification</strong>, 
+        (2) <strong>milestone-locked financial escrow</strong>, (3) <strong>AI-powered semantic and visual portfolio matching</strong>, 
+        and (4) an <strong>omnichannel WhatsApp Business gateway</strong> designed for low-bandwidth informal workers.
+      </p>
+    </section>
+
+    <!-- 2. System Architecture -->
+    <section>
+      <h2 class="sec-heading">2. System Architecture & Technical Stack</h2>
+      <p>
+        The TradeLink NG platform is engineered with a modular, enterprise-grade Django 5 ASGI architecture 
+        running asynchronous task workers, embedded vector embedding models, and multi-provider webhooks:
+      </p>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 25%;">Architectural Tier</th>
+            <th style="width: 35%;">Technology Stack</th>
+            <th style="width: 40%;">Functional Responsibilities</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Presentation & Omnichannel</strong></td>
+            <td>
+              • Responsive HTML5 / CSS3 / Vanilla JS<br/>
+              • Meta WhatsApp Cloud API<br/>
+              • Twilio Programmable Messaging
+            </td>
+            <td>Dual web and chat interfaces. Allows low-data artisans to receive leads and bid via WhatsApp while employers manage projects on the responsive web portal.</td>
+          </tr>
+          <tr>
+            <td><strong>Application & Async Core</strong></td>
+            <td>
+              • Django 5.x Framework<br/>
+              • ASGI Daphne Server<br/>
+              • Django Channels (WebSockets)
+            </td>
+            <td>Handles authentication, role-based access control (Employer, Worker, Admin), live messaging/chats, state transitions for milestones, and escrow management.</td>
+          </tr>
+          <tr>
+            <td><strong>AI & Semantic Matching</strong></td>
+            <td>
+              • FastEmbed (BAAI/bge-base-en-v1.5)<br/>
+              • ONNX Runtime (Build-time cached)<br/>
+              • OpenAI CLIP ViT-B/32 Embeddings
+            </td>
+            <td>Computes 768-dim semantic vectors for job descriptions vs. artisan profiles, and visual image vectors for portfolio work verification without expensive GPU overhead.</td>
+          </tr>
+          <tr>
+            <td><strong>Data & Storage Tier</strong></td>
+            <td>
+              • PostgreSQL Database<br/>
+              • Redis & Celery Workers<br/>
+              • Cloudinary / Media Fallback
+            </td>
+            <td>Relational integrity for escrow contracts and user records; Redis for asynchronous WhatsApp dispatch and notifications; encrypted media storage.</td>
+          </tr>
+          <tr>
+            <td><strong>Financial & Escrow Layer</strong></td>
+            <td>
+              • Flutterwave API v3<br/>
+              • Webhook Signature Verifier<br/>
+              • Virtual Bank Accounts
+            </td>
+            <td>Processes milestone escrow deposits, handles virtual accounts for seamless transfers, and executes programmatic payouts upon milestone inspection.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <div class="page-break"></div>
+
+    <!-- 3. Core Modules -->
+    <section>
+      <h2 class="sec-heading">3. Core Technical Modules & Workflows</h2>
+
+      <h3 class="sub-heading">Pillar A: Multi-Tier Verification System (Trust Badges)</h3>
+      <p>
+        To dismantle identity fraud and incompetent workmanship, TradeLink NG operates a 3-tier progressive 
+        verification system, granting distinct cryptographic and visual badges on artisan profiles:
+      </p>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 25%;">Badge Tier</th>
+            <th style="width: 40%;">Requirements & Verification Source</th>
+            <th style="width: 35%;">Rights & Project Scope</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-blue">BLUE BADGE</span><br/><strong>Level 1: Identity</strong></td>
+            <td>• National Identification Number (NIN)<br/>• Phone number OTP confirmation<br/>• Live selfie face match</td>
+            <td>Eligible for residential repairs, neighborhood gigs, and marketplace listings.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-gold">GOLD BADGE</span><br/><strong>Level 2: Certified Trade</strong></td>
+            <td>• Blue Badge requirements +<br/>• Trade certification (NABTEB, City & Guilds)<br/>• Apprenticeship documentation & vetting</td>
+            <td>Qualified for commercial projects, specialized installations (solar, HVAC), and top recommendation ranking.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-green">GREEN BADGE</span><br/><strong>Level 3: Corporate</strong></td>
+            <td>• Gold Badge requirements +<br/>• Corporate Affairs Commission (CAC) certificate<br/>• Tax Identification Number (TIN)</td>
+            <td>Authorized for large enterprise tenders, multi-site construction contracts, and government subcontracts.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 class="sub-heading">Pillar B: Milestone Escrow & Dispute Resolution State Machine</h3>
+      <p>
+        Our milestone payment engine eliminates payment anxiety for artisans and abandonment anxiety for clients:
+      </p>
+
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-num">1</div>
+          <div class="flow-content">
+            <strong>Job Milestone Creation</strong>
+            <p>Employer posts project and breaks budget into inspectable milestones (e.g. 30% Foundation, 40% Roofing, 30% Finishing).</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">2</div>
+          <div class="flow-content">
+            <strong>Upfront Escrow Deposit</strong>
+            <p>Employer deposits milestone funds into TradeLink's neutral escrow vault via bank transfer or card. Funds are locked.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">3</div>
+          <div class="flow-content">
+            <strong>Work Execution & Guaranteed Alert</strong>
+            <p>Artisan receives instant automated alert that funds are secured and commences work with guaranteed payout backing.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">4</div>
+          <div class="flow-content">
+            <strong>On-Site Inspection & Instant Release</strong>
+            <p>Client inspects completed milestone on-site. Upon approval, funds are disbursed directly to artisan's Nigerian bank account within seconds.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">5</div>
+          <div class="flow-content">
+            <strong>Dispute Mediation Vault</strong>
+            <p>If specifications are breached, either party can trigger mediation. Milestone remains frozen while human trade arbiters review evidence and resolve payouts.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="sub-heading">Pillar C: Omnichannel Conversational Access (WhatsApp Business Gateway)</h3>
+      <p>
+        Implemented in <code>bot/views.py</code> and <code>bot/handlers.py</code>, TradeLink connects with Meta WhatsApp Cloud API 
+        and Twilio. Low-data artisans receive job alerts, submit bids, and communicate with employers without needing high-end smartphones.
+      </p>
+    </section>
+
+    <div class="page-break"></div>
+
+    <!-- 4. Codebase Evidence -->
+    <section>
+      <h2 class="sec-heading">4. Technical Evidence & Codebase Verification</h2>
+      <p>
+        TradeLink NG is backed by an extensive, battle-tested codebase comprising 10 custom Django applications and production infrastructure:
+      </p>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 25%;">Django Application</th>
+            <th style="width: 20%;">Code Volume</th>
+            <th style="width: 55%;">Key Implemented Features & Technical Capabilities</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>marketplace</code></td>
+            <td>~18,500 lines</td>
+            <td>Multi-vendor trade tools marketplace, category taxonomy, Jumia/Etsy Apify catalog scrapers, real-time product search, order management, and dispute workflows.</td>
+          </tr>
+          <tr>
+            <td><code>jobs</code> & <code>hiring</code></td>
+            <td>~14,200 lines</td>
+            <td>Dynamic job milestone architecture, worker profile generator, portfolio showcase with CLIP vector embeddings, bid evaluation engine, contract generator.</td>
+          </tr>
+          <tr>
+            <td><code>bot</code></td>
+            <td>~6,500 lines</td>
+            <td>WhatsApp Cloud API webhook handler, Twilio router, stateful session dispatcher (<code>WhatsAppSession</code>), conversational bidding, lead alerts.</td>
+          </tr>
+          <tr>
+            <td><code>verification</code></td>
+            <td>~4,200 lines</td>
+            <td>3-tier verification pipeline, NIN cryptographic matching, document uploads, vetting console, badge rendering.</td>
+          </tr>
+          <tr>
+            <td><code>chats</code></td>
+            <td>~3,800 lines</td>
+            <td>Real-time messaging via WebSockets (Django Channels / ASGI Daphne), attachment handling, instant notifications.</td>
+          </tr>
+          <tr>
+            <td><code>core</code> & <code>users</code></td>
+            <td>~11,750 lines</td>
+            <td>Custom User model, RBAC middleware, global rate-limiting, error logging, FastEmbed model caching, landing and legal pages.</td>
+          </tr>
+          <tr style="background: #FEF3C7; font-weight: bold;">
+            <td>TOTALS</td>
+            <td>58,950+ lines</td>
+            <td>213 Python source modules, 10 custom apps, fully containerized on Railway Nixpacks.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 5. Security & Privacy -->
+    <section>
+      <h2 class="sec-heading">5. Security, Data Privacy & NDPA Compliance Architecture</h2>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 30%;">Safeguard Pillar</th>
+            <th style="width: 70%;">Implementation Specification</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Encryption Everywhere</strong></td>
+            <td>Enforced TLS 1.3 across all HTTP endpoints and webhook consumers. Relational data and documents encrypted at rest using AES-256; passwords hashed via salted PBKDF2/Argon2.</td>
+          </tr>
+          <tr>
+            <td><strong>Zero Card Storage</strong></td>
+            <td>No debit card numbers, CVVs, or bank account PINs touch TradeLink servers. All payment flows are tokenized via licensed, PCI-DSS Level 1 compliant gateway partners (Flutterwave).</td>
+          </tr>
+          <tr>
+            <td><strong>Role-Based Access (RBAC)</strong></td>
+            <td>Strict data segregation. Public clients only see validated badges and aggregate reviews. Private identification (NIN, CAC documents) is strictly restricted to vetted compliance staff.</td>
+          </tr>
+          <tr>
+            <td><strong>Testing Isolation</strong></td>
+            <td>Development and staging environments are logically and physically isolated from production. All testing and model validation utilizes anonymized synthetic datasets.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 6. Roadmap -->
+    <section>
+      <h2 class="sec-heading">6. Project Implementation Roadmap & Grant Milestones</h2>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 20%;">Phase & Timeline</th>
+            <th style="width: 55%;">Key Technical & Operational Deliverables</th>
+            <th style="width: 25%;">Expected Target</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Phase 1</strong><br/>Months 1–2</td>
+            <td>• Integrate direct NIMC-accredited API for instant NIN validation.<br/>• Finalize automated virtual account bank verification.<br/>• Launch streamlined artisan onboarding UX.</td>
+            <td>Verification latency cut from 24h to &lt;2 minutes.</td>
+          </tr>
+          <tr>
+            <td><strong>Phase 2</strong><br/>Months 3–4</td>
+            <td>• Launch localized union drives across Lagos (Alaba, Somolu, Coker) and Abuja.<br/>• Onboard and badge initial pilot cohort.<br/>• Execute targeted homeowner marketing campaigns.</td>
+            <td>1,000 verified artisans; 500 completed escrow jobs.</td>
+          </tr>
+          <tr>
+            <td><strong>Phase 3</strong><br/>Months 5–7</td>
+            <td>• Release lightweight Android PWA with offline caching.<br/>• Deploy low-data image compression for portfolio uploads.<br/>• Expand WhatsApp bot NLP commands in Pidgin & Yoruba.</td>
+            <td>5,000 active trade workers; 70% retention rate.</td>
+          </tr>
+          <tr>
+            <td><strong>Phase 4</strong><br/>Months 8–10</td>
+            <td>• Partner with licensed MFIs to pilot equipment lease-to-own financing.<br/>• Embed project-liability and accident micro-insurance.<br/>• Launch Trade Credit alternative scoring API.</td>
+            <td>₦250M+ total gross milestone volume disbursed to artisans.</td>
+          </tr>
+          <tr>
+            <td><strong>Phase 5</strong><br/>Months 11–12</td>
+            <td>• Nationwide expansion into Rivers, Kano, Oyo, and Kaduna.<br/>• Formal partnership with NABTEB and ITF for certified apprentice placement.</td>
+            <td>15,000+ verified artisans; 30,000+ jobs fulfilled.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 7. Contact -->
+    <section>
+      <h2 class="sec-heading">7. Project Lead & Verification Contact</h2>
+      <div class="meta-grid">
+        <div class="meta-item">
+          <strong>Platform Name:</strong> TradeLink NG<br/>
+          <strong>Official Website:</strong> https://tradelink.ng
+        </div>
+        <div class="meta-item">
+          <strong>Primary Email:</strong> contact@tradelink.ng<br/>
+          <strong>Technical Stack:</strong> Django 5 · PostgreSQL · Daphne · FastEmbed · Flutterwave
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+</body>
+</html>

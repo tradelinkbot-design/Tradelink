@@ -87,6 +87,7 @@ User = get_user_model()
 
 IMPORT_BOT_USERNAME = "jumia_import_bot"
 IMPORT_BOT_EMAIL    = "jumia-import-bot@tradelink.ng"
+IMPORT_BOT_PHONE    = "+2340000000000"
 DEFAULT_CATEGORY    = "Hand Tools"
 
 APIFY_DATASET_URL = "https://api.apify.com/v2/datasets/{dataset_id}/items"
@@ -778,10 +779,11 @@ class Command(BaseCommand):
         user, user_created = User.objects.get_or_create(
             username=username,
             defaults={
-                "email":      IMPORT_BOT_EMAIL,
-                "first_name": "Jumia",
-                "last_name":  "Import Bot",
-                "is_active":  True,
+                "email":        IMPORT_BOT_EMAIL,
+                "first_name":   "Jumia",
+                "last_name":    "Import Bot",
+                "phone_number": IMPORT_BOT_PHONE,
+                "is_active":    True,
             },
         )
         if user_created:
