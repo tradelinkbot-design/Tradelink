@@ -47,8 +47,8 @@ Usage on product_detail.html:
 
   <div class="pi__body">
     <p class="pi__label
-      {% if product.price_percentile is not None and product.price_percentile <= 35 %}pi__label--deal
-      {% elif product.price_percentile is not None and product.price_percentile <= 65 %}pi__label--fair
+      {% if product.price_percentile is not None and product.price_percentile <= 40 %}pi__label--deal
+      {% elif product.price_percentile is not None and product.price_percentile <= 60 %}pi__label--fair
       {% else %}pi__label--high{% endif %}
     ">{{ price_label }}</p>
 
@@ -59,9 +59,9 @@ Usage on product_detail.html:
         — this listing is in the
         <strong>
           {% if product.price_percentile <= 20 %}bottom 20%
-          {% elif product.price_percentile <= 35 %}bottom 35%
-          {% elif product.price_percentile <= 55 %}mid-range
-          {% elif product.price_percentile <= 75 %}upper 35%
+          {% elif product.price_percentile <= 40 %}bottom 40%
+          {% elif product.price_percentile <= 60 %}mid-range
+          {% elif product.price_percentile <= 80 %}upper 40%
           {% else %}top 20%{% endif %}
         </strong>
         of prices
@@ -72,8 +72,8 @@ Usage on product_detail.html:
     <div class="pi__meter" aria-hidden="true" title="Price position vs similar items">
       <div class="pi__track">
         <div class="pi__fill
-          {% if product.price_percentile <= 35 %}pi__fill--deal
-          {% elif product.price_percentile <= 65 %}pi__fill--fair
+          {% if product.price_percentile <= 40 %}pi__fill--deal
+          {% elif product.price_percentile <= 60 %}pi__fill--fair
           {% else %}pi__fill--high{% endif %}"
           style="width: {% widthratio product.price_percentile 100 100 %}%">
         </div>
@@ -91,11 +91,12 @@ Usage on product_detail.html:
   {% if product.price_percentile is not None %}
   <div class="pi__percentile" aria-hidden="true">
     <span class="pi__pct-num
-      {% if product.price_percentile <= 35 %}pi__label--deal
-      {% elif product.price_percentile <= 65 %}pi__label--fair
+      {% if product.price_percentile <= 40 %}pi__label--deal
+      {% elif product.price_percentile <= 60 %}pi__label--fair
       {% else %}pi__label--high{% endif %}
-    ">{{ product.price_percentile }}<small style="font-size:.55rem;font-family:'Outfit',sans-serif;font-weight:400;">%</small></span>
-    <span class="pi__pct-lbl">percentile</span>
+      " title="Priced higher than {{ product.price_percentile|floatformat:0 }}% of similar listings"
+    >{{ product.price_percentile|floatformat:0 }}<small style="font-size:.55rem;font-family:'Outfit',sans-serif;font-weight:400;">%</small></span>
+    <span class="pi__pct-lbl">vs market</span>
   </div>
   {% endif %}
 

@@ -408,59 +408,144 @@ def get_trending_products(category_id=None, limit: int = 8):
 
 def compute_price_intelligence(product_id: str) -> bool:
     """
-    For a given product, find semantically similar products (score >= 0.70),
-    compute the market median price, and derive this product's price percentile.
+    For a given product, find semantically similar products and derive its
+    price percentile relative to the market.
+
+    Candidate selection (three-tier fallback):
+      Tier A — same condition + same category   (most precise comparison group)
+      Tier B — same condition + no category filter  (if Tier A pool < 5)
+      Tier C — no condition + no category filter    (if product has no category
+                and no-category products are also sparse; last resort)
+
+    This means products without a category always get a comparison group —
+    they are compared against ALL active products of the same condition, and
+    if even that is sparse, against ALL active products regardless of condition.
+
+    Fixes applied vs original implementation:
+      ✓ Three-tier candidate fallback (category + condition aware)
+      ✓ Products with no category handled explicitly (not silently skipped)
+      ✓ Same-condition filter: new vs used prices are never mixed
+      ✓ Similarity threshold lowered 0.70 → 0.65 (wider, still meaningful)
+      ✓ Correct percentile formula: (below + 0.5×equal) / N — handles ties
+      ✓ pgvector (Tier 1) tried before NumPy (Tier 2) for efficiency
+      ✓ Minimum pool size checked after similarity filter, not before
 
     Updates Product.price_percentile and Product.market_median_price in-place.
-
     Returns True on success, False if insufficient data.
     """
     from marketplace.models import Product
     from jobs.service.text_encoder import text_encoder
+    from jobs.service.pgvector_utils import pgvector_cosine_search
+
+    # Lowered from 0.70 → 0.65: wider comparison pool, still semantically tight
+    _THRESHOLD = 0.65
+    _MIN_POOL  = 3
 
     try:
-        product = Product.objects.get(pk=product_id, status=Product.Status.ACTIVE)
+        product = Product.objects.select_related('category').get(
+            pk=product_id, status=Product.Status.ACTIVE
+        )
     except Product.DoesNotExist:
         return False
 
     if not product.text_embedding:
         return False
 
-    # Fetch similar active products (same category preferred)
-    base_qs = (
+    this_price = float(product.price)
+
+    # ── Build candidate queryset with three-tier fallback ─────────────────────
+    #
+    # Always start from same-condition pool (new vs used prices must not mix).
+    # Then narrow by category if one exists, with a size-based fallback.
+    #
+    # Tier A: same condition + same category
+    # Tier B: same condition + ALL categories   (fallback when Tier A is sparse
+    #           OR when the product has no category at all)
+    # Tier C: ALL conditions + ALL categories   (absolute last resort — only
+    #           reached if the entire same-condition pool is also < _MIN_POOL)
+
+    base_same_condition = (
+        Product.objects
+        .filter(status=Product.Status.ACTIVE, condition=product.condition)
+        .exclude(pk=product.pk)
+        .exclude(text_embedding__isnull=True)
+    )
+
+    base_all_conditions = (
         Product.objects
         .filter(status=Product.Status.ACTIVE)
         .exclude(pk=product.pk)
         .exclude(text_embedding__isnull=True)
     )
+
     if product.category:
-        base_qs = base_qs.filter(category=product.category)
+        tier_a = base_same_condition.filter(category=product.category)
+        # Use Tier A if it has enough candidates; otherwise widen to Tier B
+        candidates_qs = tier_a if tier_a.count() >= 5 else base_same_condition
+    else:
+        # No category — go straight to Tier B (same condition, any category)
+        candidates_qs = base_same_condition
 
-    candidates = list(base_qs.values('id', 'text_embedding', 'price'))
-    if len(candidates) < 3:
-        # Too few data points for meaningful intelligence
-        return False
+    # Tier C safety net: if even same-condition pool is too small, use everything
+    if candidates_qs.count() < _MIN_POOL:
+        logger.debug(
+            'compute_price_intelligence: %s — same-condition pool too small (%d), '
+            'falling back to all-condition pool.',
+            product_id, candidates_qs.count(),
+        )
+        candidates_qs = base_all_conditions
 
-    candidate_vecs = [c['text_embedding'] for c in candidates]
-    scores = text_encoder.batch_cosine_similarity(product.text_embedding, candidate_vecs)
+    # ── TIER 1: pgvector (production / NeonDB) ────────────────────────────────
+    ranked_pgv = pgvector_cosine_search(
+        qs=candidates_qs,
+        field='text_embedding',
+        dim=768,
+        query_vec=product.text_embedding,
+        threshold=_THRESHOLD,
+        limit=50,
+    )
 
-    # Only include products with high similarity (tight comparison group)
-    similar_prices = [
-        float(c['price'])
-        for c, s in zip(candidates, scores)
-        if s >= PRICE_SIMILARITY_THRESHOLD
-    ]
+    if ranked_pgv is not None:
+        # pgvector returns (pk, score) — look up prices in one extra query
+        ranked_pks = [pk for pk, _ in ranked_pgv]
+        price_map = dict(
+            Product.objects.filter(pk__in=ranked_pks).values_list('pk', 'price')
+        )
+        similar_prices = [float(price_map[pk]) for pk in ranked_pks if pk in price_map]
+    else:
+        # ── TIER 2: NumPy fallback (local dev / no pgvector) ──────────────────
+        candidates = list(candidates_qs.values('id', 'text_embedding', 'price'))
+        if not candidates:
+            return False
 
-    if len(similar_prices) < 3:
+        candidate_vecs = [c['text_embedding'] for c in candidates]
+        scores = text_encoder.batch_cosine_similarity(product.text_embedding, candidate_vecs)
+
+        similar_prices = [
+            float(c['price'])
+            for c, s in zip(candidates, scores)
+            if s >= _THRESHOLD
+        ]
+
+    if len(similar_prices) < _MIN_POOL:
+        logger.debug(
+            'compute_price_intelligence: %s — only %d products passed similarity '
+            'threshold (%.2f) — skipping.',
+            product_id, len(similar_prices), _THRESHOLD,
+        )
         return False
 
     similar_prices.sort()
     market_median = _median(similar_prices)
-    this_price = float(product.price)
+    n = len(similar_prices)
 
-    # Percentile rank: how many similar products are cheaper than this one?
-    cheaper_count = sum(1 for p in similar_prices if p < this_price)
-    percentile = (cheaper_count / len(similar_prices)) * 100
+    # ── Correct percentile rank (handles price ties properly) ─────────────────
+    # Standard formula: ((count_below + 0.5 × count_equal) / N) × 100
+    # Without the 0.5×equal term, products priced identically to N competitors
+    # all score 0th percentile and get the "🔥 Exceptional Deal" badge wrongly.
+    count_below = sum(1 for p in similar_prices if p < this_price)
+    count_equal = sum(1 for p in similar_prices if p == this_price)
+    percentile  = ((count_below + 0.5 * count_equal) / n) * 100
 
     Product.objects.filter(pk=product_id).update(
         price_percentile=round(percentile, 1),
@@ -468,8 +553,10 @@ def compute_price_intelligence(product_id: str) -> bool:
     )
 
     logger.info(
-        'compute_price_intelligence: product %s — ₦%.0f vs median ₦%.0f (%.0f percentile).',
+        'compute_price_intelligence: %s — ₦%.0f vs median ₦%.0f '
+        '(%.1f percentile, pool=%d, condition=%s, has_category=%s).',
         product_id, this_price, market_median, percentile,
+        n, product.condition, bool(product.category),
     )
     return True
 
@@ -477,6 +564,14 @@ def compute_price_intelligence(product_id: str) -> bool:
 def get_price_label(product) -> Optional[str]:
     """
     Returns a human-readable price intelligence label for display in templates.
+
+    Buckets are equal-width (20 percentile points each) so each label covers
+    the same share of the distribution:
+        ≤ 20  → bottom quintile  = exceptional deal
+        ≤ 40  → below median     = good value
+        ≤ 60  → around median    = fair price
+        ≤ 80  → above median     = above average
+        > 80  → top quintile     = premium priced
 
     Usage in template:
         {% with label=product|price_label %}
@@ -492,12 +587,12 @@ def get_price_label(product) -> Optional[str]:
     p = product.price_percentile
     if p <= 20:
         return '🔥 Exceptional Deal'
-    elif p <= 35:
-        return '✅ Great Value'
-    elif p <= 55:
+    elif p <= 40:
+        return '✅ Good Value'
+    elif p <= 60:
         return '💰 Fair Price'
-    elif p <= 75:
-        return '⚠️ Slightly Above Average'
+    elif p <= 80:
+        return '⚠️ Above Average'
     else:
         return '📈 Premium Priced'
 

@@ -41,7 +41,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-production-fallback-k
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 if DEBUG:
-    ALLOWED_HOSTS = ["127.0.0.1", "localhost", "192.168.43.77"]
+    ALLOWED_HOSTS = ["127.0.0.1", "localhost", "192.168.43.77", "172.21.24.77"]
 else:
     raw_hosts = os.environ.get('ALLOWED_HOSTS', '')
     ALLOWED_HOSTS = [h.strip() for h in raw_hosts.split(',') if h.strip()] if raw_hosts else ["*"]
