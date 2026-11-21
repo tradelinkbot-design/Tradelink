@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if action == 'Create' %}Post a Digital Gig{% else %}Edit Gig{% endif %} — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  .gf-layout {
+    position: relative; z-index: 1;
+    padding: calc(var(--nav-h) + clamp(28px,5vw,56px)) 0 clamp(48px,8vw,96px);
+  }
+  .gf-inner {
+    max-width: 740px;
+    margin: 0 auto;
+    padding: 0 clamp(16px,4vw,32px);
+  }
+  .gf-title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.4rem,3.5vw,1.9rem);
+    font-weight: 800;
+    color: var(--text-1);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .gf-title-icon {
+    width: 40px; height: 40px; border-radius: 11px;
+    background: rgba(139,92,246,.12);
+    border: 1px solid rgba(139,92,246,.2);
+    display: flex; align-items: center; justify-content: center;
+    color: #8b5cf6; font-size: 1rem; flex-shrink: 0;
+  }
+  .gf-sub { color: var(--text-2); font-size: 0.9rem; margin-bottom: 28px; }
+
+  /* Alert */
+  .gf-msg {
+    padding: 12px 16px; border-radius: var(--r-lg);
+    font-size: 0.87rem; margin-bottom: 16px;
+    border: 1px solid var(--border-subtle);
+    background: var(--surface-1); color: var(--text-2);
+  }
+
+  /* Section card */
+  .gf-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: clamp(20px,4vw,32px);
+  }
+  .gf-section-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .gf-group { margin-bottom: 20px; }
+  .gf-group:last-child { margin-bottom: 0; }
+  .gf-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-1);
+    margin-bottom: 6px;
+  }
+  .gf-label span { color: var(--orange); }
+  .gf-control, .gf-textarea, .gf-select {
+    width: 100%;
+    padding: 11px 14px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    color: var(--text-1);
+    font-size: 0.9rem;
+    font-family: 'Outfit', sans-serif;
+    transition: border-color .2s;
+    box-sizing: border-box;
+  }
+  .gf-control:focus, .gf-textarea:focus, .gf-select:focus {
+    outline: none;
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139,92,246,.12);
+  }
+  .gf-textarea { resize: vertical; }
+  .gf-help { font-size: 0.78rem; color: var(--text-3); margin-top: 5px; }
+  .gf-error { font-size: 0.78rem; color: var(--orange); margin-top: 4px; }
+
+  /* 2 and 3 column grids */
+  .gf-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .gf-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+  /* Prefix input */
+  .gf-prefix-wrap {
+    display: flex;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: var(--bg-base);
+  }
+  .gf-prefix {
+    padding: 11px 12px;
+    background: var(--surface-1);
+    border-right: 1px solid var(--border-subtle);
+    color: var(--text-3);
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+  .gf-prefix-wrap input {
+    flex: 1; border: none; outline: none;
+    padding: 11px 12px;
+    background: transparent;
+    color: var(--text-1);
+    font-size: 0.9rem;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  /* Form actions */
+  .gf-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+  }
+
+  /* Non-field errors */
+  .gf-nfe {
+    padding: 12px 16px; border-radius: var(--r-lg);
+    background: rgba(234,88,12,.08);
+    border: 1px solid rgba(234,88,12,.2);
+    color: var(--orange);
+    font-size: 0.85rem;
+    margin-bottom: 16px;
+  }
+
+  @media (max-width: 600px) {
+    .gf-row-2 { grid-template-columns: 1fr; }
+    .gf-row-3 { grid-template-columns: 1fr; }
+    .gf-actions .btn { flex: 1; justify-content: center; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gf-layout">
+<div class="gf-inner">
+
+  <h1 class="gf-title">
+    <span class="gf-title-icon"><i class="fas fa-briefcase"></i></span>
+    {% if action == 'Create' %}Post a Digital Gig{% else %}Edit Gig{% endif %}
+  </h1>
+  <p class="gf-sub">Fill in the details below to find the right digital talent.</p>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="gf-msg">{{ msg }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="gf-card">
+    <form method="post">
+      {% csrf_token %}
+
+      {# Title #}
+      <div class="gf-group">
+        <label class="gf-label">Gig Title <span>*</span></label>
+        {{ form.title }}
+        {% if form.title.errors %}<div class="gf-error">{{ form.title.errors.0 }}</div>{% endif %}
+      </div>
+
+      {# Category + Work Type #}
+      <div class="gf-row-2 gf-group">
+        <div>
+          <label class="gf-label">Category</label>
+          {{ form.category }}
+        </div>
+        <div>
+          <label class="gf-label">Work Type</label>
+          {{ form.work_type }}
+        </div>
+      </div>
+
+      {# Description #}
+      <div class="gf-group">
+        <label class="gf-label">Description <span>*</span></label>
+        {{ form.description }}
+        <div class="gf-help">Be specific about what you need — the more detail, the better proposals you'll receive.</div>
+        {% if form.description.errors %}<div class="gf-error">{{ form.description.errors.0 }}</div>{% endif %}
+      </div>
+
+      {# Required Skills #}
+      <div class="gf-group">
+        <label class="gf-label">Required Skills</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          {{ form.required_sub_skills }}
+        </div>
+      </div>
+
+      {# Budget #}
+      <div class="gf-row-3 gf-group">
+        <div>
+          <label class="gf-label">Budget Type</label>
+          {{ form.budget_type }}
+        </div>
+        <div>
+          <label class="gf-label">Min Budget (₦)</label>
+          <div class="gf-prefix-wrap">
+            <span class="gf-prefix">₦</span>
+            {{ form.budget_min }}
+          </div>
+        </div>
+        <div>
+          <label class="gf-label">Max Budget (₦)</label>
+          <div class="gf-prefix-wrap">
+            <span class="gf-prefix">₦</span>
+            {{ form.budget_max }}
+          </div>
+        </div>
+      </div>
+
+      {# State + Deadline #}
+      <div class="gf-row-2 gf-group">
+        <div>
+          <label class="gf-label">State (for on-site gigs)</label>
+          {{ form.state }}
+        </div>
+        <div>
+          <label class="gf-label">Application Deadline</label>
+          {{ form.deadline }}
+        </div>
+      </div>
+
+      {# Status #}
+      <div class="gf-group">
+        <label class="gf-label">Status</label>
+        {{ form.status }}
+        <div class="gf-help">Set to <strong>Active</strong> to publish immediately, or <strong>Draft</strong> to save and publish later.</div>
+      </div>
+
+      {% if form.non_field_errors %}
+        <div class="gf-nfe">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="gf-actions">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-paper-plane"></i>
+          {% if action == 'Create' %}Post Gig{% else %}Save Changes{% endif %}
+        </button>
+        <a href="{% url 'digital:gig_list' %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+
+</div>
+</div>
+{% endblock %}

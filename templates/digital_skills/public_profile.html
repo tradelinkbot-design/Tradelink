@@ -1,0 +1,443 @@
+{% extends "base.html" %}
+{% load static humanize %}
+
+{% block title %}{{ profile.user.get_full_name|default:profile.user.username }} — Digital Worker Profile{% endblock %}
+
+{% block extra_head %}
+<style>
+  .pub-layout {
+    position: relative; z-index: 1;
+    padding: calc(var(--nav-h) + clamp(28px,4vw,48px)) 0 clamp(48px,8vw,96px);
+  }
+  .pub-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 clamp(16px,4vw,48px);
+  }
+
+  /* Breadcrumb */
+  .pub-crumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: var(--text-3);
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .pub-crumb a { color: var(--text-3); text-decoration: none; }
+  .pub-crumb a:hover { color: var(--text-1); }
+  .pub-crumb i { font-size: 0.65rem; }
+
+  /* Two-column grid */
+  .pub-grid {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  /* Sidebar card */
+  .pub-sidebar-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    position: sticky;
+    top: calc(var(--nav-h) + 20px);
+  }
+  .pub-sid-top {
+    padding: 28px 24px 20px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .pub-avatar {
+    width: 96px; height: 96px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--border-subtle);
+    margin-bottom: 14px;
+  }
+  .pub-avatar-init {
+    width: 96px; height: 96px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,#8b5cf6,#6366f1);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 800; font-size: 2rem;
+    margin: 0 auto 14px;
+  }
+  .pub-name {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text-1);
+    margin-bottom: 4px;
+  }
+  .pub-cat {
+    font-size: 0.84rem;
+    color: var(--text-3);
+    margin-bottom: 12px;
+  }
+  .pub-badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px;
+    margin-bottom: 14px;
+  }
+  .pbadge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .pbadge-verified { background: rgba(29,78,216,.12); color: #1D4ED8; }
+  .pbadge-open { background: rgba(5,150,105,.12); color: var(--emerald); }
+  .pbadge-plain { background: var(--surface-1); color: var(--text-2); border: 1px solid var(--border-subtle); }
+  .pub-headline {
+    font-size: 0.84rem;
+    color: var(--text-2);
+    font-style: italic;
+    margin-bottom: 0;
+  }
+
+  /* Rates */
+  .pub-rates {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .pub-rate-item { text-align: center; }
+  .pub-rate-num { font-size: 1rem; font-weight: 800; color: var(--text-1); }
+  .pub-rate-label { font-size: 0.72rem; color: var(--text-3); }
+
+  /* Detail list */
+  .pub-detail-list { padding: 16px 20px; }
+  .pub-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    font-size: 0.84rem;
+    color: var(--text-2);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .pub-detail-item:last-child { border-bottom: none; }
+  .pub-detail-item i { color: var(--text-3); width: 16px; text-align: center; flex-shrink: 0; }
+
+  /* Contact buttons */
+  .pub-contact { padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
+
+  /* Right — content sections */
+  .pub-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: clamp(18px,3vw,28px);
+    margin-bottom: 20px;
+  }
+  .pub-section-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-1);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pub-section-title i { color: var(--text-3); }
+
+  .pub-bio {
+    font-size: 0.9rem;
+    color: var(--text-2);
+    white-space: pre-line;
+    line-height: 1.75;
+  }
+
+  /* Skills chips */
+  .pub-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .pub-skill-chip {
+    padding: 5px 14px;
+    border-radius: 999px;
+    background: rgba(139,92,246,.08);
+    border: 1px solid rgba(139,92,246,.2);
+    color: #8b5cf6;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  /* Portfolio grid */
+  .pub-portfolio-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px,1fr));
+    gap: 14px;
+  }
+  .pub-port-card {
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+  }
+  .pub-port-thumb {
+    width: 100%; height: 140px;
+    object-fit: cover;
+    display: block;
+  }
+  .pub-port-no-thumb {
+    width: 100%; height: 140px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(139,92,246,.07);
+    color: #8b5cf6; font-size: 2rem;
+  }
+  .pub-port-body { padding: 10px 12px; }
+  .pub-port-title { font-size: 0.84rem; font-weight: 600; color: var(--text-1); margin-bottom: 2px; }
+  .pub-port-desc { font-size: 0.75rem; color: var(--text-3);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+  /* Reviews */
+  .pub-review {
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .pub-review:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .pub-review-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 6px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .pub-reviewer { font-size: 0.88rem; font-weight: 700; color: var(--text-1); }
+  .pub-stars { color: var(--amber); font-size: 0.84rem; }
+  .pub-review-comment { font-size: 0.84rem; color: var(--text-2); line-height: 1.6; }
+  .pub-review-date { font-size: 0.75rem; color: var(--text-3); margin-top: 4px; }
+
+  @media (max-width: 920px) {
+    .pub-grid { grid-template-columns: 1fr; }
+    .pub-sidebar-card { position: static; }
+  }
+  @media (max-width: 600px) {
+    .pub-rates { gap: 16px; }
+    .pub-portfolio-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 400px) {
+    .pub-portfolio-grid { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pub-layout">
+<div class="pub-inner">
+
+  {# Breadcrumb #}
+  <nav class="pub-crumb" aria-label="Breadcrumb">
+    <a href="{% url 'digital:directory' %}">Digital Workers</a>
+    <i class="fas fa-chevron-right"></i>
+    <span>{{ profile.user.get_full_name|default:profile.user.username }}</span>
+  </nav>
+
+  <div class="pub-grid">
+
+    {# ── Left sidebar ─── #}
+    <div>
+      <div class="pub-sidebar-card">
+        <div class="pub-sid-top">
+          {% if profile.user.image %}
+            <img src="{{ profile.user.image.url }}" class="pub-avatar" alt="{{ profile.user.username }}">
+          {% else %}
+            <div class="pub-avatar-init">{{ profile.user.username|first|upper }}</div>
+          {% endif %}
+
+          <div class="pub-name">{{ profile.user.get_full_name|default:profile.user.username }}</div>
+          {% if profile.primary_category %}
+            <div class="pub-cat">
+              <i class="{{ profile.primary_category.icon_class }}" style="margin-right:4px;"></i>{{ profile.primary_category.name }}
+            </div>
+          {% endif %}
+
+          <div class="pub-badges">
+            {% if profile.is_verified %}
+              <span class="pbadge pbadge-verified"><i class="fas fa-check-circle" style="margin-right:3px;"></i>Verified</span>
+            {% endif %}
+            {% if profile.open_to_employment %}
+              <span class="pbadge pbadge-open">Open to Work</span>
+            {% endif %}
+            <span class="pbadge pbadge-plain">{{ profile.get_availability_display }}</span>
+          </div>
+
+          {% if profile.headline %}
+            <p class="pub-headline">"{{ profile.headline }}"</p>
+          {% endif %}
+        </div>
+
+        {% if profile.hourly_rate or profile.project_rate %}
+          <div class="pub-rates">
+            {% if profile.hourly_rate %}
+              <div class="pub-rate-item">
+                <div class="pub-rate-num">₦{{ profile.hourly_rate|intcomma }}</div>
+                <div class="pub-rate-label">/ hour</div>
+              </div>
+            {% endif %}
+            {% if profile.project_rate %}
+              <div class="pub-rate-item">
+                <div class="pub-rate-num">₦{{ profile.project_rate|intcomma }}</div>
+                <div class="pub-rate-label">starting rate</div>
+              </div>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        <div class="pub-detail-list">
+          {% if profile.state %}
+            <div class="pub-detail-item">
+              <i class="fas fa-map-marker-alt"></i>
+              {{ profile.get_state_display }}{% if profile.lga %}, {{ profile.lga }}{% endif %}
+            </div>
+          {% endif %}
+          {% if profile.remote_ok %}
+            <div class="pub-detail-item">
+              <i class="fas fa-wifi"></i> Available for remote work
+            </div>
+          {% endif %}
+          <div class="pub-detail-item">
+            <i class="fas fa-clock"></i> {{ profile.get_experience_level_display }}
+          </div>
+          {% if profile.years_experience %}
+            <div class="pub-detail-item">
+              <i class="fas fa-calendar"></i> {{ profile.years_experience }} years experience
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="pub-contact">
+          {% if can_contact %}
+            {% if profile.whatsapp_number %}
+              <a href="https://wa.me/{{ profile.whatsapp_number|cut:'+' }}" target="_blank" rel="noopener"
+                 class="btn btn-primary btn-sm" style="justify-content:center;">
+                <i class="fab fa-whatsapp"></i> WhatsApp
+              </a>
+            {% endif %}
+            {% if profile.portfolio_url %}
+              <a href="{{ profile.portfolio_url }}" target="_blank" rel="noopener"
+                 class="btn btn-ghost btn-sm" style="justify-content:center;">
+                <i class="fas fa-external-link-alt"></i> Portfolio
+              </a>
+            {% endif %}
+            {% if profile.linkedin_url %}
+              <a href="{{ profile.linkedin_url }}" target="_blank" rel="noopener"
+                 class="btn btn-ghost btn-sm" style="justify-content:center;">
+                <i class="fab fa-linkedin"></i> LinkedIn
+              </a>
+            {% endif %}
+          {% else %}
+            <a href="{% url 'signin' %}?next={{ request.path }}" class="btn btn-primary btn-sm" style="justify-content:center;">
+              Sign in to Contact
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Right content ─── #}
+    <div>
+
+      {# About #}
+      {% if profile.bio %}
+        <div class="pub-section">
+          <div class="pub-section-title"><i class="fas fa-user"></i> About</div>
+          <div class="pub-bio">{{ profile.bio }}</div>
+        </div>
+      {% endif %}
+
+      {# Skills #}
+      {% with subs=profile.sub_skills.all %}
+        {% if subs %}
+          <div class="pub-section">
+            <div class="pub-section-title"><i class="fas fa-tools"></i> Skills</div>
+            <div class="pub-skills">
+              {% for skill in subs %}
+                <span class="pub-skill-chip">{{ skill.name }}</span>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {# Portfolio #}
+      {% with items=profile.portfolio_items.all %}
+        {% if items %}
+          <div class="pub-section">
+            <div class="pub-section-title"><i class="fas fa-images"></i> Portfolio</div>
+            <div class="pub-portfolio-grid">
+              {% for item in items %}
+                <div class="pub-port-card">
+                  {% if item.item_type == 'image' and item.image %}
+                    <img src="{{ item.image.url }}" class="pub-port-thumb" alt="{{ item.title }}">
+                  {% elif item.item_type == 'video' %}
+                    <div class="pub-port-no-thumb"><i class="fab fa-youtube" style="color:#ef4444;"></i></div>
+                  {% else %}
+                    <div class="pub-port-no-thumb"><i class="fas fa-external-link-alt"></i></div>
+                  {% endif %}
+                  <div class="pub-port-body">
+                    <div class="pub-port-title">{{ item.title }}</div>
+                    {% if item.description %}
+                      <div class="pub-port-desc">{{ item.description }}</div>
+                    {% endif %}
+                    {% if item.external_url %}
+                      <a href="{{ item.external_url }}" target="_blank" rel="noopener"
+                         style="font-size:.75rem;color:#8b5cf6;font-weight:600;text-decoration:none;display:inline-block;margin-top:4px;">
+                        View <i class="fas fa-external-link-alt" style="font-size:.65rem;"></i>
+                      </a>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {# Reviews #}
+      {% if reviews %}
+        <div class="pub-section">
+          <div class="pub-section-title">
+            <i class="fas fa-star" style="color:var(--amber);"></i> Reviews
+            {% if avg_rating %}
+              <span class="badge badge-amber" style="margin-left:6px;">{{ avg_rating|floatformat:1 }} ★</span>
+            {% endif %}
+          </div>
+          {% for review in reviews %}
+            <div class="pub-review">
+              <div class="pub-review-top">
+                <span class="pub-reviewer">{{ review.reviewer.get_full_name|default:review.reviewer.username }}</span>
+                <span class="pub-stars">
+                  {% for i in "12345"|make_list %}
+                    {% if forloop.counter <= review.rating %}<i class="fas fa-star"></i>
+                    {% else %}<i class="far fa-star"></i>{% endif %}
+                  {% endfor %}
+                </span>
+              </div>
+              {% if review.comment %}
+                <div class="pub-review-comment">{{ review.comment }}</div>
+              {% endif %}
+              <div class="pub-review-date">{{ review.created|date:"N j, Y" }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+    </div>
+  </div>{# /pub-grid #}
+
+</div>
+</div>
+{% endblock %}

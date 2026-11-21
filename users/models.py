@@ -5,6 +5,22 @@ from phonenumber_field.modelfields import PhoneNumberField
 from django.core.exceptions import ValidationError
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+#  ACCOUNT TYPE CHOICES
+#  Stored directly on the User model so every part of the system can gate
+#  features with a single  request.user.account_type  check.
+#
+#  worker         → Artisan / Tradesperson  (creates WorkerProfile)
+#  digital_worker → Digital Skilled Worker (creates DigitalWorkerProfile)
+#  employer       → Employer               (creates EmployerProfile)
+# ──────────────────────────────────────────────────────────────────────────────
+
+class AccountType(models.TextChoices):
+    WORKER         = 'worker',         'Artisan / Tradesperson'
+    DIGITAL_WORKER = 'digital_worker', 'Digital Skilled Worker'
+    EMPLOYER       = 'employer',       'Employer'
+
+
 class UserManager(BaseUserManager):
     """Custom manager for the TradeLink NG User model."""
 
@@ -57,6 +73,17 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     email        = models.EmailField(unique=True, max_length=200)
     image        = models.ImageField(blank=True, upload_to="users_image", null=True)
+
+    # ── Account type ──────────────────────────────────────────────────────────
+    # Determines which profile type is auto-created and which features are
+    # accessible. Defaults to 'worker' for backward compatibility.
+    account_type = models.CharField(
+        max_length=20,
+        choices=AccountType.choices,
+        default=AccountType.WORKER,
+        db_index=True,
+    )
+
     is_active    = models.BooleanField(default=True)
     is_staff     = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
@@ -74,6 +101,20 @@ class User(AbstractBaseUser, PermissionsMixin):
     def profile_complete(self):
         """True once the user has added their phone number."""
         return bool(self.phone_number)
+
+    # ── Convenience account-type helpers ─────────────────────────────────────
+
+    @property
+    def is_artisan(self) -> bool:
+        return self.account_type == AccountType.WORKER
+
+    @property
+    def is_digital_worker(self) -> bool:
+        return self.account_type == AccountType.DIGITAL_WORKER
+
+    @property
+    def is_employer(self) -> bool:
+        return self.account_type == AccountType.EMPLOYER
 
     USERNAME_FIELD  = 'email'
     REQUIRED_FIELDS = ['username']   # phone_number removed — now optional

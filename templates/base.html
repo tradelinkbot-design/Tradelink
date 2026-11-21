@@ -1,3 +1,4 @@
+﻿{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,6 +17,16 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;0,9..144,800;0,9..144,900;1,9..144,700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="{% static 'favicon/favicon.ico' %}">
+  <link rel="icon" type="image/svg+xml" href="{% static 'favicon/favicon.svg' %}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon/favicon-32x32.png' %}">
+  <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon/favicon-16x16.png' %}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
+  <meta name="msapplication-TileImage" content="{% static 'favicon/mstile-150x150.png' %}">
+  <meta name="msapplication-TileColor" content="#D97706">
+  <meta name="theme-color" content="#D97706">
 
   {% block extra_head %}{% endblock %}
 
@@ -151,12 +162,10 @@
       text-decoration: none; display: flex; align-items: center; gap: 10px;
       flex-shrink: 0; /* stop logo from shrinking */
     }
-    .logo-mark {
-      width: 34px; height: 34px; border-radius: 9px;
-      background: linear-gradient(135deg, var(--amber), var(--orange));
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.85rem; color: #FFFFFF; font-weight: 900;
-      box-shadow: 0 4px 16px rgba(217,119,6,0.30); flex-shrink: 0;
+    .logo-mark-img {
+      width: 36px; height: 36px; object-fit: contain; flex-shrink: 0;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(217,119,6,0.28);
     }
     .logo-ng {
       background: linear-gradient(to right,
@@ -984,7 +993,7 @@
   <nav class="navbar" id="navbar">
     <div class="nav-inner">
     <a href="{% url 'home' %}" class="nav-logo">
-      <div class="logo-mark">T</div>
+      <img src="{% static 'icons/icon-48.png' %}" alt="TradeLink NG" class="logo-mark-img">
       TradeLink<span class="logo-ng">NG</span>
     </a>
 
@@ -1114,6 +1123,38 @@
             <div class="nd-item-icon"><i class="fas fa-shopping-bag"></i></div>
             <div class="nd-item-text"><strong>My Orders</strong><span>Track purchases &amp; sales</span></div>
           </a>
+        </div>
+      </li>
+
+      <!-- DIGITAL SKILLS dropdown -->
+      <li class="nav-dropdown">
+        <a href="{% url 'digital:directory' %}" class="nav-dropdown-trigger">
+          Digital Skills <i class="fas fa-chevron-down nd-arrow"></i>
+        </a>
+        <div class="nd-panel">
+          <div class="nd-label">Digital Freelance Hub</div>
+          <a href="{% url 'digital:directory' %}" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-users" style="color:#8b5cf6;"></i></div>
+            <div class="nd-item-text"><strong>Browse Digital Workers</strong><span>Find designers, devs & more</span></div>
+          </a>
+          <a href="{% url 'digital:gig_list' %}" class="nd-item">
+            <div class="nd-item-icon"><i class="fas fa-briefcase" style="color:#8b5cf6;"></i></div>
+            <div class="nd-item-text"><strong>Browse Gigs</strong><span>Find digital jobs & contracts</span></div>
+          </a>
+          {% if user.is_authenticated %}
+            {% if user.account_type == 'digital_worker' %}
+              <a href="{% url 'digital:dashboard' %}" class="nd-item">
+                <div class="nd-item-icon"><i class="fas fa-tachometer-alt" style="color:#8b5cf6;"></i></div>
+                <div class="nd-item-text"><strong>My Dashboard</strong><span>Profile, portfolio & applications</span></div>
+              </a>
+            {% endif %}
+            {% if user.account_type == 'employer' %}
+              <a href="{% url 'digital:gig_create' %}" class="nd-item">
+                <div class="nd-item-icon"><i class="fas fa-plus-circle" style="color:#8b5cf6;"></i></div>
+                <div class="nd-item-text"><strong>Post a Gig</strong><span>Hire a digital freelancer</span></div>
+              </a>
+            {% endif %}
+          {% endif %}
         </div>
       </li>
 
@@ -1271,7 +1312,7 @@
     <div class="footer-inner">
       <div>
         <a href="{% url 'home' %}" class="nav-logo" style="text-decoration:none;">
-          <div class="logo-mark">T</div>
+          <img src="{% static 'icons/icon-48.png' %}" alt="TradeLink NG" class="logo-mark-img">
           TradeLink<span class="logo-ng">NG</span>
         </a>
         <p class="footer-desc">

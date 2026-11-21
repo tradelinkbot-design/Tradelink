@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Identity Verification — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  .verify-wrap {
+    max-width: 760px;
+    margin: 0 auto 80px;
+    padding: calc(var(--nav-h) + 40px) 16px 0;
+  }
+  .verify-heading {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-1);
+    margin-bottom: 6px;
+  }
+  .verify-sub {
+    color: var(--text-3);
+    margin-bottom: 32px;
+  }
+
+  /* Badge / Level card */
+  .level-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+  .level-badge {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    flex-shrink: 0;
+  }
+  .level-info { flex: 1; }
+  .level-title { font-size: 1rem; font-weight: 700; color: var(--text-1); margin-bottom: 2px; }
+  .level-desc  { font-size: 0.82rem; color: var(--text-3); }
+
+  /* Step cards */
+  .step-grid {
+    display: grid;
+    gap: 16px;
+  }
+  .step-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: border-color .2s;
+  }
+  .step-card:hover { border-color: rgba(139,92,246,.4); }
+  .step-card.blocked {
+    opacity: .55;
+    cursor: not-allowed;
+  }
+  .step-num {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+  .step-num.done    { background: rgba(52,211,153,.15); color: #34d399; }
+  .step-num.active  { background: rgba(139,92,246,.15); color: #8b5cf6; }
+  .step-num.pending { background: var(--border-subtle); color: var(--text-3); }
+  .step-num.blocked-icon { background: rgba(248,113,113,.12); color: #f87171; }
+  .step-body { flex: 1; min-width: 0; }
+  .step-title { font-size: 0.95rem; font-weight: 700; color: var(--text-1); margin-bottom: 2px; }
+  .step-desc  { font-size: 0.8rem; color: var(--text-3); }
+  .step-action { margin-left: auto; }
+  .btn-verify {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all .2s;
+    border: none;
+    cursor: pointer;
+  }
+  .btn-verify-primary { background: #8b5cf6; color: #fff; }
+  .btn-verify-primary:hover { background: #7c3aed; }
+  .btn-verify-done {
+    background: rgba(52,211,153,.12);
+    color: #34d399;
+    border: 1px solid rgba(52,211,153,.2);
+    cursor: default;
+  }
+  .btn-verify-locked {
+    background: var(--border-subtle);
+    color: var(--text-3);
+    cursor: not-allowed;
+  }
+  .blocked-banner {
+    background: rgba(139,92,246,.08);
+    border: 1px solid rgba(139,92,246,.2);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 0.85rem;
+    color: #a78bfa;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .blocked-banner i { margin-top: 2px; }
+
+  /* Recent attempts table */
+  .attempts-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 32px;
+  }
+  .attempts-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-1);
+    margin-bottom: 16px;
+  }
+  .attempts-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .attempts-table th {
+    text-align: left;
+    padding: 8px 12px;
+    color: var(--text-3);
+    border-bottom: 1px solid var(--border-subtle);
+    font-weight: 600;
+  }
+  .attempts-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255,255,255,.04);
+    color: var(--text-1);
+  }
+  .status-pill {
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .pill-success  { background: rgba(52,211,153,.15); color: #34d399; }
+  .pill-failed   { background: rgba(248,113,113,.15); color: #f87171; }
+  .pill-pending  { background: rgba(245,158,11,.15);  color: #f59e0b; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="verify-wrap">
+  <h1 class="verify-heading">
+    <i class="fas fa-shield-alt" style="color:#8b5cf6;margin-right:10px;"></i>
+    Identity Verification
+  </h1>
+  <p class="verify-sub">
+    Verified accounts earn more trust and unlock more features on TradeLink NG.
+  </p>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags }}" style="margin-bottom:16px;border-radius:10px;">
+        {{ msg }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {# ── Current level ─────────────────────────────────────────────────── #}
+  <div class="level-card">
+    <div class="level-badge"
+         style="background:{{ vp.badge_colour }}22; border: 1px solid {{ vp.badge_colour }}44; color:{{ vp.badge_colour }};">
+      <i class="fas fa-shield-alt"></i>
+    </div>
+    <div class="level-info">
+      <div class="level-title">Level {{ vp.level }} — {{ vp.badge_label }}</div>
+      <div class="level-desc">
+        {% if vp.level == 0 %}
+          No verifications completed yet. Start with your NIN below.
+        {% elif vp.level == 1 %}
+          Identity confirmed. {% if not is_digital_worker %}Complete BVN to unlock Level 2.{% endif %}
+        {% elif vp.level == 2 %}
+          Enhanced trust. Complete CAC to unlock the Trusted Business badge.
+        {% else %}
+          Maximum trust level achieved — your account is fully verified.
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ── Digital worker notice ──────────────────────────────────────────── #}
+  {% if is_digital_worker %}
+    <div class="blocked-banner">
+      <i class="fas fa-info-circle"></i>
+      <div>
+        <strong>Digital Skilled Worker accounts</strong> only need to verify their NIN —
+        and only when posting services on the marketplace. BVN and CAC verification are
+        reserved for Artisan and Employer accounts.
+      </div>
+    </div>
+  {% endif %}
+
+  {# ── Verification steps ─────────────────────────────────────────────── #}
+  <div class="step-grid">
+
+    {# NIN — available to everyone #}
+    <div class="step-card">
+      <div class="step-num {% if vp.nin_verified %}done{% else %}active{% endif %}">
+        {% if vp.nin_verified %}
+          <i class="fas fa-check"></i>
+        {% else %}
+          <span>1</span>
+        {% endif %}
+      </div>
+      <div class="step-body">
+        <div class="step-title">NIN — National Identification Number</div>
+        <div class="step-desc">
+          Confirm your identity with Nigeria's National Identification Number.
+          {% if vp.nin_verified %}
+            Verified on {{ vp.nin_verified_at|date:"d M Y" }}.
+          {% endif %}
+        </div>
+      </div>
+      <div class="step-action">
+        {% if vp.nin_verified %}
+          <span class="btn-verify btn-verify-done"><i class="fas fa-check"></i> Verified</span>
+        {% else %}
+          <a href="{% url 'verify:nin' %}" class="btn-verify btn-verify-primary">
+            <i class="fas fa-id-card"></i> Verify NIN
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    {# BVN — artisans / employers only #}
+    {% if not is_digital_worker %}
+    <div class="step-card {% if not vp.nin_verified %}blocked{% endif %}">
+      <div class="step-num {% if vp.bvn_verified %}done{% elif vp.nin_verified %}active{% else %}pending{% endif %}">
+        {% if vp.bvn_verified %}
+          <i class="fas fa-check"></i>
+        {% else %}
+          <span>2</span>
+        {% endif %}
+      </div>
+      <div class="step-body">
+        <div class="step-title">BVN — Bank Verification Number</div>
+        <div class="step-desc">
+          Link your bank identity for enhanced financial trust.
+          {% if not vp.nin_verified %}
+            Requires NIN verification first.
+          {% elif vp.bvn_verified %}
+            Verified on {{ vp.bvn_verified_at|date:"d M Y" }}.
+          {% endif %}
+        </div>
+      </div>
+      <div class="step-action">
+        {% if vp.bvn_verified %}
+          <span class="btn-verify btn-verify-done"><i class="fas fa-check"></i> Verified</span>
+        {% elif vp.nin_verified %}
+          <a href="{% url 'verify:bvn' %}" class="btn-verify btn-verify-primary">
+            <i class="fas fa-university"></i> Verify BVN
+          </a>
+        {% else %}
+          <span class="btn-verify btn-verify-locked"><i class="fas fa-lock"></i> Locked</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {# CAC — artisans / employers only #}
+    <div class="step-card {% if not vp.bvn_verified %}blocked{% endif %}">
+      <div class="step-num {% if vp.cac_verified %}done{% elif vp.bvn_verified %}active{% else %}pending{% endif %}">
+        {% if vp.cac_verified %}
+          <i class="fas fa-check"></i>
+        {% else %}
+          <span>3</span>
+        {% endif %}
+      </div>
+      <div class="step-body">
+        <div class="step-title">CAC — Corporate Affairs Commission</div>
+        <div class="step-desc">
+          Register your business for the Trusted Business badge.
+          {% if not vp.bvn_verified %}
+            Requires BVN verification first.
+          {% elif vp.cac_verified %}
+            Verified — {{ vp.cac_company_name }} (RC: {{ vp.cac_rc_number }})
+          {% endif %}
+        </div>
+      </div>
+      <div class="step-action">
+        {% if vp.cac_verified %}
+          <span class="btn-verify btn-verify-done"><i class="fas fa-check"></i> Verified</span>
+        {% elif vp.bvn_verified %}
+          <a href="{% url 'verify:cac' %}" class="btn-verify btn-verify-primary">
+            <i class="fas fa-building"></i> Verify CAC
+          </a>
+        {% else %}
+          <span class="btn-verify btn-verify-locked"><i class="fas fa-lock"></i> Locked</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  {# ── Recent attempts ────────────────────────────────────────────────── #}
+  {% if recent_attempts %}
+    <div class="attempts-card">
+      <div class="attempts-title">
+        <i class="fas fa-history" style="margin-right:6px;"></i>
+        Recent Verification Attempts
+      </div>
+      <table class="attempts-table">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for attempt in recent_attempts %}
+            <tr>
+              <td>{{ attempt.get_ver_type_display }}</td>
+              <td>{{ attempt.created|date:"d M Y H:i" }}</td>
+              <td>
+                <span class="status-pill pill-{{ attempt.status }}">
+                  {{ attempt.get_status_display }}
+                </span>
+              </td>
+              <td style="color:var(--text-3);">
+                {% if attempt.error_message %}
+                  {{ attempt.error_message|truncatechars:60 }}
+                {% elif attempt.dojah_ref %}
+                  Ref: {{ attempt.dojah_ref|truncatechars:20 }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

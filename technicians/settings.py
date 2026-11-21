@@ -1,4 +1,4 @@
-﻿"""
+"""
 Django settings for technicians project.
 """
 
@@ -6,7 +6,7 @@ from pathlib import Path
 import os
 import sys
 
-# ── Extra packages path (for Windows local environment where site-packages is admin-owned) ──
+# -- Extra packages path (for Windows local environment where site-packages is admin-owned) --
 _EXTRA_PKGS = r'C:\Users\hp\py_extra_pkgs'
 if os.path.exists(_EXTRA_PKGS) and _EXTRA_PKGS not in sys.path:
     sys.path.insert(0, _EXTRA_PKGS)
@@ -16,10 +16,10 @@ from celery.schedules import crontab
 from dotenv import load_dotenv
 load_dotenv()
 
-# ── AI backend selection ───────────────────────────────────────────────────────
+# -- AI backend selection -------------------------------------------------------
 # Must be set HERE, at the very top of settings, before any import of
 # sentence_transformers / transformers / huggingface_hub can occur.
-# Setting them inside text_encoder._ensure_loaded() is too late — the
+# Setting them inside text_encoder._ensure_loaded() is too late � the
 # huggingface_hub library caches its "check for updates" intent at import time.
 #
 # AI_BACKEND logic:
@@ -29,7 +29,7 @@ load_dotenv()
 #   memory overhead (~120 MB RAM vs PyTorch's ~1.5 GB).
 os.environ.setdefault('AI_BACKEND', 'fastembed')
 os.environ.setdefault('FASTEMBED_MODEL_NAME', 'BAAI/bge-base-en-v1.5')
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -41,7 +41,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-production-fallback-k
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 if DEBUG:
-    ALLOWED_HOSTS = ["127.0.0.1", "localhost", "192.168.43.77", "172.21.24.77"]
+    ALLOWED_HOSTS = ["127.0.0.1", "localhost", "192.168.43.77", "172.21.24.77", "10.203.171.77"]
 else:
     raw_hosts = os.environ.get('ALLOWED_HOSTS', '')
     ALLOWED_HOSTS = [h.strip() for h in raw_hosts.split(',') if h.strip()] if raw_hosts else ["*"]
@@ -128,6 +128,7 @@ INSTALLED_APPS = [
     'hiring.apps.HiringConfig',
     'contacts.apps.ContactsConfig',
     'blog.apps.BlogConfig',
+    'digital_skills.apps.DigitalSkillsConfig',
 ]
 
 
@@ -242,7 +243,7 @@ else:
         # Running sync views inside an ASGI server (via asgiref's thread pool)
         # means the DB connection used to CREATE a cursor (during Paginator
         # queryset iteration) can differ from the connection used to FETCH rows
-        # during template rendering — causing:
+        # during template rendering � causing:
         #   OperationalError: cursor "..." does not exist
         # Setting this forces Django to use client-side cursors (fetchall)
         # which are not tied to a single connection.
@@ -260,7 +261,7 @@ else:
 _redis_url = os.environ.get('REDIS_URL', '')
 
 if _redis_url and _redis_url.startswith('rediss://'):
-    # Production — Upstash Redis over TLS (rediss://)
+    # Production � Upstash Redis over TLS (rediss://)
     # Pass ssl=True + ssl_cert_reqs=None so asyncio redis skips cert verification
     # (Upstash uses self-signed certs on the free tier)
     CHANNEL_LAYERS = {
@@ -277,7 +278,7 @@ if _redis_url and _redis_url.startswith('rediss://'):
         }
     }
 elif _redis_url:
-    # Production — plain Redis (redis://)
+    # Production � plain Redis (redis://)
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
@@ -289,14 +290,14 @@ elif _redis_url:
         }
     }
 elif not DEBUG:
-    # Production without Redis — fallback to InMemoryChannelLayer so WebSockets don't crash
+    # Production without Redis � fallback to InMemoryChannelLayer so WebSockets don't crash
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels.layers.InMemoryChannelLayer',
         }
     }
 else:
-    # Development — local Redis
+    # Development � local Redis
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
@@ -562,14 +563,14 @@ CELERY_BROKER_TRANSPORT_OPTIONS = {
     'visibility_timeout': 3600,
 }
 
-# ── Celery Production Scaling & Memory Management ──────────────────────────────
+# -- Celery Production Scaling & Memory Management ------------------------------
 CELERY_TASK_TIME_LIMIT            = 300   # Hard kill task after 5 min
 CELERY_TASK_SOFT_TIME_LIMIT       = 240   # Raise SoftTimeLimitExceeded after 4 min
 CELERY_WORKER_MAX_TASKS_PER_CHILD = 50    # Recycle worker process every 50 tasks (prevents memory leaks)
 CELERY_WORKER_MAX_MEMORY_PER_CHILD = 350000  # 350 MB max RAM per worker before recycling
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1     # Take one task at a time so long AI jobs don't starve other tasks
 
-# ── Production Security Headers ────────────────────────────────────────────────
+# -- Production Security Headers ------------------------------------------------
 if not DEBUG:
     SECURE_HSTS_SECONDS            = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
@@ -599,11 +600,11 @@ FLW_REDIRECT_URL  = os.environ.get('FLW_REDIRECT_URL', _default_callback)
 # (e.g. email templates, Celery tasks).
 #
 # Resolution order:
-#   1. SITE_BASE_URL env var  — set this in production when you have a custom
+#   1. SITE_BASE_URL env var  � set this in production when you have a custom
 #                               domain (e.g. https://tradelink.ng)
-#   2. Railway public domain  — auto-detected from RAILWAY_PUBLIC_DOMAIN
-#   3. Render hostname        — auto-detected from RENDER_EXTERNAL_HOSTNAME
-#   4. http://localhost:8000  — local development fallback
+#   2. Railway public domain  � auto-detected from RAILWAY_PUBLIC_DOMAIN
+#   3. Render hostname        � auto-detected from RENDER_EXTERNAL_HOSTNAME
+#   4. http://localhost:8000  � local development fallback
 _site_host = (
     os.environ.get('RAILWAY_PUBLIC_DOMAIN')
     or os.environ.get('RENDER_EXTERNAL_HOSTNAME')
@@ -627,7 +628,7 @@ BOT_PROVIDER = os.environ.get('BOT_PROVIDER', 'twilio')  # 'twilio' | 'meta'
 
 # --- Twilio (current default) ---
 # Used when BOT_PROVIDER=twilio.
-# Sign up at https://twilio.com — use the WhatsApp Sandbox for immediate access.
+# Sign up at https://twilio.com � use the WhatsApp Sandbox for immediate access.
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
 TWILIO_AUTH_TOKEN  = os.environ.get('TWILIO_AUTH_TOKEN', '')
 TWILIO_FROM_NUMBER = os.environ.get('TWILIO_FROM_NUMBER', '')  # E.164, e.g. +14155238886
@@ -645,19 +646,19 @@ WHATSAPP_API_VERSION     = 'v19.0'
 #
 # Strategy:
 #   - Development (DEBUG=True):  Gmail SMTP via Django's built-in backend.
-#   - Production (DEBUG=False):  Resend HTTP API — bypasses all SMTP port
+#   - Production (DEBUG=False):  Resend HTTP API � bypasses all SMTP port
 #                                restrictions that cloud/container hosts enforce.
 #
 # Required env vars:
-#   Development  → EMAIL_HOST_USER, EMAIL_HOST_PASSWORD (Gmail App Password)
-#   Production   → RESEND_API_KEY, EMAIL_FROM (optional, has default)
+#   Development  ? EMAIL_HOST_USER, EMAIL_HOST_PASSWORD (Gmail App Password)
+#   Production   ? RESEND_API_KEY, EMAIL_FROM (optional, has default)
 # ==================================
 
 RESEND_API_KEY     = os.environ.get('RESEND_API_KEY', '')
 DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_FROM', 'TradeLink NG <noreply@tradelink.ng>')
 
 if DEBUG:
-    # ── Development: Gmail SMTP ────────────────────────────────────────────────
+    # -- Development: Gmail SMTP ------------------------------------------------
     EMAIL_BACKEND       = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
     EMAIL_HOST          = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
     EMAIL_PORT          = int(os.environ.get('EMAIL_PORT', 465))
@@ -667,16 +668,16 @@ if DEBUG:
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '').replace(' ', '').strip()
     DEFAULT_FROM_EMAIL  = os.environ.get('DEFAULT_FROM_EMAIL') or EMAIL_HOST_USER
 else:
-    # ── Production: Resend HTTP API (port 443 — never blocked) ────────────────
+    # -- Production: Resend HTTP API (port 443 � never blocked) ----------------
     # Django's EMAIL_BACKEND is intentionally NOT set here; all email in
     # production must go through the send_email() helper in core/email.py
     # which calls the Resend SDK directly over HTTPS.
-    EMAIL_BACKEND = 'django.core.mail.backends.dummy.EmailBackend'  # safety net — blocks accidental SMTP fallback
+    EMAIL_BACKEND = 'django.core.mail.backends.dummy.EmailBackend'  # safety net � blocks accidental SMTP fallback
 
 
 
 # FastEmbed ONNX model cache.
-# On Railway (Linux), the app root is always /app — use the same absolute path
+# On Railway (Linux), the app root is always /app � use the same absolute path
 # that nixpacks.toml writes the model to during build, so the cache is found
 # immediately without any HuggingFace network calls.
 # On Windows (local dev), fall back to BASE_DIR / '.fastembed_cache'.
@@ -685,7 +686,7 @@ _default_cache = '/app/.fastembed_cache' if _platform.system() != 'Windows' else
 os.environ.setdefault('FASTEMBED_CACHE_PATH', _default_cache)
 os.environ.setdefault('ENABLE_CLIP', 'False')  # Keep False on 512MB RAM instances to prevent OOM SIGKILL
 
-# Disable symlinks — use real copies of files instead (required on Windows
+# Disable symlinks � use real copies of files instead (required on Windows
 # unless Developer Mode / symlink privilege is enabled)
 os.environ.setdefault('HUGGINGFACE_HUB_SYMLINKS_MODE', 'copy')
 os.environ.setdefault('HF_HUB_DISABLE_SYMLINKS_WARNING', '1')

@@ -1,0 +1,401 @@
+{% extends "base.html" %}
+{% load static humanize %}
+
+{% block title %}Digital Gigs — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  .gigs-layout {
+    position: relative; z-index: 1;
+    padding: calc(var(--nav-h) + clamp(28px,4vw,48px)) 0 clamp(48px,8vw,96px);
+  }
+  .gigs-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 clamp(16px,4vw,48px);
+  }
+
+  /* Hero */
+  .gigs-hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+  .gigs-title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.4rem,3.5vw,2rem);
+    font-weight: 800;
+    color: var(--text-1);
+    margin: 0 0 4px;
+  }
+  .gigs-sub { color: var(--text-2); font-size: 0.9rem; margin: 0; }
+  .gigs-cta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  /* Layout */
+  .gigs-grid {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  /* Sidebar */
+  .gigs-sidebar { position: sticky; top: calc(var(--nav-h) + 16px); }
+  .gigs-filter-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 20px;
+    margin-bottom: 14px;
+  }
+  .gigs-filter-heading {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 14px;
+  }
+  .gigs-field { margin-bottom: 12px; }
+  .gigs-field:last-child { margin-bottom: 0; }
+  .gigs-field label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-2);
+    margin-bottom: 4px;
+  }
+  .gigs-field input,
+  .gigs-field select {
+    width: 100%;
+    padding: 9px 12px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    color: var(--text-1);
+    font-size: 0.84rem;
+    font-family: 'Outfit', sans-serif;
+    box-sizing: border-box;
+  }
+  .gigs-field input:focus,
+  .gigs-field select:focus {
+    outline: none;
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139,92,246,.12);
+  }
+
+  /* Mobile filter toggle */
+  .gigs-toggle {
+    display: none;
+    width: 100%;
+    margin-bottom: 14px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-1);
+    cursor: pointer;
+  }
+  .gigs-filter-mobile { display: none; }
+  .gigs-filter-mobile.open { display: block; }
+
+  /* Gig cards */
+  .gig-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 20px 22px;
+    margin-bottom: 14px;
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+    transition: box-shadow .2s, border-color .2s;
+    text-decoration: none;
+    color: inherit;
+  }
+  .gig-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-strong);
+    text-decoration: none;
+  }
+  .gig-card-body { flex: 1; min-width: 0; }
+  .gig-card-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+  .gig-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .gig-badge-purple { background: rgba(139,92,246,.1); color: #8b5cf6; border: 1px solid rgba(139,92,246,.2); }
+  .gig-badge-green  { background: rgba(5,150,105,.1); color: var(--emerald); }
+  .gig-badge-sky    { background: rgba(2,132,199,.1); color: var(--sky); }
+  .gig-badge-amber  { background: rgba(217,119,6,.1); color: var(--amber); }
+  .gig-badge-plain  { background: var(--surface-1); color: var(--text-2); border: 1px solid var(--border-subtle); }
+  .gig-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-1);
+    margin-bottom: 6px;
+  }
+  .gig-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 0.8rem;
+    color: var(--text-3);
+    margin-bottom: 10px;
+  }
+  .gig-meta span { display: flex; align-items: center; gap: 4px; }
+  .gig-excerpt {
+    font-size: 0.84rem;
+    color: var(--text-2);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.6;
+  }
+  .gig-card-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    min-width: 110px;
+    flex-shrink: 0;
+  }
+  .gig-budget {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--emerald);
+  }
+  .gig-apps {
+    font-size: 0.75rem;
+    color: var(--text-3);
+    white-space: nowrap;
+  }
+
+  /* Pagination */
+  .gigs-pagination {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+  }
+  .gigs-page-btn {
+    padding: 8px 15px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-2);
+    font-size: 0.84rem;
+    text-decoration: none;
+    transition: all .2s;
+  }
+  .gigs-page-btn:hover, .gigs-page-btn.current {
+    background: rgba(139,92,246,.1);
+    border-color: rgba(139,92,246,.3);
+    color: #8b5cf6;
+    text-decoration: none;
+  }
+
+  .gigs-empty {
+    text-align: center;
+    padding: 64px 20px;
+    color: var(--text-3);
+  }
+  .gigs-empty i { font-size: 2.5rem; display: block; margin-bottom: 16px; }
+
+  @media (max-width: 920px) {
+    .gigs-grid { grid-template-columns: 1fr; }
+    .gigs-sidebar { position: static; }
+    .gigs-filter-card { display: none; }
+    .gigs-toggle { display: flex; }
+  }
+  @media (max-width: 600px) {
+    .gigs-hero { flex-direction: column; }
+    .gigs-cta { width: 100%; }
+    .gigs-cta .btn { flex: 1; justify-content: center; }
+    .gig-card { flex-direction: column; gap: 10px; }
+    .gig-card-side { align-items: flex-start; flex-direction: row; gap: 12px; min-width: 0; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gigs-layout">
+<div class="gigs-inner">
+
+  {# Hero #}
+  <div class="gigs-hero">
+    <div>
+      <h1 class="gigs-title">
+        <i class="fas fa-briefcase" style="color:#8b5cf6;margin-right:8px;"></i>Digital Gigs
+      </h1>
+      <p class="gigs-sub">Short-term digital projects posted by businesses across Nigeria.</p>
+    </div>
+    <div class="gigs-cta">
+      {% if user.is_authenticated and user.account_type == 'employer' %}
+        <a href="{% url 'digital:gig_create' %}" class="btn btn-primary btn-sm">
+          <i class="fas fa-plus"></i> Post a Gig
+        </a>
+      {% elif user.is_authenticated and user.account_type == 'digital_worker' %}
+        <a href="{% url 'digital:my_applications' %}" class="btn btn-ghost btn-sm">
+          <i class="fas fa-file-alt"></i> My Applications
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Mobile toggle #}
+  <button class="gigs-toggle" onclick="this.nextElementSibling.classList.toggle('open');" aria-expanded="false">
+    <span><i class="fas fa-filter" style="margin-right:8px;color:var(--text-3);"></i> Filter Gigs</span>
+    <i class="fas fa-chevron-down" style="color:var(--text-3);font-size:.8rem;"></i>
+  </button>
+  <div class="gigs-filter-mobile">
+    <div class="gigs-filter-card" style="display:block;">
+      <div class="gigs-filter-heading"><i class="fas fa-filter" style="margin-right:5px;"></i> Filters</div>
+      <form method="get">
+        <div class="gigs-field">
+          <label>Search</label>
+          <input type="text" name="q" value="{{ q }}" placeholder="Search gigs...">
+        </div>
+        <div class="gigs-field">
+          <label>Category</label>
+          <select name="category">
+            <option value="">All Categories</option>
+            {% for cat in categories %}
+              <option value="{{ cat.slug }}" {% if selected_category == cat.slug %}selected{% endif %}>{{ cat.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="gigs-field">
+          <label>Work Type</label>
+          <select name="work_type">
+            <option value="">Any</option>
+            <option value="remote"  {% if work_type == 'remote' %}selected{% endif %}>Remote</option>
+            <option value="onsite"  {% if work_type == 'onsite' %}selected{% endif %}>On-site</option>
+            <option value="hybrid"  {% if work_type == 'hybrid' %}selected{% endif %}>Hybrid</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:4px;">Apply</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="gigs-grid">
+    {# Sidebar #}
+    <div class="gigs-sidebar">
+      <div class="gigs-filter-card">
+        <div class="gigs-filter-heading"><i class="fas fa-filter" style="margin-right:5px;"></i> Filters</div>
+        <form method="get">
+          <div class="gigs-field">
+            <label>Search</label>
+            <input type="text" name="q" value="{{ q }}" placeholder="Search gigs...">
+          </div>
+          <div class="gigs-field">
+            <label>Category</label>
+            <select name="category">
+              <option value="">All Categories</option>
+              {% for cat in categories %}
+                <option value="{{ cat.slug }}" {% if selected_category == cat.slug %}selected{% endif %}>{{ cat.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="gigs-field">
+            <label>Work Type</label>
+            <select name="work_type">
+              <option value="">Any</option>
+              <option value="remote"  {% if work_type == 'remote' %}selected{% endif %}>Remote</option>
+              <option value="onsite"  {% if work_type == 'onsite' %}selected{% endif %}>On-site</option>
+              <option value="hybrid"  {% if work_type == 'hybrid' %}selected{% endif %}>Hybrid</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:4px;">Apply Filters</button>
+          {% if q or selected_category or work_type %}
+            <a href="{% url 'digital:gig_list' %}" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:8px;">Clear</a>
+          {% endif %}
+        </form>
+      </div>
+    </div>
+
+    {# Gig list #}
+    <div>
+      {% if page_obj.object_list %}
+        {% for gig in page_obj %}
+          <a href="{% url 'digital:gig_detail' gig.pk %}" class="gig-card">
+            <div class="gig-card-body">
+              <div class="gig-card-badges">
+                {% if gig.category %}
+                  <span class="gig-badge gig-badge-purple">
+                    <i class="{{ gig.category.icon_class }}" style="margin-right:3px;"></i>{{ gig.category.name }}
+                  </span>
+                {% endif %}
+                {% if gig.work_type == 'remote' %}
+                  <span class="gig-badge gig-badge-green">Remote</span>
+                {% elif gig.work_type == 'onsite' %}
+                  <span class="gig-badge gig-badge-sky">On-site</span>
+                {% else %}
+                  <span class="gig-badge gig-badge-amber">Hybrid</span>
+                {% endif %}
+                <span class="gig-badge gig-badge-plain">{{ gig.get_budget_type_display }}</span>
+              </div>
+              <div class="gig-title">{{ gig.title }}</div>
+              <div class="gig-meta">
+                <span><i class="fas fa-building"></i>{{ gig.employer.company_name|default:"Employer" }}</span>
+                {% if gig.state %}<span><i class="fas fa-map-marker-alt"></i>{{ gig.get_state_display }}</span>{% endif %}
+                <span><i class="fas fa-clock"></i>{{ gig.created|timesince }} ago</span>
+              </div>
+              {% if gig.description %}
+                <div class="gig-excerpt">{{ gig.description|truncatechars:160 }}</div>
+              {% endif %}
+            </div>
+            <div class="gig-card-side">
+              <span class="gig-budget">{{ gig.budget_display }}</span>
+              <span class="gig-apps"><i class="fas fa-users" style="margin-right:3px;"></i>{{ gig.applications_count }} applied</span>
+              {% if gig.deadline %}
+                <span class="gig-apps" style="color:var(--orange);"><i class="fas fa-calendar-alt" style="margin-right:3px;"></i>{{ gig.deadline|date:"M j" }}</span>
+              {% endif %}
+            </div>
+          </a>
+        {% endfor %}
+
+        {% if page_obj.has_other_pages %}
+          <nav class="gigs-pagination">
+            {% if page_obj.has_previous %}
+              <a class="gigs-page-btn" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&category={{ selected_category }}&work_type={{ work_type }}">‹ Prev</a>
+            {% endif %}
+            <span class="gigs-page-btn current">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+              <a class="gigs-page-btn" href="?page={{ page_obj.next_page_number }}&q={{ q }}&category={{ selected_category }}&work_type={{ work_type }}">Next ›</a>
+            {% endif %}
+          </nav>
+        {% endif %}
+
+      {% else %}
+        <div class="gigs-empty">
+          <i class="fas fa-search"></i>
+          <h4 style="color:var(--text-1);font-size:1.1rem;margin-bottom:8px;">No gigs found</h4>
+          <p style="font-size:.88rem;margin-bottom:16px;">Try adjusting your search or filters.</p>
+          <a href="{% url 'digital:gig_list' %}" class="btn btn-ghost btn-sm">Clear Filters</a>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+</div>
+</div>
+{% endblock %}

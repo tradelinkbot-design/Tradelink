@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Verify NIN — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  .verify-form-wrap {
+    max-width: 480px;
+    margin: 0 auto 80px;
+    padding: calc(var(--nav-h) + 48px) 16px 0;
+  }
+  .verify-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 36px 32px;
+  }
+  .verify-icon {
+    width: 60px; height: 60px; border-radius: 50%;
+    background: rgba(139,92,246,.12);
+    border: 1px solid rgba(139,92,246,.2);
+    display: flex; align-items: center; justify-content: center;
+    color: #8b5cf6; font-size: 1.5rem;
+    margin-bottom: 16px;
+  }
+  .verify-title { font-size: 1.3rem; font-weight: 700; color: var(--text-1); margin-bottom: 6px; }
+  .verify-desc  { font-size: 0.85rem; color: var(--text-3); margin-bottom: 24px; line-height: 1.6; }
+  .form-group { margin-bottom: 20px; }
+  .form-label { display:block; font-size:.875rem; font-weight:600; color:var(--text-1); margin-bottom:6px; }
+  .form-control {
+    width: 100%; padding: 11px 14px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle); border-radius: 8px;
+    color: var(--text-1); font-size: 0.95rem; letter-spacing: .1em;
+    transition: border-color .2s;
+  }
+  .form-control:focus {
+    outline: none; border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139,92,246,.15);
+  }
+  .help-text { font-size:.78rem; color:var(--text-3); margin-top:4px; }
+  .field-error { font-size:.78rem; color:#f87171; margin-top:4px; }
+  .btn-submit {
+    width: 100%; padding: 12px;
+    background: #8b5cf6; color: #fff;
+    border: none; border-radius: 8px;
+    font-size: .95rem; font-weight: 600;
+    cursor: pointer; transition: background .2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-submit:hover { background: #7c3aed; }
+  .security-note {
+    margin-top: 20px; padding: 12px 16px;
+    background: rgba(52,211,153,.06);
+    border: 1px solid rgba(52,211,153,.15);
+    border-radius: 8px; font-size: .78rem; color: var(--text-3);
+  }
+  .back-link { display:block; text-align:center; margin-top:16px; font-size:.82rem; color:var(--text-3); }
+  .back-link:hover { color:var(--text-1); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="verify-form-wrap">
+  <div class="verify-card">
+    <div class="verify-icon"><i class="fas fa-id-card"></i></div>
+    <div class="verify-title">NIN Verification</div>
+    <div class="verify-desc">
+      Enter your 11-digit National Identification Number (NIN).
+      Your NIN is verified instantly via Dojah's secure API — it is never stored in plain text.
+    </div>
+
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }}" style="margin-bottom:16px;border-radius:8px;">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {% for err in form.non_field_errors %}
+        <div class="field-error" style="margin-bottom:12px;">
+          <i class="fas fa-exclamation-circle"></i> {{ err }}
+        </div>
+      {% endfor %}
+
+      <div class="form-group">
+        <label class="form-label" for="{{ form.nin.id_for_label }}">
+          NIN — 11 digits
+        </label>
+        <input
+          type="text"
+          id="{{ form.nin.id_for_label }}"
+          name="{{ form.nin.html_name }}"
+          class="form-control"
+          placeholder="12345678901"
+          maxlength="11"
+          inputmode="numeric"
+          pattern="[0-9]{11}"
+          autocomplete="off"
+          value="{{ form.nin.value|default:'' }}"
+        >
+        <div class="help-text">Your NIN is printed on your National ID card or slip from NIMC.</div>
+        {% for err in form.nin.errors %}
+          <div class="field-error">{{ err }}</div>
+        {% endfor %}
+      </div>
+
+      <button type="submit" class="btn-submit">
+        <i class="fas fa-shield-check"></i> Verify NIN
+      </button>
+    </form>
+
+    <div class="security-note">
+      <i class="fas fa-lock" style="color:#34d399;margin-right:5px;"></i>
+      Your NIN is transmitted over an encrypted connection and is never shared with third parties.
+      We only record whether verification passed or failed.
+    </div>
+
+    <a href="{% url 'verify:dashboard' %}" class="back-link">
+      <i class="fas fa-arrow-left"></i> Back to Verification Dashboard
+    </a>
+  </div>
+</div>
+{% endblock %}

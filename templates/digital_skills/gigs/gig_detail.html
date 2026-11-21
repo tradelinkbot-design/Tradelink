@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+{% load static humanize %}
+
+{% block title %}{{ gig.title }} — Digital Gig{% endblock %}
+
+{% block extra_head %}
+<style>
+  .gd-layout {
+    position: relative; z-index: 1;
+    padding: calc(var(--nav-h) + clamp(24px,4vw,44px)) 0 clamp(48px,8vw,96px);
+  }
+  .gd-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 clamp(16px,4vw,48px);
+  }
+
+  /* Breadcrumb */
+  .gd-crumb {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.82rem; color: var(--text-3); margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .gd-crumb a { color: var(--text-3); text-decoration: none; }
+  .gd-crumb a:hover { color: var(--text-1); }
+  .gd-crumb i { font-size: 0.65rem; }
+
+  /* Two-column layout */
+  .gd-grid {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 24px;
+    align-items: start;
+  }
+
+  /* Main card */
+  .gd-main-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: clamp(20px,4vw,32px);
+    margin-bottom: 20px;
+  }
+
+  /* Badges row */
+  .gd-badges {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;
+  }
+  .gd-badge {
+    display: inline-block; padding: 3px 11px;
+    border-radius: 999px; font-size: 0.75rem; font-weight: 600;
+  }
+  .gd-badge-purple { background: rgba(139,92,246,.1); color: #8b5cf6; border: 1px solid rgba(139,92,246,.2); }
+  .gd-badge-green  { background: rgba(5,150,105,.1);  color: var(--emerald); }
+  .gd-badge-sky    { background: rgba(2,132,199,.1);  color: var(--sky); }
+  .gd-badge-amber  { background: rgba(217,119,6,.1);  color: var(--amber); }
+  .gd-badge-plain  { background: var(--surface-1); color: var(--text-2); border: 1px solid var(--border-subtle); }
+
+  .gd-title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.3rem,3vw,1.8rem);
+    font-weight: 800;
+    color: var(--text-1);
+    margin-bottom: 12px;
+  }
+  .gd-meta {
+    display: flex; flex-wrap: wrap; gap: 14px;
+    font-size: 0.82rem; color: var(--text-3); margin-bottom: 24px;
+  }
+  .gd-meta span { display: flex; align-items: center; gap: 5px; }
+  .gd-section-title {
+    font-size: 0.9rem; font-weight: 700; color: var(--text-1);
+    margin-bottom: 10px; margin-top: 24px;
+  }
+  .gd-description {
+    font-size: 0.9rem; color: var(--text-2);
+    white-space: pre-line; line-height: 1.75;
+  }
+  hr.gd-divider {
+    border: none; border-top: 1px solid var(--border-subtle); margin: 20px 0;
+  }
+  .gd-skills {
+    display: flex; flex-wrap: wrap; gap: 7px;
+  }
+  .gd-skill-chip {
+    padding: 4px 13px; border-radius: 999px;
+    background: rgba(139,92,246,.08);
+    border: 1px solid rgba(139,92,246,.2);
+    color: #8b5cf6; font-size: 0.82rem; font-weight: 600;
+  }
+
+  /* Alert banners */
+  .gd-alert {
+    padding: 14px 18px; border-radius: var(--r-lg);
+    font-size: 0.88rem; display: flex; align-items: flex-start; gap: 10px; margin-bottom: 16px;
+  }
+  .gd-alert i { flex-shrink: 0; margin-top: 2px; }
+  .gd-alert-success { background: rgba(5,150,105,.08); border: 1px solid rgba(5,150,105,.2); color: var(--emerald); }
+  .gd-alert-info    { background: rgba(2,132,199,.08); border: 1px solid rgba(2,132,199,.2); color: var(--sky); }
+  .gd-alert-muted   { background: var(--surface-1); border: 1px solid var(--border-subtle); color: var(--text-2); }
+  .gd-alert a { color: inherit; font-weight: 700; }
+
+  /* Apply form card */
+  .gd-apply-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: clamp(18px,3vw,28px);
+  }
+  .gd-apply-title {
+    font-size: 1rem; font-weight: 700; color: var(--text-1);
+    margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
+  }
+  .gd-apply-title i { color: var(--text-3); }
+  .gd-form-group { margin-bottom: 16px; }
+  .gd-label {
+    display: block; font-size: 0.84rem; font-weight: 600;
+    color: var(--text-1); margin-bottom: 6px;
+  }
+  .gd-label span { color: var(--orange); }
+  .gd-control {
+    width: 100%; padding: 10px 13px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    color: var(--text-1);
+    font-size: 0.9rem;
+    font-family: 'Outfit', sans-serif;
+    transition: border-color .2s;
+    box-sizing: border-box;
+  }
+  .gd-control:focus {
+    outline: none;
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139,92,246,.12);
+  }
+  .gd-help { font-size: 0.78rem; color: var(--text-3); margin-top: 4px; }
+  .gd-error { font-size: 0.78rem; color: var(--orange); margin-top: 4px; }
+
+  /* Prefix input (₦) */
+  .gd-input-prefix {
+    display: flex;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: var(--bg-base);
+  }
+  .gd-prefix {
+    padding: 10px 12px;
+    background: var(--surface-1);
+    border-right: 1px solid var(--border-subtle);
+    color: var(--text-3);
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .gd-input-prefix input {
+    flex: 1; border: none; outline: none;
+    padding: 10px 13px;
+    background: transparent;
+    color: var(--text-1);
+    font-size: 0.9rem;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  /* Sidebar */
+  .gd-sidebar { display: flex; flex-direction: column; gap: 14px; }
+  .gd-side-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 20px;
+  }
+  .gd-detail-title {
+    font-size: 0.84rem; font-weight: 700; color: var(--text-1); margin-bottom: 14px;
+  }
+  .gd-detail-row {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 8px 0; border-bottom: 1px solid var(--border-subtle);
+    font-size: 0.84rem; gap: 8px;
+  }
+  .gd-detail-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .gd-detail-key { color: var(--text-3); flex-shrink: 0; }
+  .gd-detail-val { color: var(--text-1); font-weight: 600; text-align: right; }
+  .gd-budget-val { color: var(--emerald); font-size: 1.1rem; font-weight: 800; }
+  .gd-deadline-val { color: var(--orange); }
+
+  .gd-save-btn {
+    width: 100%; padding: 11px;
+    border-radius: var(--r-md);
+    font-size: 0.88rem; font-weight: 700;
+    cursor: pointer; transition: all .2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-1);
+    color: var(--text-1);
+  }
+  .gd-save-btn.saved {
+    background: rgba(217,119,6,.1);
+    border-color: rgba(217,119,6,.3);
+    color: var(--amber);
+  }
+  .gd-save-btn:hover { background: var(--surface-2); }
+
+  @media (max-width: 920px) {
+    .gd-grid { grid-template-columns: 1fr; }
+    .gd-sidebar { order: -1; }
+    .gd-side-card { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+    .gd-detail-row { flex-direction: column; gap: 2px; }
+    .gd-detail-val { text-align: left; }
+  }
+  @media (max-width: 600px) {
+    .gd-meta { gap: 8px; }
+    .gd-side-card { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gd-layout">
+<div class="gd-inner">
+
+  <nav class="gd-crumb" aria-label="Breadcrumb">
+    <a href="{% url 'digital:gig_list' %}">Digital Gigs</a>
+    <i class="fas fa-chevron-right"></i>
+    <span>{{ gig.title|truncatechars:40 }}</span>
+  </nav>
+
+  <div class="gd-grid">
+
+    {# ── Main content ─── #}
+    <div>
+      <div class="gd-main-card">
+        <div class="gd-badges">
+          {% if gig.category %}
+            <span class="gd-badge gd-badge-purple">
+              <i class="{{ gig.category.icon_class }}" style="margin-right:3px;"></i>{{ gig.category.name }}
+            </span>
+          {% endif %}
+          {% if gig.work_type == 'remote' %}
+            <span class="gd-badge gd-badge-green">Remote</span>
+          {% elif gig.work_type == 'onsite' %}
+            <span class="gd-badge gd-badge-sky">On-site</span>
+          {% else %}
+            <span class="gd-badge gd-badge-amber">Hybrid</span>
+          {% endif %}
+          <span class="gd-badge gd-badge-plain">{{ gig.get_budget_type_display }}</span>
+        </div>
+
+        <h1 class="gd-title">{{ gig.title }}</h1>
+        <div class="gd-meta">
+          <span><i class="fas fa-building"></i>{{ gig.employer.company_name|default:"Employer" }}</span>
+          {% if gig.state %}<span><i class="fas fa-map-marker-alt"></i>{{ gig.get_state_display }}</span>{% endif %}
+          <span><i class="fas fa-clock"></i>Posted {{ gig.created|timesince }} ago</span>
+          <span><i class="fas fa-eye"></i>{{ gig.views_count }} views</span>
+          <span><i class="fas fa-users"></i>{{ gig.applications_count }} applications</span>
+        </div>
+
+        <h5 class="gd-section-title">About this Gig</h5>
+        <div class="gd-description">{{ gig.description }}</div>
+
+        {% with subs=gig.required_sub_skills.all %}
+          {% if subs %}
+            <hr class="gd-divider">
+            <h5 class="gd-section-title" style="margin-top:0;">Required Skills</h5>
+            <div class="gd-skills">
+              {% for skill in subs %}
+                <span class="gd-skill-chip">{{ skill.name }}</span>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+      </div>
+
+      {# Application section #}
+      {% if user.is_authenticated and user.account_type == 'digital_worker' %}
+        {% if has_applied %}
+          <div class="gd-alert gd-alert-success">
+            <i class="fas fa-check-circle"></i>
+            <div>You have already applied to this gig. The employer will review your application.</div>
+          </div>
+        {% elif apply_form %}
+          <div class="gd-apply-card">
+            <div class="gd-apply-title">
+              <i class="fas fa-paper-plane"></i> Submit Your Proposal
+            </div>
+            <form method="post" action="{% url 'digital:apply' gig.pk %}">
+              {% csrf_token %}
+              <div class="gd-form-group">
+                <label class="gd-label">Cover Note <span>*</span></label>
+                {{ apply_form.cover_note }}
+                {% if apply_form.cover_note.errors %}
+                  <div class="gd-error">{{ apply_form.cover_note.errors.0 }}</div>
+                {% endif %}
+              </div>
+              <div class="gd-form-group">
+                <label class="gd-label">Your Proposed Rate (₦)</label>
+                <div class="gd-input-prefix">
+                  <span class="gd-prefix">₦</span>
+                  {{ apply_form.proposed_rate }}
+                </div>
+                <div class="gd-help">Leave blank to negotiate directly with the employer.</div>
+              </div>
+              <button type="submit" class="btn btn-primary" style="margin-top:4px;">
+                <i class="fas fa-paper-plane"></i> Submit Proposal
+              </button>
+            </form>
+          </div>
+        {% endif %}
+      {% elif not user.is_authenticated %}
+        <div class="gd-alert gd-alert-info">
+          <i class="fas fa-info-circle"></i>
+          <div><a href="{% url 'signin' %}?next={{ request.path }}">Sign in</a> as a Digital Worker to apply.</div>
+        </div>
+      {% elif user.account_type == 'employer' %}
+        <div class="gd-alert gd-alert-muted">
+          <i class="fas fa-briefcase"></i>
+          <div><a href="{% url 'digital:gig_create' %}">Post your own gig</a> to find digital talent.</div>
+        </div>
+      {% endif %}
+    </div>
+
+    {# ── Sidebar ─── #}
+    <div class="gd-sidebar">
+      <div class="gd-side-card">
+        <div class="gd-detail-title">Gig Details</div>
+        <div class="gd-detail-row">
+          <span class="gd-detail-key">Budget</span>
+          <span class="gd-detail-val gd-budget-val">{{ gig.budget_display }}</span>
+        </div>
+        <div class="gd-detail-row">
+          <span class="gd-detail-key">Type</span>
+          <span class="gd-detail-val">{{ gig.get_budget_type_display }}</span>
+        </div>
+        <div class="gd-detail-row">
+          <span class="gd-detail-key">Work</span>
+          <span class="gd-detail-val">{{ gig.get_work_type_display }}</span>
+        </div>
+        {% if gig.state %}
+          <div class="gd-detail-row">
+            <span class="gd-detail-key">Location</span>
+            <span class="gd-detail-val">{{ gig.get_state_display }}</span>
+          </div>
+        {% endif %}
+        {% if gig.deadline %}
+          <div class="gd-detail-row">
+            <span class="gd-detail-key">Deadline</span>
+            <span class="gd-detail-val gd-deadline-val">{{ gig.deadline|date:"M j, Y" }}</span>
+          </div>
+        {% endif %}
+      </div>
+
+      {% if user.is_authenticated %}
+        <button class="gd-save-btn {% if is_saved %}saved{% endif %}"
+                id="saveBtn"
+                onclick="toggleSave('{% url "digital:save_gig" gig.pk %}', this)">
+          <i class="fas fa-bookmark"></i>
+          {% if is_saved %}Saved{% else %}Save Gig{% endif %}
+        </button>
+      {% endif %}
+
+      <a href="{% url 'digital:gig_list' %}" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;">
+        <i class="fas fa-arrow-left"></i> All Gigs
+      </a>
+    </div>
+
+  </div>
+
+</div>
+</div>
+
+<script>
+function toggleSave(url, btn) {
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '',
+      'Content-Type': 'application/json',
+    },
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.saved) {
+      btn.classList.add('saved');
+      btn.innerHTML = '<i class="fas fa-bookmark"></i> Saved';
+    } else {
+      btn.classList.remove('saved');
+      btn.innerHTML = '<i class="fas fa-bookmark"></i> Save Gig';
+    }
+  });
+}
+</script>
+{% endblock %}

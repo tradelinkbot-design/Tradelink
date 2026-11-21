@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+{% load static humanize %}
+
+{% block title %}Set Up Your Digital Worker Profile — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  .ds-setup-hero {
+    padding-top: calc(var(--nav-h) + clamp(32px,5vw,56px));
+    padding-bottom: clamp(24px,4vw,40px);
+    position: relative; z-index: 1;
+  }
+  .ds-wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 clamp(16px,4vw,32px) clamp(48px,8vw,96px);
+    position: relative; z-index: 1;
+  }
+  .ds-page-title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.6rem,4vw,2.2rem);
+    font-weight: 800; color: var(--text-1);
+    margin-bottom: 6px; letter-spacing: -0.5px;
+  }
+  .ds-page-sub { color: var(--text-2); margin-bottom: 32px; font-size: clamp(0.88rem,2vw,1rem); }
+
+  /* Section cards */
+  .ds-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: clamp(20px,4vw,32px);
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+  .ds-section-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .ds-group { margin-bottom: 18px; }
+
+  /* Form controls */
+  .ds-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-1);
+    margin-bottom: 6px;
+  }
+  .ds-input, .ds-select, .ds-textarea {
+    width: 100%;
+    padding: 11px 14px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    color: var(--text-1);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.9rem;
+    transition: border-color .2s, box-shadow .2s;
+    outline: none;
+  }
+  .ds-input:focus, .ds-select:focus, .ds-textarea:focus {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139,92,246,.12);
+  }
+  .ds-textarea { resize: vertical; min-height: 120px; }
+  .ds-help { font-size: 0.78rem; color: var(--text-3); margin-top: 4px; }
+  .ds-error { font-size: 0.78rem; color: #dc2626; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+  .ds-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* Skill chips */
+  .chip-wrap { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
+  .skill-chip {
+    padding: 6px 16px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--border-subtle);
+    background: var(--surface-1);
+    color: var(--text-2);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--t);
+    user-select: none;
+  }
+  .skill-chip:hover { border-color: #8b5cf6; color: #7c3aed; }
+  .skill-chip.active {
+    background: rgba(139,92,246,.1);
+    border-color: #8b5cf6;
+    color: #7c3aed;
+    font-weight: 600;
+  }
+  .chip-loading { font-size: 0.82rem; color: var(--text-3); }
+
+  /* Submit */
+  .ds-submit {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 32px;
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: #fff;
+    border: none;
+    border-radius: var(--r-pill);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--t);
+    box-shadow: 0 4px 16px rgba(139,92,246,.3);
+  }
+  .ds-submit:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+  .ds-skip-link { font-size: 0.85rem; color: var(--text-3); text-decoration: none; }
+  .ds-skip-link:hover { color: var(--text-2); }
+
+  @media (max-width: 600px) {
+    .ds-row-2 { grid-template-columns: 1fr; }
+    .ds-card { padding: 20px 16px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ds-setup-hero">
+  <div class="ds-wrap">
+    <div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <span style="width:44px;height:44px;border-radius:50%;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.2);display:flex;align-items:center;justify-content:center;color:#8b5cf6;font-size:1.2rem;">
+        <i class="fas fa-laptop-code"></i>
+      </span>
+      <span style="font-size:0.78rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-3);">Digital Worker</span>
+    </div>
+    <h1 class="ds-page-title">Set Up Your Profile</h1>
+    <p class="ds-page-sub">
+      A complete profile gets you <strong>5× more visibility</strong> in employer searches.
+      Fill in as much as you can — it only takes a few minutes.
+    </p>
+
+    {% if messages %}
+      {% for msg in messages %}
+        <div style="padding:12px 16px;border-radius:var(--r-lg);margin-bottom:12px;background:var(--surface-1);border:1px solid var(--border-subtle);color:var(--text-2);font-size:.87rem;">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div style="padding:12px 16px;border-radius:var(--r-lg);margin-bottom:12px;background:rgba(234,88,12,.08);border:1px solid rgba(234,88,12,.2);color:var(--orange);">
+          {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+        </div>
+      {% endif %}
+
+      {# ── 1. Identity & Bio ──────────────────────────────────────── #}
+      <div class="ds-card">
+        <div class="ds-section-title">Identity &amp; Bio</div>
+
+        <div class="ds-group">
+          <label class="ds-label">
+            Professional Headline <span style="color:#dc2626;">*</span>
+          </label>
+          <input type="text" name="{{ form.headline.html_name }}"
+                 class="ds-input"
+                 value="{{ form.headline.value|default:'' }}"
+                 placeholder="e.g. Full-Stack Web Developer | React &amp; Django Expert"
+                 maxlength="180">
+          <div class="ds-help">One punchy line that describes what you do best.</div>
+          {% for err in form.headline.errors %}<div class="ds-error"><i class="fas fa-circle-exclamation"></i>{{ err }}</div>{% endfor %}
+        </div>
+
+        <div class="ds-group">
+          <label class="ds-label">Bio / About Me</label>
+          <textarea name="{{ form.bio.html_name }}" class="ds-textarea"
+                    placeholder="Tell employers about your background, what you love to build, and what makes you stand out.">{{ form.bio.value|default:'' }}</textarea>
+          {% for err in form.bio.errors %}<div class="ds-error"><i class="fas fa-circle-exclamation"></i>{{ err }}</div>{% endfor %}
+        </div>
+
+        <div class="ds-row-2">
+          <div>
+            <label class="ds-label">Years of Experience</label>
+            <input type="number" name="{{ form.years_experience.html_name }}"
+                   class="ds-input"
+                   value="{{ form.years_experience.value|default:'' }}"
+                   min="0" max="60" placeholder="0">
+            {% for err in form.years_experience.errors %}<div class="ds-error">{{ err }}</div>{% endfor %}
+          </div>
+          <div>
+            <label class="ds-label">Location (State / City)</label>
+            <input type="text" name="{{ form.location.html_name }}"
+                   class="ds-input"
+                   value="{{ form.location.value|default:'' }}"
+                   placeholder="e.g. Lagos, Nigeria">
+            {% for err in form.location.errors %}<div class="ds-error">{{ err }}</div>{% endfor %}
+          </div>
+        </div>
+      </div>
+
+      {# ── 2. Skills & Category ──────────────────────────────────── #}
+      <div class="ds-card">
+        <div class="ds-section-title">Skills &amp; Category</div>
+
+        <div class="ds-group">
+          <label class="ds-label">
+            Primary Skill Category <span style="color:#dc2626;">*</span>
+          </label>
+          <select name="{{ form.primary_category.html_name }}" class="ds-select"
+                  onchange="loadSubSkills(this.value)">
+            <option value="">— Select a category —</option>
+            {% for cat in categories %}
+              <option value="{{ cat.pk }}"
+                {% if form.primary_category.value == cat.pk|stringformat:'s' %}selected{% endif %}>
+                {{ cat.name }}
+              </option>
+            {% endfor %}
+          </select>
+          {% for err in form.primary_category.errors %}<div class="ds-error">{{ err }}</div>{% endfor %}
+        </div>
+
+        <div class="ds-group">
+          <label class="ds-label">Sub-Skills <span style="color:var(--text-3);font-weight:400;">(choose up to 10)</span></label>
+          <div id="sub-skills-wrap" class="chip-wrap">
+            <span class="chip-loading">Select a category above to see sub-skills.</span>
+          </div>
+          <select name="{{ form.sub_skills.html_name }}" id="id_sub_skills" multiple style="display:none;">
+            {% for opt in form.sub_skills %}{{ opt }}{% endfor %}
+          </select>
+          {% for err in form.sub_skills.errors %}<div class="ds-error">{{ err }}</div>{% endfor %}
+        </div>
+      </div>
+
+      {# ── 3. Rates & Availability ───────────────────────────────── #}
+      <div class="ds-card">
+        <div class="ds-section-title">Rates &amp; Availability</div>
+        <div class="ds-row-2">
+          <div>
+            <label class="ds-label">Hourly Rate (₦)</label>
+            <input type="number" name="{{ form.hourly_rate.html_name }}"
+                   class="ds-input"
+                   value="{{ form.hourly_rate.value|default:'' }}"
+                   min="0" step="100" placeholder="5000">
+            {% for err in form.hourly_rate.errors %}<div class="ds-error">{{ err }}</div>{% endfor %}
+          </div>
+          <div>
+            <label class="ds-label">Availability</label>
+            {{ form.availability }}
+            {% for err in form.availability.errors %}<div class="ds-error">{{ err }}</div>{% endfor %}
+          </div>
+        </div>
+      </div>
+
+      {# ── 4. Online Presence ────────────────────────────────────── #}
+      <div class="ds-card">
+        <div class="ds-section-title">Online Presence <span style="font-weight:400;text-transform:none;letter-spacing:0;">(Optional)</span></div>
+        <div class="ds-row-2">
+          <div>
+            <label class="ds-label">Portfolio / Website</label>
+            <input type="url" name="{{ form.website_url.html_name }}"
+                   class="ds-input"
+                   value="{{ form.website_url.value|default:'' }}"
+                   placeholder="https://yourportfolio.com">
+          </div>
+          <div>
+            <label class="ds-label">LinkedIn</label>
+            <input type="url" name="{{ form.linkedin_url.html_name }}"
+                   class="ds-input"
+                   value="{{ form.linkedin_url.value|default:'' }}"
+                   placeholder="https://linkedin.com/in/yourname">
+          </div>
+        </div>
+        <div class="ds-row-2" style="margin-top:16px;">
+          <div>
+            <label class="ds-label">GitHub</label>
+            <input type="url" name="{{ form.github_url.html_name }}"
+                   class="ds-input"
+                   value="{{ form.github_url.value|default:'' }}"
+                   placeholder="https://github.com/yourhandle">
+          </div>
+          <div>
+            <label class="ds-label">Twitter / X</label>
+            <input type="url" name="{{ form.twitter_url.html_name }}"
+                   class="ds-input"
+                   value="{{ form.twitter_url.value|default:'' }}"
+                   placeholder="https://twitter.com/yourhandle">
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+        <button type="submit" class="ds-submit">
+          <i class="fas fa-save"></i> Save Profile
+        </button>
+        <a href="{% url 'digital:dashboard' %}" class="ds-skip-link">
+          Skip for now →
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const SUB_SKILLS_URL = "{% url 'digital:ajax_sub_skills' %}";
+
+async function loadSubSkills(categoryId) {
+  const wrap   = document.getElementById('sub-skills-wrap');
+  const select = document.getElementById('id_sub_skills');
+  if (!categoryId) {
+    wrap.innerHTML = '<span class="chip-loading">Select a category above to see sub-skills.</span>';
+    return;
+  }
+  wrap.innerHTML = '<span class="chip-loading"><i class="fas fa-spinner fa-spin"></i> Loading…</span>';
+  try {
+    const res  = await fetch(`${SUB_SKILLS_URL}?category=${categoryId}`);
+    const data = await res.json();
+    const sel  = Array.from(select.selectedOptions).map(o => o.value);
+    wrap.innerHTML = '';
+    select.innerHTML = '';
+    data.sub_skills.forEach(s => {
+      // chip
+      const chip = document.createElement('span');
+      chip.className = 'skill-chip' + (sel.includes(String(s.id)) ? ' active' : '');
+      chip.textContent = s.name;
+      chip.dataset.id  = s.id;
+      chip.onclick = () => toggleChip(chip, s.id);
+      wrap.appendChild(chip);
+      // option
+      const opt = document.createElement('option');
+      opt.value = s.id; opt.textContent = s.name;
+      opt.selected = sel.includes(String(s.id));
+      select.appendChild(opt);
+    });
+  } catch {
+    wrap.innerHTML = '<span class="chip-loading" style="color:#dc2626;">Failed to load. Please refresh.</span>';
+  }
+}
+
+function toggleChip(chip, skillId) {
+  const select = document.getElementById('id_sub_skills');
+  const opt    = select.querySelector(`option[value="${skillId}"]`);
+  if (!opt) return;
+  if (!chip.classList.contains('active') &&
+      document.querySelectorAll('#sub-skills-wrap .skill-chip.active').length >= 10) {
+    alert('You can select up to 10 sub-skills.');
+    return;
+  }
+  chip.classList.toggle('active');
+  opt.selected = chip.classList.contains('active');
+}
+</script>
+{% endblock %}

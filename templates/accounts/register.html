@@ -110,7 +110,7 @@ body { display: flex; flex-direction: column; }
 
 /* ===== ACCOUNT TYPE STEP ===== */
 .account-type-grid {
-  display: grid; grid-template-columns: 1fr 1fr;
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
   gap: 14px; margin-bottom: 32px;
 }
 .type-card {
@@ -485,6 +485,13 @@ body { display: flex; flex-direction: column; }
 .sec-badge p  { font-size: 0.77rem; color: var(--text-3); line-height: 1.4; }
 
 /* ===== RESPONSIVE ===== */
+@media (max-width: 760px) {
+  .account-type-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .type-card { padding: 18px 12px; }
+  .type-icon { width: 44px; height: 44px; font-size: 1.1rem; }
+  .type-title { font-size: 0.9rem; }
+  .type-desc { font-size: 0.74rem; }
+}
 @media (max-width: 960px) {
   .reg-wrap { grid-template-columns: 1fr; }
   .reg-visual-panel { display: none; }
@@ -492,7 +499,7 @@ body { display: flex; flex-direction: column; }
   .reg-form-inner { max-width: 100%; }
 }
 @media (max-width: 600px) {
-  .account-type-grid { grid-template-columns: 1fr; gap: 12px; }
+  .account-type-grid { grid-template-columns: 1fr; gap: 12px; }  /* stack all 3 on mobile */
   .form-row-2  { grid-template-columns: 1fr; gap: 12px; }
   .social-row-reg { grid-template-columns: 1fr; gap: 8px; }
   .step-nav { flex-direction: column-reverse; gap: 10px; }
@@ -592,6 +599,15 @@ body { display: flex; flex-direction: column; }
               </div>
               <div class="type-title">I'm an Employer</div>
               <div class="type-desc">Looking to hire skilled tradespeople for jobs, projects, or contracts.</div>
+            </label>
+            <label class="type-card" id="card-digital_worker">
+              <input type="radio" name="_account_type" value="digital_worker">
+              <div class="type-check"><i class="fas fa-check"></i></div>
+              <div class="type-icon" style="background:rgba(139,92,246,0.12); border:1px solid rgba(139,92,246,0.2); color:#8b5cf6;">
+                <i class="fas fa-laptop-code"></i>
+              </div>
+              <div class="type-title">I'm a Digital Worker</div>
+              <div class="type-desc">Offering digital services — design, writing, dev, marketing, and more.</div>
             </label>
           </div>
 

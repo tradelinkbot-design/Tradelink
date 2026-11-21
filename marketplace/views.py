@@ -1,4 +1,4 @@
-"""
+﻿"""
 marketplace/views.py
 =====================
 TradeLink NG — Tool & Equipment Marketplace views.
@@ -94,19 +94,68 @@ logger = logging.getLogger(__name__)
 class SellerRequiredMixin(LoginRequiredMixin):
     """
     Ensures the logged-in user has a WorkerProfile (seller identity).
-    Only workers can list products on the marketplace.
+
+    Rules
+    ─────
+    * Artisan  (account_type == 'worker')               — full access; must have WorkerProfile.
+    * Digital worker (account_type == 'digital_worker') — allowed, NIN-only gate; WorkerProfile
+      is auto-created on first access so they can list products.
+    * Employer (account_type == 'employer')              — blocked; use the digital_skills gigs.
+    * Any other authenticated user                       — standard WorkerProfile gate.
     """
 
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return self.handle_no_permission()
-        if not hasattr(request.user, 'worker_profile'):
+
+        user = request.user
+        account_type = getattr(user, 'account_type', 'worker')
+
+        # -- Employers cannot list physical products on the marketplace ----------
+        if account_type == 'employer':
+            messages.error(
+                request,
+                'Employer accounts cannot list products on the marketplace. '
+                'Post a digital gig instead.',
+            )
+            return redirect('digital:gig_list')
+
+        # -- Digital workers: NIN-only gate + auto-create WorkerProfile ----------
+        if account_type == 'digital_worker':
+            nin_verified = getattr(user, 'nin_verified', False)
+            if not nin_verified:
+                messages.warning(
+                    request,
+                    'Digital workers must verify their NIN before listing on the marketplace. '
+                    'Please complete NIN verification first.',
+                )
+                return redirect('verification:nin_verify')
+
+            if not hasattr(user, 'worker_profile'):
+                try:
+                    WorkerProfile.objects.get_or_create(user=user)
+                    logger.info(
+                        "Auto-created WorkerProfile for digital_worker %s", user.pk
+                    )
+                except Exception as exc:
+                    logger.error(
+                        "Could not auto-create WorkerProfile for digital_worker %s: %s",
+                        user.pk, exc,
+                    )
+                    messages.error(request, 'Could not set up your seller profile. Please contact support.')
+                    return redirect('digital:dashboard')
+
+            return super().dispatch(request, *args, **kwargs)
+
+        # -- Artisans / other workers: standard WorkerProfile gate ---------------
+        if not hasattr(user, 'worker_profile'):
             messages.warning(
                 request,
                 'Only worker accounts can list products. '
                 'Complete your worker profile first.',
             )
             return redirect('jobs:worker_profile_edit')
+
         return super().dispatch(request, *args, **kwargs)
 
     @property

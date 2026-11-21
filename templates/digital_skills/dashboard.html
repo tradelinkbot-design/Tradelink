@@ -1,0 +1,449 @@
+{% extends "base.html" %}
+{% load static humanize %}
+
+{% block title %}Digital Worker Dashboard — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  .dw-layout {
+    position: relative; z-index: 1;
+    padding: calc(var(--nav-h) + clamp(32px,5vw,56px)) 0 clamp(48px,8vw,96px);
+  }
+  .dw-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 clamp(16px,4vw,48px);
+  }
+
+  /* Page header */
+  .dw-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+  .dw-title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.4rem,3.5vw,2rem);
+    font-weight: 800;
+    color: var(--text-1);
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .dw-title-icon {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: rgba(139,92,246,.12);
+    border: 1px solid rgba(139,92,246,.2);
+    display: flex; align-items: center; justify-content: center;
+    color: #8b5cf6; font-size: 1.1rem; flex-shrink: 0;
+  }
+  .dw-sub { color: var(--text-2); font-size: 0.95rem; }
+  .dw-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+  /* Banners */
+  .dw-banner {
+    padding: 16px 20px;
+    border-radius: var(--r-lg);
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .dw-banner-purple {
+    background: rgba(139,92,246,.07);
+    border: 1px solid rgba(139,92,246,.2);
+  }
+  .dw-banner-warn {
+    background: rgba(217,119,6,.07);
+    border: 1px solid rgba(217,119,6,.2);
+  }
+  .dw-banner-icon {
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .dw-banner-purple .dw-banner-icon { color: #8b5cf6; }
+  .dw-banner-warn .dw-banner-icon { color: var(--amber); }
+  .dw-banner-body { flex: 1; min-width: 0; }
+  .dw-banner-body strong { display: block; font-weight: 700; color: var(--text-1); font-size: 0.9rem; margin-bottom: 2px; }
+  .dw-banner-body span { font-size: 0.84rem; color: var(--text-2); }
+  .dw-banner-body a { color: #8b5cf6; font-weight: 600; }
+  .dw-banner-warn .dw-banner-body a { color: var(--amber); }
+
+  /* Progress bar */
+  .dw-prog-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 100px;
+  }
+  .dw-prog-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--border-subtle);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .dw-prog-fill {
+    height: 100%;
+    background: #8b5cf6;
+    border-radius: 999px;
+    transition: width .4s;
+  }
+  .dw-prog-pct {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #8b5cf6;
+    white-space: nowrap;
+  }
+
+  /* Stats grid */
+  .dw-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .dw-stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 20px 18px;
+    text-align: center;
+  }
+  .dw-stat-num {
+    font-size: clamp(1.6rem,3vw,2.2rem);
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .dw-stat-label { font-size: 0.8rem; color: var(--text-3); font-weight: 500; }
+
+  /* Main two-column layout */
+  .dw-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+    align-items: start;
+  }
+
+  /* Section card */
+  .dw-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .dw-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .dw-card-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dw-card-title i { color: var(--text-3); }
+  .dw-card-link {
+    font-size: 0.8rem;
+    color: #8b5cf6;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .dw-card-link:hover { text-decoration: underline; }
+
+  /* App list */
+  .dw-app-list { padding: 0; }
+  .dw-app-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .dw-app-item:last-child { border-bottom: none; }
+  .dw-app-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-1);
+    margin-bottom: 2px;
+  }
+  .dw-app-meta {
+    font-size: 0.78rem;
+    color: var(--text-3);
+  }
+  .dw-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-3);
+  }
+  .dw-empty i { font-size: 2rem; margin-bottom: 10px; display: block; color: var(--border-subtle); }
+
+  /* Gig list */
+  .dw-gig-item {
+    display: block;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    text-decoration: none;
+    transition: background .15s;
+  }
+  .dw-gig-item:last-child { border-bottom: none; }
+  .dw-gig-item:hover { background: var(--surface-1); }
+  .dw-gig-name { font-size: 0.85rem; font-weight: 600; color: var(--text-1); margin-bottom: 3px; }
+  .dw-gig-row { display: flex; justify-content: space-between; align-items: center; }
+  .dw-gig-budget { font-size: 0.78rem; color: var(--text-2); }
+
+  /* Quick actions card */
+  .dw-actions-card {
+    padding: 20px;
+  }
+  .dw-qa-title { font-size: 0.88rem; font-weight: 700; color: var(--text-1); margin-bottom: 14px; }
+  .dw-qa-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 14px;
+    border-radius: var(--r-md);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-1);
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    margin-bottom: 8px;
+    transition: all .15s;
+  }
+  .dw-qa-btn:hover {
+    background: var(--surface-2);
+    border-color: var(--border-strong);
+    text-decoration: none;
+  }
+  .dw-qa-btn i { color: var(--text-3); width: 16px; text-align: center; }
+  .dw-qa-btn.warn { background: rgba(217,119,6,.07); border-color: rgba(217,119,6,.2); }
+  .dw-qa-btn.warn i { color: var(--amber); }
+
+  /* Status badges */
+  .ds-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .ds-badge-hired   { background: rgba(5,150,105,.12); color: var(--emerald); }
+  .ds-badge-shortlisted { background: rgba(2,132,199,.12); color: var(--sky); }
+  .ds-badge-rejected  { background: rgba(234,88,12,.12); color: var(--orange); }
+  .ds-badge-pending   { background: rgba(217,119,6,.12); color: var(--amber); }
+  .ds-badge-withdrawn { background: var(--surface-1); color: var(--text-3); }
+
+  /* Purple accent badge */
+  .ds-badge-purple {
+    background: rgba(139,92,246,.1);
+    color: #8b5cf6;
+    border: 1px solid rgba(139,92,246,.2);
+  }
+
+  @media (max-width: 1024px) {
+    .dw-grid { grid-template-columns: 1fr; }
+    .dw-stats { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .dw-stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .dw-stat-card { padding: 16px 12px; }
+    .dw-banner { flex-direction: column; gap: 8px; }
+    .dw-prog-wrap { width: 100%; }
+  }
+  @media (max-width: 400px) {
+    .dw-actions { flex-direction: column; width: 100%; }
+    .dw-actions .btn { width: 100%; text-align: center; justify-content: center; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dw-layout">
+<div class="dw-inner">
+
+  {# ── Page header ─── #}
+  <div class="dw-header">
+    <div>
+      <h1 class="dw-title">
+        <span class="dw-title-icon"><i class="fas fa-tachometer-alt"></i></span>
+        Digital Dashboard
+      </h1>
+      <p class="dw-sub">Welcome back, {{ request.user.get_full_name|default:request.user.username }}</p>
+    </div>
+    <div class="dw-actions">
+      <a href="{% url 'digital:profile_edit' %}" class="btn btn-ghost btn-sm">
+        <i class="fas fa-edit"></i> Edit Profile
+      </a>
+      <a href="{% url 'digital:portfolio' %}" class="btn btn-outline btn-sm">
+        <i class="fas fa-images"></i> Portfolio
+      </a>
+    </div>
+  </div>
+
+  {# ── Profile completion banner ─── #}
+  {% if profile.profile_completion < 80 %}
+  <div class="dw-banner dw-banner-purple">
+    <div class="dw-banner-icon"><i class="fas fa-info-circle"></i></div>
+    <div class="dw-banner-body">
+      <strong>Your profile is {{ profile.profile_completion }}% complete.</strong>
+      <span>A complete profile gets 3× more views and applications.
+        <a href="{% url 'digital:profile_setup' %}">Complete it now →</a>
+      </span>
+    </div>
+    <div class="dw-prog-wrap">
+      <div class="dw-prog-bar">
+        <div class="dw-prog-fill" style="width:{{ profile.profile_completion }}%;"></div>
+      </div>
+      <span class="dw-prog-pct">{{ profile.profile_completion }}%</span>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── NIN banner ─── #}
+  {% if not request.user.verification_profile.nin_verified %}
+  <div class="dw-banner dw-banner-warn">
+    <div class="dw-banner-icon"><i class="fas fa-id-card"></i></div>
+    <div class="dw-banner-body">
+      <strong>NIN not yet verified.</strong>
+      <span>You need to verify your NIN before listing products on the marketplace.
+        <a href="{% url 'verify:nin' %}">Verify NIN →</a>
+      </span>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Stats ─── #}
+  <div class="dw-stats">
+    <div class="dw-stat-card">
+      <div class="dw-stat-num" style="color:#8b5cf6;">{{ recent_apps.count }}</div>
+      <div class="dw-stat-label">Applications Sent</div>
+    </div>
+    <div class="dw-stat-card">
+      <div class="dw-stat-num" style="color:var(--emerald);">{{ profile.profile_completion }}%</div>
+      <div class="dw-stat-label">Profile Complete</div>
+    </div>
+    <div class="dw-stat-card">
+      <div class="dw-stat-num" style="color:var(--sky);">{{ profile.sub_skills.count }}</div>
+      <div class="dw-stat-label">Listed Skills</div>
+    </div>
+    <div class="dw-stat-card">
+      <div class="dw-stat-num" style="color:var(--amber);">{{ profile.portfolio_items.count }}</div>
+      <div class="dw-stat-label">Portfolio Items</div>
+    </div>
+  </div>
+
+  {# ── Main grid ─── #}
+  <div class="dw-grid">
+
+    {# Left — Recent Applications #}
+    <div>
+      <div class="dw-card">
+        <div class="dw-card-head">
+          <div class="dw-card-title">
+            <i class="fas fa-file-alt"></i> Recent Applications
+          </div>
+          <a href="{% url 'digital:my_applications' %}" class="dw-card-link">View all →</a>
+        </div>
+        <div class="dw-app-list">
+          {% if recent_apps %}
+            {% for app in recent_apps %}
+              <div class="dw-app-item">
+                <div>
+                  <div class="dw-app-name">{{ app.gig.title|truncatechars:55 }}</div>
+                  <div class="dw-app-meta">
+                    {% if app.gig.category %}{{ app.gig.category.name }} · {% endif %}
+                    {{ app.created|timesince }} ago
+                  </div>
+                </div>
+                <span class="ds-badge ds-badge-{{ app.status }}">{{ app.get_status_display }}</span>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="dw-empty">
+              <i class="fas fa-file-alt"></i>
+              <p style="font-size:.85rem;margin:0;">No applications yet.</p>
+              <a href="{% url 'digital:gig_list' %}" class="btn btn-primary btn-sm" style="margin-top:12px;">Browse Gigs</a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# Right — Latest Gigs + Quick Actions #}
+    <div>
+      {# Latest Gigs #}
+      <div class="dw-card" style="margin-bottom:16px;">
+        <div class="dw-card-head">
+          <div class="dw-card-title"><i class="fas fa-briefcase"></i> Latest Gigs</div>
+        </div>
+        {% if recent_gigs %}
+          {% for gig in recent_gigs %}
+            <a href="{% url 'digital:gig_detail' gig.pk %}" class="dw-gig-item">
+              <div class="dw-gig-name">{{ gig.title|truncatechars:46 }}</div>
+              <div class="dw-gig-row">
+                <span class="dw-gig-budget">{{ gig.budget_display }}</span>
+                <span class="ds-badge ds-badge-purple">{{ gig.get_work_type_display }}</span>
+              </div>
+            </a>
+          {% endfor %}
+          <div style="padding:12px 20px;">
+            <a href="{% url 'digital:gig_list' %}" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;">View All Gigs</a>
+          </div>
+        {% else %}
+          <div class="dw-empty" style="padding:24px;">
+            <p style="font-size:.82rem;color:var(--text-3);">No active gigs right now.</p>
+          </div>
+        {% endif %}
+      </div>
+
+      {# Quick Actions #}
+      <div class="dw-card">
+        <div class="dw-card-head">
+          <div class="dw-card-title"><i class="fas fa-bolt"></i> Quick Actions</div>
+        </div>
+        <div class="dw-actions-card">
+          <a href="{% url 'digital:profile_edit' %}" class="dw-qa-btn">
+            <i class="fas fa-user-edit"></i> Update Profile
+          </a>
+          <a href="{% url 'digital:portfolio' %}" class="dw-qa-btn">
+            <i class="fas fa-plus"></i> Add Portfolio Item
+          </a>
+          <a href="{% url 'digital:gig_list' %}" class="dw-qa-btn">
+            <i class="fas fa-search"></i> Browse Gigs
+          </a>
+          <a href="{% url 'digital:public_profile' request.user.username %}" class="dw-qa-btn">
+            <i class="fas fa-eye"></i> View Public Profile
+          </a>
+          {% if not request.user.verification_profile.nin_verified %}
+            <a href="{% url 'verify:nin' %}" class="dw-qa-btn warn">
+              <i class="fas fa-id-card"></i> Verify NIN (for marketplace)
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>{# /dw-grid #}
+
+</div>
+</div>
+{% endblock %}

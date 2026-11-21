@@ -2,6 +2,11 @@
 verification/views.py
 =====================
 All views for the TradeLink NG verification system.
+
+Account-type gating rules:
+  - worker (artisan):   full access — NIN → BVN → CAC (sequential)
+  - digital_worker:     NIN ONLY — BVN and CAC are BLOCKED with a clear message
+  - employer:           full access (CAC used for corporate job postings)
 """
 
 import logging
@@ -43,11 +48,13 @@ class VerificationDashboardView(LoginRequiredMixin, TemplateView):
         ctx['recent_attempts'] = VerificationAttempt.objects.filter(
             user=self.request.user
         ).order_by('-created')[:10]
+        # Pass account type so the template can show/hide BVN & CAC options
+        ctx['is_digital_worker'] = (self.request.user.account_type == 'digital_worker')
         return ctx
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Level 1 — NIN
+#  Level 1 — NIN  (available to ALL account types)
 # ─────────────────────────────────────────────────────────────────────────────
 
 class NINVerifyView(LoginRequiredMixin, FormView):
@@ -119,7 +126,7 @@ class NINVerifyView(LoginRequiredMixin, FormView):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Level 2 — BVN
+#  Level 2 — BVN  (BLOCKED for digital_worker accounts)
 # ─────────────────────────────────────────────────────────────────────────────
 
 class BVNVerifyView(LoginRequiredMixin, FormView):
@@ -133,6 +140,15 @@ class BVNVerifyView(LoginRequiredMixin, FormView):
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
+            # ── Digital workers cannot do BVN verification ───────────────────
+            if request.user.account_type == 'digital_worker':
+                messages.warning(
+                    request,
+                    'BVN verification is not available for Digital Skilled Worker accounts. '
+                    'You only need to verify your NIN when posting on the marketplace.',
+                )
+                return redirect('verify:dashboard')
+
             vp = _get_profile(request.user)
             if vp.bvn_verified:
                 messages.info(request, 'Your BVN has already been verified.')
@@ -192,7 +208,7 @@ class BVNVerifyView(LoginRequiredMixin, FormView):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Level 3 — CAC
+#  Level 3 — CAC  (BLOCKED for digital_worker accounts)
 # ─────────────────────────────────────────────────────────────────────────────
 
 class CACVerifyView(LoginRequiredMixin, FormView):
@@ -206,6 +222,15 @@ class CACVerifyView(LoginRequiredMixin, FormView):
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
+            # ── Digital workers cannot do CAC verification ───────────────────
+            if request.user.account_type == 'digital_worker':
+                messages.warning(
+                    request,
+                    'CAC (business) verification is not available for Digital Skilled Worker accounts. '
+                    'Only Artisan accounts can register a business on TradeLink.',
+                )
+                return redirect('verify:dashboard')
+
             vp = _get_profile(request.user)
             if vp.cac_verified:
                 messages.info(request, 'Your CAC number has already been verified.')
@@ -277,10 +302,11 @@ class VerificationStatusView(LoginRequiredMixin, TemplateView):
     def get(self, request, *args, **kwargs):
         vp = _get_profile(request.user)
         return JsonResponse({
-            'level':       vp.level,
-            'label':       vp.badge_label,
-            'colour':      vp.badge_colour,
-            'nin_verified': vp.nin_verified,
-            'bvn_verified': vp.bvn_verified,
-            'cac_verified': vp.cac_verified,
+            'level':            vp.level,
+            'label':            vp.badge_label,
+            'colour':           vp.badge_colour,
+            'nin_verified':     vp.nin_verified,
+            'bvn_verified':     vp.bvn_verified,
+            'cac_verified':     vp.cac_verified,
+            'is_digital_worker': request.user.account_type == 'digital_worker',
         })

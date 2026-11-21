@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Edit Digital Worker Profile — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  .edit-wrap {
+    max-width: 760px;
+    margin: 0 auto 80px;
+    padding: calc(var(--nav-h) + 32px) 16px 0;
+  }
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .page-header h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-1);
+    margin: 0;
+  }
+  .edit-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 20px;
+  }
+  .section-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .form-group { margin-bottom: 18px; }
+  .form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-1);
+    margin-bottom: 6px;
+  }
+  .form-control {
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    color: var(--text-1);
+    font-size: 0.9rem;
+    transition: border-color .2s;
+  }
+  .form-control:focus {
+    outline: none;
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139,92,246,.15);
+  }
+  .form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .skill-chip-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .skill-chip {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border-subtle);
+    background: transparent;
+    color: var(--text-3);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .skill-chip.active {
+    background: rgba(139,92,246,.15);
+    border-color: #8b5cf6;
+    color: #a78bfa;
+  }
+  .help-text {
+    font-size: 0.78rem;
+    color: var(--text-3);
+    margin-top: 4px;
+  }
+  .field-error {
+    font-size: 0.78rem;
+    color: #f87171;
+    margin-top: 4px;
+  }
+  .completion-bar-wrap {
+    background: var(--border-subtle);
+    border-radius: 999px;
+    height: 8px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .completion-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #8b5cf6, #6d28d9);
+    border-radius: 999px;
+    transition: width .4s ease;
+  }
+  .completion-label {
+    font-size: 0.82rem;
+    color: var(--text-3);
+    margin-bottom: 8px;
+  }
+  .btn-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 32px;
+    background: #8b5cf6;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  .btn-save:hover { background: #7c3aed; }
+  @media(max-width:600px){
+    .edit-card { padding: 20px 16px; }
+    .form-row-2 { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edit-wrap">
+  <div class="page-header">
+    <h1><i class="fas fa-user-edit" style="color:#8b5cf6;margin-right:8px;"></i> Edit Profile</h1>
+    <a href="{% url 'digital:public_profile' profile.user.username %}"
+       style="font-size:.85rem; color:var(--text-3);">
+      <i class="fas fa-eye"></i> View public profile
+    </a>
+  </div>
+
+  {% if profile.profile_completion < 80 %}
+  <div class="edit-card" style="padding:20px;">
+    <div class="completion-label">
+      Profile completion: <strong>{{ profile.profile_completion }}%</strong>
+      — a complete profile gets 5× more views
+    </div>
+    <div class="completion-bar-wrap">
+      <div class="completion-bar" style="width:{{ profile.profile_completion }}%;"></div>
+    </div>
+  </div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+
+    {# ── Identity & Bio ─────────────────────────────────────────── #}
+    <div class="edit-card">
+      <div class="section-title">Identity &amp; Bio</div>
+
+      <div class="form-group">
+        <label class="form-label">Professional Headline <span style="color:#f87171;">*</span></label>
+        <input type="text" name="{{ form.headline.html_name }}"
+               class="form-control"
+               value="{{ form.headline.value|default:'' }}"
+               placeholder="e.g. Full-Stack Developer | React &amp; Django Expert"
+               maxlength="180">
+        {% for err in form.headline.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Bio / About Me</label>
+        <textarea name="{{ form.bio.html_name }}" class="form-control" rows="5"
+                  placeholder="Tell clients about your background and what makes you stand out.">{{ form.bio.value|default:'' }}</textarea>
+        {% for err in form.bio.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-group">
+          <label class="form-label">Years of Experience</label>
+          <input type="number" name="{{ form.years_experience.html_name }}"
+                 class="form-control"
+                 value="{{ form.years_experience.value|default:'' }}"
+                 min="0" max="60">
+          {% for err in form.years_experience.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Location (State / City)</label>
+          <input type="text" name="{{ form.location.html_name }}"
+                 class="form-control"
+                 value="{{ form.location.value|default:'' }}"
+                 placeholder="Lagos, Nigeria">
+          {% for err in form.location.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Skills ─────────────────────────────────────────────────── #}
+    <div class="edit-card">
+      <div class="section-title">Skills &amp; Category</div>
+
+      <div class="form-group">
+        <label class="form-label">Primary Skill Category <span style="color:#f87171;">*</span></label>
+        <select name="{{ form.primary_category.html_name }}" class="form-control"
+                id="cat-select" onchange="loadSubSkills(this.value)">
+          <option value="">— Select a category —</option>
+          {% for cat in categories %}
+            <option value="{{ cat.pk }}"
+              {% if form.primary_category.value == cat.pk|stringformat:'s' %}selected{% endif %}>
+              {{ cat.name }}
+            </option>
+          {% endfor %}
+        </select>
+        {% for err in form.primary_category.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Sub-Skills (up to 10)</label>
+        <div id="sub-skills-wrap" class="skill-chip-wrap">
+          <!-- Populated by JS on load -->
+          <span class="help-text">Loading current sub-skills…</span>
+        </div>
+        <select name="{{ form.sub_skills.html_name }}" id="id_sub_skills" multiple style="display:none;">
+          {% for opt in form.sub_skills %}{{ opt }}{% endfor %}
+        </select>
+        {% for err in form.sub_skills.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
+      </div>
+    </div>
+
+    {# ── Rates & Availability ────────────────────────────────────── #}
+    <div class="edit-card">
+      <div class="section-title">Rates &amp; Availability</div>
+      <div class="form-row-2">
+        <div class="form-group">
+          <label class="form-label">Hourly Rate (₦)</label>
+          <input type="number" name="{{ form.hourly_rate.html_name }}"
+                 class="form-control"
+                 value="{{ form.hourly_rate.value|default:'' }}"
+                 min="0" step="100" placeholder="5000">
+          {% for err in form.hourly_rate.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Availability</label>
+          {{ form.availability }}
+          {% for err in form.availability.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Online Presence ─────────────────────────────────────────── #}
+    <div class="edit-card">
+      <div class="section-title">Online Presence</div>
+      <div class="form-row-2">
+        <div class="form-group">
+          <label class="form-label">Portfolio / Website</label>
+          <input type="url" name="{{ form.website_url.html_name }}" class="form-control"
+                 value="{{ form.website_url.value|default:'' }}"
+                 placeholder="https://yourportfolio.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">LinkedIn</label>
+          <input type="url" name="{{ form.linkedin_url.html_name }}" class="form-control"
+                 value="{{ form.linkedin_url.value|default:'' }}"
+                 placeholder="https://linkedin.com/in/yourname">
+        </div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-group">
+          <label class="form-label">GitHub</label>
+          <input type="url" name="{{ form.github_url.html_name }}" class="form-control"
+                 value="{{ form.github_url.value|default:'' }}"
+                 placeholder="https://github.com/yourhandle">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Twitter / X</label>
+          <input type="url" name="{{ form.twitter_url.html_name }}" class="form-control"
+                 value="{{ form.twitter_url.value|default:'' }}"
+                 placeholder="https://twitter.com/yourhandle">
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn-save">
+      <i class="fas fa-save"></i> Save Changes
+    </button>
+  </form>
+</div>
+
+<script>
+  const SUB_SKILLS_URL = "{% url 'digital:ajax_sub_skills' %}";
+  const CURRENT_SUB_SKILLS = [{% for ws in profile.digitalworkersubskill_set.all %}"{{ ws.sub_skill_id }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+
+  async function loadSubSkills(categoryId) {
+    const wrap = document.getElementById('sub-skills-wrap');
+    const select = document.getElementById('id_sub_skills');
+    if (!categoryId) {
+      wrap.innerHTML = '<span class="help-text">Select a category to see sub-skills.</span>';
+      return;
+    }
+    wrap.innerHTML = '<span class="help-text"><i class="fas fa-spinner fa-spin"></i> Loading…</span>';
+    try {
+      const res = await fetch(`${SUB_SKILLS_URL}?category=${categoryId}`);
+      const data = await res.json();
+      const selectedVals = CURRENT_SUB_SKILLS.map(String);
+      wrap.innerHTML = '';
+      select.innerHTML = '';
+      data.sub_skills.forEach(skill => {
+        const isActive = selectedVals.includes(String(skill.id));
+        // chip
+        const chip = document.createElement('span');
+        chip.className = 'skill-chip' + (isActive ? ' active' : '');
+        chip.textContent = skill.name;
+        chip.dataset.id = skill.id;
+        chip.onclick = () => toggleChip(chip, skill.id);
+        wrap.appendChild(chip);
+        // option
+        const opt = document.createElement('option');
+        opt.value = skill.id;
+        opt.textContent = skill.name;
+        opt.selected = isActive;
+        select.appendChild(opt);
+      });
+    } catch {
+      wrap.innerHTML = '<span class="help-text" style="color:#f87171;">Failed to load. Try refreshing.</span>';
+    }
+  }
+
+  function toggleChip(chip, skillId) {
+    const select = document.getElementById('id_sub_skills');
+    const opt = select.querySelector(`option[value="${skillId}"]`);
+    if (!opt) return;
+    if (!chip.classList.contains('active') &&
+        document.querySelectorAll('#sub-skills-wrap .skill-chip.active').length >= 10) {
+      alert('You can select up to 10 sub-skills.');
+      return;
+    }
+    chip.classList.toggle('active');
+    opt.selected = chip.classList.contains('active');
+  }
+
+  // On page load, trigger sub-skill load for current category
+  window.addEventListener('DOMContentLoaded', () => {
+    const sel = document.getElementById('cat-select');
+    if (sel && sel.value) loadSubSkills(sel.value);
+  });
+</script>
+{% endblock %}

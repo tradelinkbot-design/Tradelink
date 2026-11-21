@@ -1,0 +1,530 @@
+{% extends "base.html" %}
+{% load static humanize %}
+
+{% block title %}Digital Skills Directory — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  .dir-layout {
+    position: relative; z-index: 1;
+    padding: calc(var(--nav-h) + clamp(28px,4vw,48px)) 0 clamp(48px,8vw,96px);
+  }
+  .dir-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 clamp(16px,4vw,48px);
+  }
+
+  /* Hero */
+  .dir-hero {
+    margin-bottom: 32px;
+  }
+  .dir-hero-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .dir-title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.5rem,4vw,2.4rem);
+    font-weight: 800;
+    color: var(--text-1);
+    margin: 0 0 6px;
+  }
+  .dir-title span { color: #8b5cf6; }
+  .dir-sub { color: var(--text-2); font-size: clamp(0.88rem,2vw,1rem); margin: 0; }
+  .dir-cta { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+  /* Layout grid */
+  .dir-grid {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+
+  /* Sidebar */
+  .dir-sidebar {
+    position: sticky;
+    top: calc(var(--nav-h) + 20px);
+  }
+  .dir-filter-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .dir-filter-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dir-filter-label i { color: var(--text-3); }
+  .dir-field { margin-bottom: 14px; }
+  .dir-field:last-child { margin-bottom: 0; }
+  .dir-field label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-2);
+    margin-bottom: 5px;
+  }
+  .dir-field input,
+  .dir-field select {
+    width: 100%;
+    padding: 9px 12px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    color: var(--text-1);
+    font-size: 0.85rem;
+    font-family: 'Outfit', sans-serif;
+    transition: border-color .2s;
+    box-sizing: border-box;
+  }
+  .dir-field input:focus,
+  .dir-field select:focus {
+    outline: none;
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139,92,246,.12);
+  }
+
+  /* Mobile filter toggle */
+  .dir-filter-toggle {
+    display: none;
+    width: 100%;
+    margin-bottom: 16px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-1);
+    cursor: pointer;
+  }
+  .dir-filter-mobile { display: none; }
+  .dir-filter-mobile.open { display: block; }
+
+  /* Worker grid */
+  .worker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 18px;
+  }
+
+  /* Worker card */
+  .worker-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow .2s, transform .2s, border-color .2s;
+  }
+  .worker-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-strong);
+  }
+  .worker-card-body { padding: 20px 18px; flex: 1; }
+  .worker-avatar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .worker-avatar {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  .worker-avatar-init {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,#8b5cf6,#6366f1);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 800; font-size: 1.1rem; flex-shrink: 0;
+  }
+  .worker-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-1);
+    margin-bottom: 2px;
+  }
+  .worker-category {
+    font-size: 0.78rem;
+    color: var(--text-3);
+  }
+  .worker-category i { margin-right: 3px; }
+  .worker-headline {
+    font-size: 0.82rem;
+    color: var(--text-2);
+    font-style: italic;
+    margin-bottom: 10px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .worker-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 10px;
+  }
+  .wbadge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .wbadge-verified { background: rgba(29,78,216,.12); color: #1D4ED8; }
+  .wbadge-open     { background: rgba(5,150,105,.12); color: var(--emerald); }
+  .wbadge-remote   { background: rgba(2,132,199,.12); color: var(--sky); }
+  .wbadge-plain    { background: var(--surface-1); color: var(--text-2); }
+  .worker-rate {
+    font-size: 0.8rem;
+    color: var(--text-2);
+    margin-bottom: 6px;
+  }
+  .worker-loc { font-size: 0.78rem; color: var(--text-3); margin-bottom: 12px; }
+  .worker-loc i { margin-right: 4px; }
+
+  /* Progress bar */
+  .worker-prog-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: var(--text-3);
+    margin-bottom: 2px;
+  }
+  .worker-prog {
+    flex: 1;
+    height: 4px;
+    background: var(--border-subtle);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .worker-prog-fill {
+    height: 100%;
+    background: #8b5cf6;
+    border-radius: 999px;
+  }
+
+  .worker-card-foot {
+    padding: 12px 18px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .worker-btn {
+    display: block;
+    text-align: center;
+    padding: 9px;
+    border-radius: var(--r-md);
+    background: rgba(139,92,246,.1);
+    border: 1px solid rgba(139,92,246,.25);
+    color: #8b5cf6;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all .2s;
+  }
+  .worker-btn:hover {
+    background: #8b5cf6;
+    color: #fff;
+    text-decoration: none;
+  }
+
+  /* Pagination */
+  .dir-pagination {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 32px;
+    flex-wrap: wrap;
+  }
+  .dir-page-btn {
+    padding: 8px 16px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-2);
+    font-size: 0.84rem;
+    text-decoration: none;
+    transition: all .2s;
+  }
+  .dir-page-btn:hover, .dir-page-btn.current {
+    background: rgba(139,92,246,.1);
+    border-color: rgba(139,92,246,.3);
+    color: #8b5cf6;
+    text-decoration: none;
+  }
+
+  /* Empty state */
+  .dir-empty {
+    text-align: center;
+    padding: 64px 20px;
+    color: var(--text-3);
+  }
+  .dir-empty i { font-size: 2.5rem; display: block; margin-bottom: 16px; }
+
+  @media (max-width: 920px) {
+    .dir-grid { grid-template-columns: 1fr; }
+    .dir-sidebar { position: static; }
+    .dir-filter-card { display: none; }
+    .dir-filter-toggle { display: flex; }
+  }
+  @media (max-width: 600px) {
+    .dir-hero-top { flex-direction: column; }
+    .dir-cta { width: 100%; }
+    .dir-cta .btn { flex: 1; justify-content: center; }
+    .worker-grid { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dir-layout">
+<div class="dir-inner">
+
+  {# ── Hero ─── #}
+  <div class="dir-hero">
+    <div class="dir-hero-top">
+      <div>
+        <h1 class="dir-title">
+          <i class="fas fa-laptop-code" style="color:#8b5cf6;margin-right:8px;"></i>
+          Digital <span>Skilled Workers</span>
+        </h1>
+        <p class="dir-sub">Find verified designers, developers, writers, and other digital professionals across Nigeria.</p>
+      </div>
+      <div class="dir-cta">
+        {% if user.is_authenticated and user.account_type == 'digital_worker' %}
+          <a href="{% url 'digital:profile_setup' %}" class="btn btn-primary btn-sm">
+            <i class="fas fa-edit"></i> Edit My Profile
+          </a>
+          <a href="{% url 'digital:dashboard' %}" class="btn btn-ghost btn-sm">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+          </a>
+        {% elif user.is_authenticated and user.account_type == 'employer' %}
+          <a href="{% url 'digital:gig_create' %}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus"></i> Post a Digital Gig
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ── Mobile filter toggle ─── #}
+  <button class="dir-filter-toggle" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('.fa-chevron-down').classList.toggle('fa-rotate-180');" aria-expanded="false">
+    <span><i class="fas fa-filter" style="margin-right:8px;color:var(--text-3);"></i> Filter Workers</span>
+    <i class="fas fa-chevron-down" style="color:var(--text-3);font-size:.8rem;transition:transform .2s;"></i>
+  </button>
+  <div class="dir-filter-mobile">
+    <div class="dir-filter-card" style="display:block;">
+      <div class="dir-filter-label"><i class="fas fa-filter"></i> Filters</div>
+      <form method="get" action="">
+        <div class="dir-field">
+          <label>Search</label>
+          <input type="text" name="q" value="{{ q }}" placeholder="e.g. logo designer Lagos">
+        </div>
+        <div class="dir-field">
+          <label>Category</label>
+          <select name="category">
+            <option value="">All Categories</option>
+            {% for cat in categories %}
+              <option value="{{ cat.slug }}" {% if filters.category_slug == cat.slug %}selected{% endif %}>{{ cat.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="dir-field">
+          <label>Availability</label>
+          <select name="availability">
+            <option value="">Any</option>
+            <option value="available" {% if filters.availability == 'available' %}selected{% endif %}>Available Now</option>
+            <option value="soon" {% if filters.availability == 'soon' %}selected{% endif %}>Available Soon</option>
+          </select>
+        </div>
+        <div class="dir-field">
+          <label>Experience</label>
+          <select name="experience">
+            <option value="">Any Level</option>
+            <option value="entry"       {% if filters.experience == 'entry' %}selected{% endif %}>Entry (0–2 yrs)</option>
+            <option value="mid"         {% if filters.experience == 'mid' %}selected{% endif %}>Intermediate (3–5 yrs)</option>
+            <option value="experienced" {% if filters.experience == 'experienced' %}selected{% endif %}>Experienced (6–10 yrs)</option>
+            <option value="expert"      {% if filters.experience == 'expert' %}selected{% endif %}>Expert (10+ yrs)</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:4px;">Apply Filters</button>
+        {% if q or filters.category_slug or filters.availability or filters.experience %}
+          <a href="{% url 'digital:directory' %}" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:8px;">Clear</a>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
+  <div class="dir-grid">
+
+    {# Sidebar #}
+    <div class="dir-sidebar">
+      <div class="dir-filter-card">
+        <div class="dir-filter-label"><i class="fas fa-filter"></i> Filters</div>
+        <form method="get" action="">
+          <div class="dir-field">
+            <label>Search</label>
+            <input type="text" name="q" value="{{ q }}" placeholder="e.g. logo designer Lagos">
+          </div>
+          <div class="dir-field">
+            <label>Category</label>
+            <select name="category">
+              <option value="">All Categories</option>
+              {% for cat in categories %}
+                <option value="{{ cat.slug }}" {% if filters.category_slug == cat.slug %}selected{% endif %}>{{ cat.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="dir-field">
+            <label>Availability</label>
+            <select name="availability">
+              <option value="">Any</option>
+              <option value="available" {% if filters.availability == 'available' %}selected{% endif %}>Available Now</option>
+              <option value="soon" {% if filters.availability == 'soon' %}selected{% endif %}>Available Soon</option>
+            </select>
+          </div>
+          <div class="dir-field">
+            <label>Experience</label>
+            <select name="experience">
+              <option value="">Any Level</option>
+              <option value="entry"       {% if filters.experience == 'entry' %}selected{% endif %}>Entry (0–2 yrs)</option>
+              <option value="mid"         {% if filters.experience == 'mid' %}selected{% endif %}>Intermediate (3–5 yrs)</option>
+              <option value="experienced" {% if filters.experience == 'experienced' %}selected{% endif %}>Experienced (6–10 yrs)</option>
+              <option value="expert"      {% if filters.experience == 'expert' %}selected{% endif %}>Expert (10+ yrs)</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:4px;">Apply Filters</button>
+          {% if q or filters.category_slug or filters.availability or filters.experience %}
+            <a href="{% url 'digital:directory' %}" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:8px;">Clear</a>
+          {% endif %}
+        </form>
+      </div>
+
+      <div class="dir-filter-card">
+        <div class="dir-filter-label"><i class="fas fa-link"></i> Quick Links</div>
+        <a href="{% url 'digital:gig_list' %}" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-bottom:8px;">
+          <i class="fas fa-briefcase"></i> Browse Digital Gigs
+        </a>
+        {% if user.is_authenticated and user.account_type == 'digital_worker' %}
+          <a href="{% url 'digital:my_applications' %}" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;">
+            <i class="fas fa-file-alt"></i> My Applications
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Worker grid #}
+    <div>
+      {% if page_obj.object_list %}
+        <div class="worker-grid">
+          {% for profile in page_obj %}
+            <div class="worker-card">
+              <div class="worker-card-body">
+                <div class="worker-avatar-row">
+                  {% if profile.user.image %}
+                    <img src="{{ profile.user.image.url }}" class="worker-avatar" alt="{{ profile.user.username }}">
+                  {% else %}
+                    <div class="worker-avatar-init">{{ profile.user.username|first|upper }}</div>
+                  {% endif %}
+                  <div>
+                    <div class="worker-name">{{ profile.user.get_full_name|default:profile.user.username }}</div>
+                    {% if profile.primary_category %}
+                      <div class="worker-category">
+                        <i class="{{ profile.primary_category.icon_class }}"></i>{{ profile.primary_category.name }}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+
+                {% if profile.headline %}
+                  <div class="worker-headline">"{{ profile.headline }}"</div>
+                {% endif %}
+
+                <div class="worker-badges">
+                  {% if profile.is_verified %}
+                    <span class="wbadge wbadge-verified"><i class="fas fa-check-circle" style="margin-right:3px;"></i>Verified</span>
+                  {% endif %}
+                  {% if profile.open_to_employment %}
+                    <span class="wbadge wbadge-open">Open to Work</span>
+                  {% endif %}
+                  {% if profile.remote_ok %}
+                    <span class="wbadge wbadge-remote"><i class="fas fa-wifi" style="margin-right:3px;"></i>Remote OK</span>
+                  {% endif %}
+                  <span class="wbadge wbadge-plain">{{ profile.get_availability_display }}</span>
+                  <span class="wbadge wbadge-plain">{{ profile.get_experience_level_display }}</span>
+                </div>
+
+                {% if profile.hourly_rate or profile.project_rate %}
+                  <div class="worker-rate">
+                    {% if profile.hourly_rate %}<i class="fas fa-clock" style="margin-right:4px;color:var(--text-3);"></i>₦{{ profile.hourly_rate|intcomma }}/hr{% endif %}
+                    {% if profile.project_rate %}&nbsp;·&nbsp;<i class="fas fa-tag" style="margin-right:4px;color:var(--text-3);"></i>From ₦{{ profile.project_rate|intcomma }}{% endif %}
+                  </div>
+                {% endif %}
+
+                {% if profile.state %}
+                  <div class="worker-loc"><i class="fas fa-map-marker-alt"></i>{{ profile.get_state_display }}</div>
+                {% endif %}
+
+                <div class="worker-prog-row">
+                  <span>Profile</span>
+                  <div class="worker-prog"><div class="worker-prog-fill" style="width:{{ profile.profile_completion }}%;"></div></div>
+                  <span>{{ profile.profile_completion }}%</span>
+                </div>
+              </div>
+              <div class="worker-card-foot">
+                <a href="{% url 'digital:public_profile' profile.user.username %}" class="worker-btn">View Profile</a>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        {# Pagination #}
+        {% if page_obj.has_other_pages %}
+          <nav class="dir-pagination" aria-label="Pagination">
+            {% if page_obj.has_previous %}
+              <a class="dir-page-btn" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&category={{ filters.category_slug }}&availability={{ filters.availability }}&experience={{ filters.experience }}">‹ Prev</a>
+            {% endif %}
+            <span class="dir-page-btn current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+              <a class="dir-page-btn" href="?page={{ page_obj.next_page_number }}&q={{ q }}&category={{ filters.category_slug }}&availability={{ filters.availability }}&experience={{ filters.experience }}">Next ›</a>
+            {% endif %}
+          </nav>
+        {% endif %}
+
+      {% else %}
+        <div class="dir-empty">
+          <i class="fas fa-search"></i>
+          <h4 style="color:var(--text-1);font-size:1.1rem;margin-bottom:8px;">No digital workers found</h4>
+          <p style="font-size:.88rem;margin-bottom:16px;">Try adjusting your filters or search term.</p>
+          <a href="{% url 'digital:directory' %}" class="btn btn-ghost btn-sm">Clear Filters</a>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>{# /dir-grid #}
+
+</div>
+</div>
+{% endblock %}

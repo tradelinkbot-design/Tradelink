@@ -1,21 +1,31 @@
 from django import forms
 from django.contrib.auth import authenticate
-from .models import User
+from .models import User, AccountType
 
 
 class RegisterForm(forms.ModelForm):
     """
     Registration form for the 3-step wizard template.
 
-    Step 1  – account_type (hidden field, set by JS)
-    Step 2  – first_name, last_name, username, email, phone_number
-    Step 3  – password1, password2, terms (checkbox — validated client-side
+    Step 1  — account_type (hidden field, set by JS when user clicks a card)
+    Step 2  — first_name, last_name, username, email, phone_number
+    Step 3  — password1, password2, terms (checkbox — validated client-side
                and server-side)
+
+    Three account types:
+      worker         → Artisan / Tradesperson  (creates WorkerProfile via jobs signal)
+      digital_worker → Digital Skilled Worker  (creates DigitalWorkerProfile via digital_skills signal)
+      employer       → Employer                (creates EmployerProfile via jobs signal)
     """
 
-    # ── Non-model fields ──────────────────────────────────────────────────────
+    # ── Non-model fields ─────────────────────────────────────────────────────
+
     account_type = forms.ChoiceField(
-        choices=[('worker', 'Tradesperson'), ('employer', 'Employer')],
+        choices=[
+            ('worker',         'Artisan / Tradesperson'),
+            ('digital_worker', 'Digital Skilled Worker'),
+            ('employer',       'Employer'),
+        ],
         widget=forms.HiddenInput,
         required=False,
         initial='worker',
@@ -37,6 +47,13 @@ class RegisterForm(forms.ModelForm):
         fields = ['first_name', 'last_name', 'username', 'email', 'phone_number']
 
     # ── Field-level cleaning ──────────────────────────────────────────────────
+
+    def clean_account_type(self):
+        value = self.cleaned_data.get('account_type', 'worker').strip()
+        valid = {c[0] for c in AccountType.choices}
+        if value not in valid:
+            return 'worker'
+        return value
 
     def clean_username(self):
         username = self.cleaned_data.get('username', '').strip()
@@ -101,6 +118,8 @@ class RegisterForm(forms.ModelForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         user.set_password(self.cleaned_data['password1'])
+        # Persist the account type chosen in Step 1 of the wizard
+        user.account_type = self.cleaned_data.get('account_type', 'worker')
         if commit:
             user.save()
         return user

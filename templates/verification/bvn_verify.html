@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Verify BVN — TradeLink NG{% endblock %}
+
+{% block extra_head %}
+<style>
+  .verify-form-wrap { max-width:480px; margin: 0 auto 80px;
+    padding: calc(var(--nav-h) + 48px) 16px 0; }
+  .verify-card { background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:16px; padding:36px 32px; }
+  .verify-icon {
+    width:60px; height:60px; border-radius:50%;
+    background:rgba(56,189,248,.12); border:1px solid rgba(56,189,248,.2);
+    display:flex; align-items:center; justify-content:center;
+    color:#38bdf8; font-size:1.5rem; margin-bottom:16px;
+  }
+  .verify-title { font-size:1.3rem; font-weight:700; color:var(--text-1); margin-bottom:6px; }
+  .verify-desc  { font-size:.85rem; color:var(--text-3); margin-bottom:24px; line-height:1.6; }
+  .form-group { margin-bottom:20px; }
+  .form-label { display:block; font-size:.875rem; font-weight:600; color:var(--text-1); margin-bottom:6px; }
+  .form-control {
+    width:100%; padding:11px 14px;
+    background:var(--bg-base); border:1px solid var(--border-subtle);
+    border-radius:8px; color:var(--text-1); font-size:.95rem; letter-spacing:.1em;
+    transition:border-color .2s;
+  }
+  .form-control:focus { outline:none; border-color:#38bdf8; box-shadow:0 0 0 3px rgba(56,189,248,.15); }
+  .help-text { font-size:.78rem; color:var(--text-3); margin-top:4px; }
+  .field-error { font-size:.78rem; color:#f87171; margin-top:4px; }
+  .btn-submit {
+    width:100%; padding:12px; background:#38bdf8; color:#0f172a;
+    border:none; border-radius:8px; font-size:.95rem; font-weight:700;
+    cursor:pointer; transition:background .2s;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn-submit:hover { background:#0ea5e9; }
+  .security-note {
+    margin-top:20px; padding:12px 16px;
+    background:rgba(52,211,153,.06); border:1px solid rgba(52,211,153,.15);
+    border-radius:8px; font-size:.78rem; color:var(--text-3);
+  }
+  .back-link { display:block; text-align:center; margin-top:16px; font-size:.82rem; color:var(--text-3); }
+  .back-link:hover { color:var(--text-1); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="verify-form-wrap">
+  <div class="verify-card">
+    <div class="verify-icon"><i class="fas fa-university"></i></div>
+    <div class="verify-title">BVN Verification</div>
+    <div class="verify-desc">
+      Enter your 11-digit Bank Verification Number (BVN).
+      Your BVN links your identity to your bank account for enhanced financial trust —
+      required for Level 2 (Enhanced) status.
+    </div>
+
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }}" style="margin-bottom:16px;border-radius:8px;">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {% for err in form.non_field_errors %}
+        <div class="field-error" style="margin-bottom:12px;">
+          <i class="fas fa-exclamation-circle"></i> {{ err }}
+        </div>
+      {% endfor %}
+
+      <div class="form-group">
+        <label class="form-label" for="{{ form.bvn.id_for_label }}">
+          BVN — 11 digits
+        </label>
+        <input
+          type="text"
+          id="{{ form.bvn.id_for_label }}"
+          name="{{ form.bvn.html_name }}"
+          class="form-control"
+          placeholder="12345678901"
+          maxlength="11"
+          inputmode="numeric"
+          pattern="[0-9]{11}"
+          autocomplete="off"
+          value="{{ form.bvn.value|default:'' }}"
+        >
+        <div class="help-text">Dial *565*0# on any network to find your BVN.</div>
+        {% for err in form.bvn.errors %}
+          <div class="field-error">{{ err }}</div>
+        {% endfor %}
+      </div>
+
+      <button type="submit" class="btn-submit">
+        <i class="fas fa-shield-check"></i> Verify BVN
+      </button>
+    </form>
+
+    <div class="security-note">
+      <i class="fas fa-lock" style="color:#34d399;margin-right:5px;"></i>
+      Your BVN is verified via Dojah's encrypted API. Only the last 4 digits are stored on our servers.
+    </div>
+
+    <a href="{% url 'verify:dashboard' %}" class="back-link">
+      <i class="fas fa-arrow-left"></i> Back to Verification Dashboard
+    </a>
+  </div>
+</div>
+{% endblock %}
