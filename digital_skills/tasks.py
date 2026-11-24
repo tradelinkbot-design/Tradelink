@@ -20,7 +20,7 @@ def compute_digital_worker_embedding_task(self, profile_pk: str):
     """
     try:
         from digital_skills.models import DigitalWorkerProfile
-        from jobs.service.text_encoder import encoder   # re-use the shared encoder
+        from jobs.service.text_encoder import text_encoder as encoder   # re-use the shared encoder
         from django.utils import timezone
 
         profile = DigitalWorkerProfile.objects.select_related(

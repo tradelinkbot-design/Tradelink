@@ -1,4 +1,4 @@
-﻿"""
+"""
 digital_skills/models.py
 ========================
 TradeLink NG — Digital Skilled Worker models.
@@ -418,6 +418,14 @@ class DigitalGig(models.Model):
     text_embedding         = models.JSONField(null=True, blank=True)
     text_embedding_updated = models.DateTimeField(null=True, blank=True)
 
+    # ── External URL (optional) ───────────────────────────────────────────
+    # If set, applicants are redirected to this URL to apply externally.
+    # If blank, the gig is internal and workers apply within the platform.
+    external_url = models.URLField(
+        blank=True, default='',
+        help_text='External application URL. Leave blank for on-platform applications.',
+    )
+
     # Tracking
     views_count        = models.PositiveIntegerField(default=0, editable=False)
     applications_count = models.PositiveIntegerField(default=0, editable=False)
@@ -446,6 +454,11 @@ class DigitalGig(models.Model):
     @property
     def is_active(self):
         return self.status == self.Status.ACTIVE
+
+    @property
+    def is_external(self) -> bool:
+        """True when applicants should be redirected to an external URL."""
+        return bool(self.external_url)
 
 
 # ──────────────────────────────────────────────────────────────────────────────

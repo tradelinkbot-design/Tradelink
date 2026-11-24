@@ -1,279 +1,1412 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static humanize %}
 
-{% block title %}My Portfolio — TradeLink NG{% endblock %}
+{% block title %}My Portfolio — TradeLink NG Digital{% endblock %}
 
 {% block extra_head %}
 <style>
-  .portfolio-wrap {
-    max-width: 900px;
-    margin: 0 auto 80px;
-    padding: calc(var(--nav-h) + 32px) 16px 0;
+  /* ── CSS Variables & Layout ────────────────────────────────────────────── */
+  :root {
+    --pf-indigo:       #4F46E5;
+    --pf-indigo-hover: #4338CA;
+    --pf-indigo-soft:  rgba(79, 70, 229, 0.08);
+    --pf-indigo-line:  rgba(79, 70, 229, 0.22);
+    --pf-cyan:         #06B6D4;
+    --pf-cyan-soft:    rgba(6, 182, 212, 0.08);
+    --pf-cyan-line:    rgba(6, 182, 212, 0.22);
+    --pf-rose:         #F43F5E;
+    --pf-rose-soft:    rgba(244, 63, 94, 0.1);
   }
-  .page-header {
+
+  .pf-page {
+    position: relative;
+    z-index: 1;
+    padding: calc(var(--nav-h) + clamp(24px, 4vw, 48px)) 0 clamp(64px, 8vw, 110px);
+  }
+
+  .pf-container {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 0 clamp(16px, 4vw, 36px);
+  }
+
+  /* ── Breadcrumb ────────────────────────────────────────────────────────── */
+  .pf-crumb {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 28px;
+    gap: 8px;
+    font-size: 0.84rem;
+    color: var(--text-3);
+    margin-bottom: 22px;
     flex-wrap: wrap;
-    gap: 12px;
   }
-  .page-header h1 {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--text-1);
-    margin: 0;
+  .pf-crumb a {
+    color: var(--text-3);
+    text-decoration: none;
+    transition: color 0.15s ease;
   }
-  .portfolio-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 20px;
-    margin-bottom: 40px;
-  }
-  .portfolio-card {
+  .pf-crumb a:hover { color: var(--pf-indigo); }
+  .pf-crumb i { font-size: 0.68rem; opacity: 0.6; }
+
+  /* ── Header Banner ─────────────────────────────────────────────────────── */
+  .pf-header {
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
-    border-radius: 12px;
-    overflow: hidden;
-    transition: transform .2s, box-shadow .2s;
+    border-radius: var(--r-xl);
+    padding: clamp(24px, 4vw, 36px);
+    margin-bottom: 28px;
     position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
   }
-  .portfolio-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+
+  .pf-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--pf-indigo), var(--pf-cyan));
   }
-  .portfolio-thumb {
-    width: 100%;
-    height: 170px;
-    object-fit: cover;
-    display: block;
-    background: var(--border-subtle);
+
+  .pf-header-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
   }
-  .portfolio-no-thumb {
-    width: 100%;
-    height: 170px;
+
+  .pf-title-wrap {
+    flex: 1;
+    min-width: 280px;
+  }
+
+  .pf-badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: var(--pf-indigo-soft);
+    border: 1px solid var(--pf-indigo-line);
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--pf-indigo);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 12px;
+  }
+
+  .pf-title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.5rem, 3.2vw, 2.1rem);
+    font-weight: 800;
+    color: var(--text-1);
+    margin: 0 0 8px;
+    line-height: 1.25;
+  }
+
+  .pf-subtitle {
+    font-size: 0.92rem;
+    color: var(--text-2);
+    margin: 0;
+    max-width: 680px;
+    line-height: 1.6;
+  }
+
+  .pf-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .pf-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: var(--r-md);
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  .pf-btn-primary {
+    background: linear-gradient(135deg, var(--pf-indigo), #3730A3);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.28);
+  }
+  .pf-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(79, 70, 229, 0.38);
+    color: #ffffff;
+  }
+
+  .pf-btn-secondary {
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-1);
+  }
+  .pf-btn-secondary:hover {
+    background: var(--surface-2);
+    border-color: var(--border-strong);
+    color: var(--text-1);
+  }
+
+  /* ── Profile completion hint banner ───────────────────────────────────── */
+  .pf-strength-bar {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .pf-strength-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    background: var(--pf-cyan-soft);
+    border: 1px solid var(--pf-cyan-line);
+    color: var(--pf-cyan);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(139,92,246,.08);
-    color: #8b5cf6;
-    font-size: 2.5rem;
-  }
-  .portfolio-body { padding: 14px; }
-  .portfolio-title {
+    flex-shrink: 0;
     font-size: 0.95rem;
+  }
+
+  .pf-strength-info {
+    flex: 1;
+    min-width: 220px;
+    font-size: 0.84rem;
+    color: var(--text-2);
+    line-height: 1.5;
+  }
+  .pf-strength-info strong { color: var(--text-1); }
+
+  .pf-strength-meter {
+    width: 140px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .pf-meter-track {
+    flex: 1;
+    height: 8px;
+    background: var(--surface-2);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+
+  .pf-meter-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--pf-indigo), var(--pf-cyan));
+  }
+
+  .pf-meter-text {
+    font-size: 0.84rem;
+    font-weight: 800;
+    color: var(--pf-indigo);
+    font-family: 'Fraunces', serif;
+  }
+
+  /* ── Filter Bar ────────────────────────────────────────────────────────── */
+  .pf-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .pf-tabs {
+    display: inline-flex;
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    padding: 4px;
+    gap: 4px;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  .pf-tab {
+    padding: 7px 16px;
+    border-radius: calc(var(--r-lg) - 4px);
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-3);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    transition: all 0.18s ease;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  .pf-tab:hover { color: var(--text-1); }
+
+  .pf-tab.active {
+    background: var(--bg-card);
+    color: var(--pf-indigo);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .pf-tab-count {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    background: var(--surface-2);
+    color: var(--text-2);
+  }
+  .pf-tab.active .pf-tab-count {
+    background: var(--pf-indigo-soft);
+    color: var(--pf-indigo);
+  }
+
+  /* ── Portfolio Grid ────────────────────────────────────────────────────── */
+  .pf-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+    margin-bottom: 48px;
+  }
+
+  .pf-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+    position: relative;
+  }
+
+  .pf-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--pf-indigo-line);
+    box-shadow: 0 12px 30px rgba(79, 70, 229, 0.1);
+  }
+
+  /* Media preview area */
+  .pf-card-media {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    background: var(--surface-2);
+    overflow: hidden;
+  }
+
+  .pf-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s ease;
+    cursor: pointer;
+  }
+  .pf-card:hover .pf-card-img {
+    transform: scale(1.04);
+  }
+
+  .pf-card-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.06), rgba(6, 182, 212, 0.08));
+    color: var(--pf-indigo);
+  }
+  .pf-card-placeholder i {
+    font-size: 2.4rem;
+    opacity: 0.85;
+  }
+  .pf-card-placeholder.video-type {
+    background: linear-gradient(135deg, rgba(244, 63, 94, 0.08), rgba(79, 70, 229, 0.08));
+    color: var(--pf-rose);
+  }
+
+  /* Overlay on hover */
+  .pf-media-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .pf-card:hover .pf-media-overlay {
+    opacity: 1;
+  }
+
+  .pf-overlay-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #ffffff;
+    color: #1E293B;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    text-decoration: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: transform 0.15s ease, background 0.15s ease;
+    border: none;
+    cursor: pointer;
+  }
+  .pf-overlay-btn:hover {
+    transform: scale(1.1);
+    background: var(--pf-indigo);
+    color: #ffffff;
+  }
+
+  /* Media tags */
+  .pf-card-type-tag {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    backdrop-filter: blur(8px);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    z-index: 2;
+  }
+  .tag-image {
+    background: rgba(15, 23, 42, 0.75);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  .tag-link {
+    background: rgba(6, 182, 212, 0.9);
+    color: #ffffff;
+  }
+  .tag-video {
+    background: rgba(244, 63, 94, 0.9);
+    color: #ffffff;
+  }
+
+  .pf-card-order-tag {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.65);
+    color: #ffffff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  /* Card content */
+  .pf-card-body {
+    padding: 18px 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .pf-card-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-1);
+    margin: 0 0 8px;
+    line-height: 1.4;
+  }
+
+  .pf-card-desc {
+    font-size: 0.85rem;
+    color: var(--text-2);
+    line-height: 1.6;
+    margin: 0 0 16px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex: 1;
+  }
+
+  .pf-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .pf-link-btn {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--pf-indigo);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.15s ease;
+  }
+  .pf-link-btn:hover { color: var(--pf-cyan); text-decoration: underline; }
+
+  .pf-delete-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-3);
+    padding: 6px 10px;
+    border-radius: var(--r-md);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+  }
+  .pf-delete-btn:hover {
+    color: #EF4444;
+    background: rgba(239, 68, 68, 0.08);
+  }
+
+  /* ── Empty State ───────────────────────────────────────────────────────── */
+  .pf-empty {
+    text-align: center;
+    padding: clamp(48px, 6vw, 72px) 24px;
+    background: var(--bg-card);
+    border: 2px dashed var(--border-subtle);
+    border-radius: var(--r-xl);
+    margin-bottom: 48px;
+  }
+
+  .pf-empty-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 20px;
+    background: var(--pf-indigo-soft);
+    border: 1px solid var(--pf-indigo-line);
+    color: var(--pf-indigo);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    margin: 0 auto 18px;
+  }
+
+  .pf-empty-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-1);
+    margin: 0 0 8px;
+  }
+
+  .pf-empty-text {
+    font-size: 0.9rem;
+    color: var(--text-2);
+    max-width: 480px;
+    margin: 0 auto 24px;
+    line-height: 1.6;
+  }
+
+  .pf-empty-tags {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  .pf-empty-tag {
+    font-size: 0.78rem;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-3);
+  }
+
+  /* ── Add New Project Card ──────────────────────────────────────────────── */
+  .pf-form-card {
+    background: var(--bg-card);
+    border: 1px solid var(--pf-indigo-line);
+    border-radius: var(--r-xl);
+    padding: clamp(24px, 4vw, 40px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+    position: relative;
+  }
+
+  .pf-form-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .pf-form-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--pf-indigo), var(--pf-cyan));
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .pf-form-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text-1);
+    margin: 0 0 4px;
+  }
+
+  .pf-form-sub {
+    font-size: 0.84rem;
+    color: var(--text-3);
+    margin: 0;
+  }
+
+  /* Type selection pills */
+  .pf-type-picker {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .pf-type-option {
+    border: 2px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    padding: 14px 16px;
+    cursor: pointer;
+    background: var(--surface-1);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    user-select: none;
+  }
+
+  .pf-type-option:hover {
+    border-color: var(--pf-indigo-line);
+    background: var(--bg-card);
+  }
+
+  .pf-type-option.selected {
+    border-color: var(--pf-indigo);
+    background: var(--pf-indigo-soft);
+  }
+
+  .pf-type-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--surface-2);
+    color: var(--text-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+  }
+  .pf-type-option.selected .pf-type-icon {
+    background: var(--pf-indigo);
+    color: #ffffff;
+  }
+
+  .pf-type-label-main {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-1);
+    margin-bottom: 2px;
+  }
+  .pf-type-label-sub {
+    font-size: 0.74rem;
+    color: var(--text-3);
+  }
+
+  /* Form Fields */
+  .pf-field {
+    margin-bottom: 20px;
+  }
+  .pf-field-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  .pf-label {
+    display: block;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--text-1);
+    margin-bottom: 8px;
+  }
+  .pf-label span.req { color: var(--pf-rose); }
+  .pf-label span.opt { color: var(--text-3); font-weight: 400; font-size: 0.78rem; }
+
+  .pf-input, .pf-textarea, .pf-select {
+    width: 100%;
+    padding: 11px 14px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    color: var(--text-1);
+    font-size: 0.9rem;
+    font-family: 'Outfit', sans-serif;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .pf-input:focus, .pf-textarea:focus, .pf-select:focus {
+    outline: none;
+    border-color: var(--pf-indigo);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+  }
+  .pf-textarea { resize: vertical; min-height: 90px; }
+
+  /* Drag & Drop File Zone */
+  .pf-dropzone {
+    border: 2px dashed var(--border-subtle);
+    border-radius: var(--r-lg);
+    padding: 28px 20px;
+    text-align: center;
+    background: var(--surface-1);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+  }
+  .pf-dropzone:hover, .pf-dropzone.dragover {
+    border-color: var(--pf-indigo);
+    background: var(--pf-indigo-soft);
+  }
+  .pf-dropzone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .pf-drop-icon {
+    font-size: 2rem;
+    color: var(--pf-indigo);
+    margin-bottom: 10px;
+  }
+  .pf-drop-text {
+    font-size: 0.88rem;
     font-weight: 600;
     color: var(--text-1);
     margin-bottom: 4px;
   }
-  .portfolio-desc {
-    font-size: 0.8rem;
+  .pf-drop-sub {
+    font-size: 0.76rem;
     color: var(--text-3);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
   }
-  .portfolio-actions {
+
+  /* Live Preview Box */
+  .pf-preview-box {
+    display: none;
+    margin-top: 14px;
+    position: relative;
+    border-radius: var(--r-md);
+    overflow: hidden;
+    max-width: 320px;
+    border: 1px solid var(--border-subtle);
+  }
+  .pf-preview-img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    display: block;
+  }
+  .pf-preview-remove {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.75);
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    border-top: 1px solid var(--border-subtle);
+    justify-content: center;
+    font-size: 0.8rem;
   }
-  .btn-sm {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 5px 12px;
-    border-radius: 6px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    cursor: pointer;
-    text-decoration: none;
-    border: none;
-    transition: background .2s;
-  }
-  .btn-sm-outline {
-    background: transparent;
-    border: 1px solid var(--border-subtle);
-    color: var(--text-3);
-  }
-  .btn-sm-outline:hover { background: var(--border-subtle); color: var(--text-1); }
-  .btn-sm-danger {
-    background: rgba(248,113,113,.12);
-    color: #f87171;
-    border: 1px solid rgba(248,113,113,.25);
-  }
-  .btn-sm-danger:hover { background: rgba(248,113,113,.2); }
+  .pf-preview-remove:hover { background: #EF4444; }
 
-  /* Upload form */
-  .upload-card {
+  /* Help & errors */
+  .pf-field-help {
+    font-size: 0.78rem;
+    color: var(--text-3);
+    margin-top: 5px;
+    line-height: 1.4;
+  }
+  .pf-field-error {
+    font-size: 0.78rem;
+    color: var(--pf-rose);
+    margin-top: 4px;
+    font-weight: 500;
+  }
+
+  /* Form actions */
+  .pf-form-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-subtle);
+    flex-wrap: wrap;
+  }
+
+  /* ── Lightbox Modal ────────────────────────────────────────────────────── */
+  .pf-lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 15, 30, 0.92);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+  .pf-lightbox.active {
+    display: flex;
+    opacity: 1;
+  }
+  .pf-lightbox-card {
+    max-width: 900px;
+    max-height: 90vh;
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
-    border-radius: 16px;
-    padding: 28px;
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    position: relative;
   }
-  .upload-title {
-    font-size: 1rem;
+  .pf-lightbox-img {
+    max-height: 65vh;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    background: #0B0F19;
+  }
+  .pf-lightbox-body {
+    padding: 18px 24px;
+    background: var(--bg-card);
+  }
+  .pf-lightbox-title {
+    font-size: 1.15rem;
     font-weight: 700;
     color: var(--text-1);
-    margin-bottom: 20px;
+    margin: 0 0 6px;
   }
-  .form-group { margin-bottom: 18px; }
-  .form-label {
-    display: block;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-1);
-    margin-bottom: 6px;
+  .pf-lightbox-desc {
+    font-size: 0.88rem;
+    color: var(--text-2);
+    margin: 0;
+    line-height: 1.5;
   }
-  .form-control {
-    width: 100%;
-    padding: 10px 14px;
-    background: var(--bg-base);
-    border: 1px solid var(--border-subtle);
-    border-radius: 8px;
-    color: var(--text-1);
-    font-size: 0.9rem;
-  }
-  .form-control:focus {
-    outline: none;
-    border-color: #8b5cf6;
-    box-shadow: 0 0 0 3px rgba(139,92,246,.15);
-  }
-  .btn-add {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 11px 28px;
-    background: #8b5cf6;
-    color: #fff;
+  .pf-lightbox-close {
+    position: absolute;
+    top: 14px; right: 14px;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.7);
+    color: #ffffff;
     border: none;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
     cursor: pointer;
-    transition: background .2s;
+    transition: background 0.15s ease;
+    z-index: 5;
   }
-  .btn-add:hover { background: #7c3aed; }
-  .empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--text-3);
+  .pf-lightbox-close:hover { background: #EF4444; }
+
+  /* ── Responsive adjustments ────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .pf-header-top { flex-direction: column; }
+    .pf-header-actions { width: 100%; }
+    .pf-header-actions .pf-btn { flex: 1; text-align: center; }
+    .pf-type-picker { grid-template-columns: 1fr; }
+    .pf-field-row-2 { grid-template-columns: 1fr; }
   }
-  .empty-state i { font-size: 2.5rem; margin-bottom: 14px; color: var(--border-subtle); display: block; }
+
+  @media (max-width: 600px) {
+    .pf-grid { grid-template-columns: 1fr; }
+    .pf-strength-bar { flex-direction: column; align-items: flex-start; }
+    .pf-strength-meter { width: 100%; }
+    .pf-toolbar { flex-direction: column; align-items: stretch; }
+    .pf-tabs { width: 100%; }
+    .pf-tab { flex: 1; justify-content: center; }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="portfolio-wrap">
-  <div class="page-header">
-    <h1><i class="fas fa-briefcase" style="color:#8b5cf6;margin-right:8px;"></i> My Portfolio</h1>
-    <a href="{% url 'digital:dashboard' %}" style="color:var(--text-3);font-size:.85rem;">
-      <i class="fas fa-arrow-left"></i> Back to Dashboard
-    </a>
-  </div>
+<div class="pf-page">
+<div class="pf-container">
 
+  {# ── Breadcrumb ─── #}
+  <nav class="pf-crumb" aria-label="Breadcrumb">
+    <a href="{% url 'digital:dashboard' %}"><i class="fas fa-th-large" style="margin-right:4px;"></i> Dashboard</a>
+    <i class="fas fa-chevron-right"></i>
+    <span style="color:var(--text-1);font-weight:600;">My Portfolio</span>
+  </nav>
+
+  {# ── Top Flash Messages ─── #}
   {% if messages %}
-    {% for msg in messages %}
-      <div class="alert alert-{{ msg.tags }}" style="margin-bottom:16px;">{{ msg }}</div>
-    {% endfor %}
+    <div style="margin-bottom: 24px;">
+      {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert"
+             style="border-radius:var(--r-md);font-size:0.9rem;border-left:4px solid {% if msg.tags == 'success' %}#10B981{% elif msg.tags == 'error' %}#EF4444{% else %}#4F46E5{% endif %};">
+          <i class="fas {% if msg.tags == 'success' %}fa-check-circle{% elif msg.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}" style="margin-right:8px;"></i>
+          {{ msg }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    </div>
   {% endif %}
 
-  {# ── Existing items ──────────────────────────────────────────── #}
-  {% if portfolio_items %}
-    <div class="portfolio-grid">
-      {% for item in portfolio_items %}
-        <div class="portfolio-card" id="item-{{ item.pk }}">
-          {% if item.image %}
-            <img src="{{ item.image.url }}" alt="{{ item.title }}" class="portfolio-thumb">
-          {% elif item.demo_url %}
-            <div class="portfolio-no-thumb">
-              <i class="fas fa-external-link-alt"></i>
-            </div>
-          {% else %}
-            <div class="portfolio-no-thumb">
-              <i class="fas fa-image"></i>
-            </div>
-          {% endif %}
+  {# ── Header Banner ─── #}
+  <div class="pf-header">
+    <div class="pf-header-top">
+      <div class="pf-title-wrap">
+        <div class="pf-badge-pill">
+          <i class="fas fa-briefcase"></i> Project Showcase
+        </div>
+        <h1 class="pf-title">My Digital Portfolio</h1>
+        <p class="pf-subtitle">
+          Add screenshots, Figma prototypes, GitHub repositories, live websites, and video walkthroughs to win projects from verified clients.
+        </p>
+      </div>
 
-          <div class="portfolio-body">
-            <div class="portfolio-title">{{ item.title }}</div>
-            {% if item.description %}
-              <div class="portfolio-desc">{{ item.description }}</div>
+      <div class="pf-header-actions">
+        <a href="#add-project" class="pf-btn pf-btn-primary" onclick="focusAddProject(event)">
+          <i class="fas fa-plus"></i> Add New Project
+        </a>
+        <a href="{% url 'digital:public_profile' profile.user.username %}" target="_blank" class="pf-btn pf-btn-secondary" title="View how employers see your portfolio">
+          <i class="fas fa-eye"></i> View Public Profile
+        </a>
+      </div>
+    </div>
+
+    {# Profile impact banner #}
+    <div class="pf-strength-bar">
+      <div class="pf-strength-icon">
+        <i class="fas fa-chart-line"></i>
+      </div>
+      <div class="pf-strength-info">
+        <strong>Portfolio Impact:</strong> Profiles with 3+ live work samples receive <strong>300% more proposals and direct interview requests</strong> on TradeLink NG.
+      </div>
+      <div class="pf-strength-meter">
+        <div class="pf-meter-track">
+          <div class="pf-meter-fill" style="width: {{ profile.profile_completion }}%;"></div>
+        </div>
+        <span class="pf-meter-text">{{ profile.profile_completion }}%</span>
+      </div>
+    </div>
+  </div>
+
+  {# ── Filter Toolbar ─── #}
+  {% if items %}
+  <div class="pf-toolbar">
+    <div class="pf-tabs">
+      <button class="pf-tab active" onclick="filterPortfolio('all', this)">
+        <i class="fas fa-layer-group"></i> All Projects
+        <span class="pf-tab-count">{{ items.count }}</span>
+      </button>
+      <button class="pf-tab" onclick="filterPortfolio('image', this)">
+        <i class="fas fa-image"></i> Images / Designs
+        <span class="pf-tab-count" id="count-image">0</span>
+      </button>
+      <button class="pf-tab" onclick="filterPortfolio('link', this)">
+        <i class="fas fa-link"></i> Live Links
+        <span class="pf-tab-count" id="count-link">0</span>
+      </button>
+      <button class="pf-tab" onclick="filterPortfolio('video', this)">
+        <i class="fas fa-play"></i> Videos
+        <span class="pf-tab-count" id="count-video">0</span>
+      </button>
+    </div>
+
+    <div style="font-size:0.84rem;color:var(--text-3);">
+      Showing <strong style="color:var(--text-1);" id="visible-count">{{ items.count }}</strong> item{{ items.count|pluralize }}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Portfolio Cards Grid ─── #}
+  {% if items %}
+    <div class="pf-grid" id="portfolioGrid">
+      {% for item in items %}
+        <div class="pf-card" data-type="{{ item.item_type }}" id="item-{{ item.pk }}">
+          {# Card Media #}
+          <div class="pf-card-media">
+            {# Tag #}
+            {% if item.item_type == 'image' %}
+              <span class="pf-card-type-tag tag-image"><i class="fas fa-image"></i> Design</span>
+            {% elif item.item_type == 'video' %}
+              <span class="pf-card-type-tag tag-video"><i class="fas fa-video"></i> Video</span>
+            {% else %}
+              <span class="pf-card-type-tag tag-link"><i class="fas fa-link"></i> Live Link</span>
+            {% endif %}
+
+            {% if item.display_order %}
+              <span class="pf-card-order-tag" title="Display Order: {{ item.display_order }}">{{ item.display_order }}</span>
+            {% endif %}
+
+            {# Preview or Image #}
+            {% if item.image %}
+              <img src="{{ item.image.url }}" alt="{{ item.title }}" class="pf-card-img"
+                   onclick="openLightbox('{{ item.image.url }}', '{{ item.title|escapejs }}', '{{ item.description|escapejs }}')">
+              <div class="pf-media-overlay">
+                <button type="button" class="pf-overlay-btn" title="View Full Image"
+                        onclick="openLightbox('{{ item.image.url }}', '{{ item.title|escapejs }}', '{{ item.description|escapejs }}')">
+                  <i class="fas fa-search-plus"></i>
+                </button>
+                {% if item.external_url %}
+                  <a href="{{ item.external_url }}" target="_blank" rel="noopener noreferrer" class="pf-overlay-btn" title="Open Project URL">
+                    <i class="fas fa-external-link-alt"></i>
+                  </a>
+                {% endif %}
+              </div>
+            {% elif item.item_type == 'video' %}
+              <div class="pf-card-placeholder video-type">
+                <i class="fas fa-play-circle"></i>
+                <span style="font-size:0.8rem;font-weight:700;">Video Showcase</span>
+              </div>
+              {% if item.external_url %}
+                <div class="pf-media-overlay">
+                  <a href="{{ item.external_url }}" target="_blank" rel="noopener noreferrer" class="pf-overlay-btn" title="Watch Video">
+                    <i class="fas fa-play"></i>
+                  </a>
+                </div>
+              {% endif %}
+            {% else %}
+              <div class="pf-card-placeholder">
+                <i class="fas fa-globe"></i>
+                <span style="font-size:0.8rem;font-weight:700;">Live Web Project</span>
+              </div>
+              {% if item.external_url %}
+                <div class="pf-media-overlay">
+                  <a href="{{ item.external_url }}" target="_blank" rel="noopener noreferrer" class="pf-overlay-btn" title="Open Live URL">
+                    <i class="fas fa-external-link-alt"></i>
+                  </a>
+                </div>
+              {% endif %}
             {% endif %}
           </div>
 
-          <div class="portfolio-actions">
-            {% if item.demo_url %}
-              <a href="{{ item.demo_url }}" target="_blank" class="btn-sm btn-sm-outline">
-                <i class="fas fa-external-link-alt"></i> View
-              </a>
+          {# Card Body #}
+          <div class="pf-card-body">
+            <h3 class="pf-card-title">{{ item.title }}</h3>
+            {% if item.description %}
+              <p class="pf-card-desc">{{ item.description }}</p>
+            {% else %}
+              <p class="pf-card-desc" style="color:var(--text-3);font-style:italic;">No description provided.</p>
             {% endif %}
-            <form method="post" action="{% url 'digital:portfolio_delete' item.pk %}"
-                  style="margin-left:auto;"
-                  onsubmit="return confirm('Delete this portfolio item?')">
-              {% csrf_token %}
-              <button type="submit" class="btn-sm btn-sm-danger">
-                <i class="fas fa-trash"></i> Delete
-              </button>
-            </form>
+
+            <div class="pf-card-footer">
+              {% if item.external_url %}
+                <a href="{{ item.external_url }}" target="_blank" rel="noopener noreferrer" class="pf-link-btn">
+                  <span>Visit Link</span> <i class="fas fa-external-link-alt" style="font-size:0.75rem;"></i>
+                </a>
+              {% elif item.image %}
+                <a href="javascript:void(0)" class="pf-link-btn" onclick="openLightbox('{{ item.image.url }}', '{{ item.title|escapejs }}', '{{ item.description|escapejs }}')">
+                  <span>Preview Image</span> <i class="fas fa-expand" style="font-size:0.75rem;"></i>
+                </a>
+              {% else %}
+                <span></span>
+              {% endif %}
+
+              <form method="post" action="{% url 'digital:portfolio_delete' item.pk %}"
+                    onsubmit="return confirm('Are you sure you want to remove &quot;{{ item.title|escapejs }}&quot; from your portfolio?')">
+                {% csrf_token %}
+                <button type="submit" class="pf-delete-btn" title="Remove piece">
+                  <i class="fas fa-trash-alt"></i> Delete
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       {% endfor %}
     </div>
   {% else %}
-    <div class="empty-state">
-      <i class="fas fa-images"></i>
-      <p style="font-size:1rem;font-weight:600;color:var(--text-1);margin-bottom:6px;">No portfolio items yet</p>
-      <p>Add samples of your work below — projects, designs, screenshots, or links.</p>
+    {# ── Empty State ─── #}
+    <div class="pf-empty">
+      <div class="pf-empty-icon">
+        <i class="fas fa-folder-plus"></i>
+      </div>
+      <h3 class="pf-empty-title">Your portfolio is currently empty</h3>
+      <p class="pf-empty-text">
+        High-performing digital workers in Nigeria showcase at least 3-5 work samples. Upload designs, screenshots, or link directly to your Behance, GitHub, live sites, or YouTube walkthroughs.
+      </p>
+      <div class="pf-empty-tags">
+        <span class="pf-empty-tag"><i class="fas fa-palette" style="color:var(--pf-indigo);margin-right:4px;"></i> UI/UX Case Studies</span>
+        <span class="pf-empty-tag"><i class="fas fa-code" style="color:var(--pf-cyan);margin-right:4px;"></i> GitHub & Repos</span>
+        <span class="pf-empty-tag"><i class="fas fa-laptop" style="color:#10B981;margin-right:4px;"></i> Deployed Web Apps</span>
+        <span class="pf-empty-tag"><i class="fas fa-video" style="color:var(--pf-rose);margin-right:4px;"></i> Video Demos</span>
+      </div>
+      <a href="#add-project" class="pf-btn pf-btn-primary" onclick="focusAddProject(event)">
+        <i class="fas fa-plus"></i> Upload Your First Project
+      </a>
     </div>
   {% endif %}
 
-  {# ── Upload form ─────────────────────────────────────────────── #}
-  <div class="upload-card">
-    <div class="upload-title"><i class="fas fa-plus-circle" style="color:#8b5cf6;margin-right:8px;"></i>Add Portfolio Item</div>
+  {# ── Add New Project Card ─── #}
+  <div class="pf-form-card" id="add-project">
+    <div class="pf-form-header">
+      <div class="pf-form-icon">
+        <i class="fas fa-cloud-upload-alt"></i>
+      </div>
+      <div>
+        <h2 class="pf-form-title">Add New Portfolio Project</h2>
+        <p class="pf-form-sub">Upload screenshots or paste external links to showcase your best digital work.</p>
+      </div>
+    </div>
 
-    <form method="post" enctype="multipart/form-data" novalidate>
+    <form method="post" enctype="multipart/form-data" novalidate id="portfolioForm">
       {% csrf_token %}
 
-      <div class="form-group">
-        <label class="form-label">Title <span style="color:#f87171;">*</span></label>
-        <input type="text" name="{{ form.title.html_name }}"
-               class="form-control"
-               value="{{ form.title.value|default:'' }}"
-               placeholder="e.g. E-commerce Website for Fashion Brand"
-               maxlength="200">
-        {% for err in form.title.errors %}
-          <div style="font-size:.78rem;color:#f87171;margin-top:4px;">{{ err }}</div>
-        {% endfor %}
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Description</label>
-        <textarea name="{{ form.description.html_name }}" class="form-control" rows="3"
-                  placeholder="Briefly describe what you built, your role, and the outcome.">{{ form.description.value|default:'' }}</textarea>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="form-group">
-          <label class="form-label">Image / Screenshot</label>
-          <input type="file" name="{{ form.image.html_name }}" class="form-control"
-                 accept="image/*">
+      {# Item Type Picker #}
+      <label class="pf-label">What type of work are you adding? <span class="req">*</span></label>
+      <div class="pf-type-picker">
+        <div class="pf-type-option selected" data-type="image" onclick="selectType('image')">
+          <div class="pf-type-icon"><i class="fas fa-image"></i></div>
+          <div>
+            <div class="pf-type-label-main">Image / Design</div>
+            <div class="pf-type-label-sub">PNG, JPG, WebP artwork</div>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Live Demo / Project URL</label>
-          <input type="url" name="{{ form.demo_url.html_name }}" class="form-control"
-                 value="{{ form.demo_url.value|default:'' }}"
-                 placeholder="https://project-demo.com">
+
+        <div class="pf-type-option" data-type="link" onclick="selectType('link')">
+          <div class="pf-type-icon"><i class="fas fa-link"></i></div>
+          <div>
+            <div class="pf-type-label-main">Project / Web Link</div>
+            <div class="pf-type-label-sub">Behance, GitHub, Live app</div>
+          </div>
+        </div>
+
+        <div class="pf-type-option" data-type="video" onclick="selectType('video')">
+          <div class="pf-type-icon"><i class="fas fa-video"></i></div>
+          <div>
+            <div class="pf-type-label-main">Video Demo</div>
+            <div class="pf-type-label-sub">YouTube or Vimeo link</div>
+          </div>
         </div>
       </div>
 
-      <button type="submit" class="btn-add">
-        <i class="fas fa-plus"></i> Add to Portfolio
-      </button>
+      {# Hidden native select that matches form #}
+      <div style="display:none;">
+        {{ form.item_type }}
+      </div>
+
+      {# Title #}
+      <div class="pf-field">
+        <label class="pf-label" for="id_title">Project Title <span class="req">*</span></label>
+        {{ form.title }}
+        {% if form.title.errors %}
+          <div class="pf-field-error"><i class="fas fa-exclamation-circle"></i> {{ form.title.errors.0 }}</div>
+        {% endif %}
+      </div>
+
+      {# Description #}
+      <div class="pf-field">
+        <label class="pf-label" for="id_description">Project Description <span class="opt">(Optional but recommended)</span></label>
+        {{ form.description }}
+        <div class="pf-field-help">Highlight tools used (e.g. Figma, React, Python), your core deliverables, and project metrics.</div>
+        {% if form.description.errors %}
+          <div class="pf-field-error"><i class="fas fa-exclamation-circle"></i> {{ form.description.errors.0 }}</div>
+        {% endif %}
+      </div>
+
+      {# Dynamic Dropzone & URL Row #}
+      <div class="pf-field-row-2">
+        {# Image Upload Area #}
+        <div class="pf-field" id="imageFieldWrap">
+          <label class="pf-label" id="imageLabel">
+            Project Screenshot / Banner <span class="req" id="imageReqStar">*</span>
+          </label>
+          <div class="pf-dropzone" id="dropzone">
+            <input type="file" name="image" id="id_image" accept="image/*" onchange="handleFileSelect(this)">
+            <i class="fas fa-cloud-upload-alt pf-drop-icon"></i>
+            <div class="pf-drop-text" id="dropText">Click or drag &amp; drop screenshot here</div>
+            <div class="pf-drop-sub">Supports PNG, JPG, WebP, GIF (Max 10MB)</div>
+          </div>
+
+          <div class="pf-preview-box" id="previewBox">
+            <img src="" id="previewImg" class="pf-preview-img" alt="Preview">
+            <button type="button" class="pf-preview-remove" onclick="removeImageFile()" title="Remove image">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          {% if form.image.errors %}
+            <div class="pf-field-error"><i class="fas fa-exclamation-circle"></i> {{ form.image.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        {# External URL Input #}
+        <div class="pf-field" id="urlFieldWrap">
+          <label class="pf-label" id="urlLabel">
+            Live URL / Demo Link <span class="opt" id="urlOptNote">(Optional for images)</span>
+          </label>
+          {{ form.external_url }}
+          <div class="pf-field-help" id="urlHelpText">
+            Paste link to Behance case study, GitHub repository, Figma prototype, or live website.
+          </div>
+          {% if form.external_url.errors %}
+            <div class="pf-field-error"><i class="fas fa-exclamation-circle"></i> {{ form.external_url.errors.0 }}</div>
+          {% endif %}
+
+          {# Display Order in same column #}
+          <div style="margin-top: 18px;">
+            <label class="pf-label" for="id_display_order">Display Priority <span class="opt">(0 = Highest priority)</span></label>
+            {{ form.display_order }}
+            <div class="pf-field-help">Controls position on your public card: lower numbers appear first.</div>
+          </div>
+        </div>
+      </div>
+
+      {# Form Actions #}
+      <div class="pf-form-actions">
+        <button type="submit" class="pf-btn pf-btn-primary" style="padding: 12px 28px; font-size: 0.95rem;">
+          <i class="fas fa-check"></i> Save Project to Portfolio
+        </button>
+        <button type="reset" class="pf-btn pf-btn-secondary" onclick="resetPortfolioForm()">
+          <i class="fas fa-undo"></i> Reset Form
+        </button>
+      </div>
     </form>
   </div>
+
 </div>
+</div>
+
+{# ── Image Lightbox Modal ─── #}
+<div class="pf-lightbox" id="pfLightbox" onclick="closeLightbox(event)">
+  <div class="pf-lightbox-card" onclick="event.stopPropagation()">
+    <button type="button" class="pf-lightbox-close" onclick="closeLightbox()" title="Close">
+      <i class="fas fa-times"></i>
+    </button>
+    <img src="" id="lightboxImg" class="pf-lightbox-img" alt="Enlarged project view">
+    <div class="pf-lightbox-body">
+      <h4 id="lightboxTitle" class="pf-lightbox-title"></h4>
+      <p id="lightboxDesc" class="pf-lightbox-desc"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── 1. Count categories on load ───────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.pf-card');
+    let imgCount = 0, linkCount = 0, videoCount = 0;
+    cards.forEach(card => {
+      const type = card.dataset.type;
+      if (type === 'image') imgCount++;
+      else if (type === 'link') linkCount++;
+      else if (type === 'video') videoCount++;
+    });
+
+    const elImg = document.getElementById('count-image');
+    const elLink = document.getElementById('count-link');
+    const elVideo = document.getElementById('count-video');
+    if (elImg) elImg.textContent = imgCount;
+    if (elLink) elLink.textContent = linkCount;
+    if (elVideo) elVideo.textContent = videoCount;
+
+    // Check if form had previous selection from validation
+    const nativeSelect = document.getElementById('id_item_type');
+    if (nativeSelect && nativeSelect.value) {
+      selectType(nativeSelect.value);
+    } else {
+      selectType('image');
+    }
+
+    // Drag and drop events
+    const dropzone = document.getElementById('dropzone');
+    if (dropzone) {
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, e => {
+          e.preventDefault();
+          dropzone.classList.add('dragover');
+        });
+      });
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, e => {
+          e.preventDefault();
+          dropzone.classList.remove('dragover');
+        });
+      });
+    }
+  });
+
+  // ── 2. Type Selector Interaction ──────────────────────────────────────────
+  function selectType(type) {
+    // Update visual pills
+    document.querySelectorAll('.pf-type-option').forEach(el => {
+      if (el.dataset.type === type) {
+        el.classList.add('selected');
+      } else {
+        el.classList.remove('selected');
+      }
+    });
+
+    // Update form select
+    const nativeSelect = document.getElementById('id_item_type');
+    if (nativeSelect) nativeSelect.value = type;
+
+    // Adjust UI prompts
+    const imageReq = document.getElementById('imageReqStar');
+    const urlOpt = document.getElementById('urlOptNote');
+    const urlHelp = document.getElementById('urlHelpText');
+    const extInput = document.getElementById('id_external_url');
+
+    if (type === 'image') {
+      if (imageReq) imageReq.style.display = 'inline';
+      if (urlOpt) urlOpt.textContent = '(Optional project or demo link)';
+      if (urlHelp) urlHelp.textContent = 'Optional: Link to live project, Figma file, or Behance post.';
+      if (extInput) extInput.placeholder = 'https://... (Optional)';
+    } else if (type === 'video') {
+      if (imageReq) imageReq.style.display = 'none';
+      if (urlOpt) urlOpt.innerHTML = '<span style="color:var(--pf-rose);">* Required video URL</span>';
+      if (urlHelp) urlHelp.textContent = 'Paste YouTube, Loom, or Vimeo video URL.';
+      if (extInput) extInput.placeholder = 'https://youtu.be/... or https://vimeo.com/...';
+    } else {
+      // link
+      if (imageReq) imageReq.style.display = 'none';
+      if (urlOpt) urlOpt.innerHTML = '<span style="color:var(--pf-rose);">* Required URL</span>';
+      if (urlHelp) urlHelp.textContent = 'Paste link to deployed web app, GitHub repo, or Behance portfolio.';
+      if (extInput) extInput.placeholder = 'https://github.com/... or https://yourproject.com';
+    }
+  }
+
+  // ── 3. File Preview ───────────────────────────────────────────────────────
+  function handleFileSelect(input) {
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('previewImg').src = e.target.result;
+        document.getElementById('previewBox').style.display = 'block';
+        document.getElementById('dropzone').style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function removeImageFile() {
+    const input = document.getElementById('id_image');
+    if (input) input.value = '';
+    document.getElementById('previewBox').style.display = 'none';
+    document.getElementById('dropzone').style.display = 'block';
+  }
+
+  function resetPortfolioForm() {
+    removeImageFile();
+    selectType('image');
+  }
+
+  // ── 4. Client-side Filter Tabs ────────────────────────────────────────────
+  function filterPortfolio(filter, btn) {
+    document.querySelectorAll('.pf-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+
+    const cards = document.querySelectorAll('.pf-card');
+    let count = 0;
+    cards.forEach(card => {
+      const type = card.dataset.type;
+      if (filter === 'all' || type === filter) {
+        card.style.display = 'flex';
+        count++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+    const visibleCount = document.getElementById('visible-count');
+    if (visibleCount) visibleCount.textContent = count;
+  }
+
+  // ── 5. Lightbox Modal ─────────────────────────────────────────────────────
+  function openLightbox(imgUrl, title, desc) {
+    document.getElementById('lightboxImg').src = imgUrl;
+    document.getElementById('lightboxTitle').textContent = title || 'Portfolio Project';
+    document.getElementById('lightboxDesc').textContent = desc || '';
+    const lb = document.getElementById('pfLightbox');
+    lb.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    const lb = document.getElementById('pfLightbox');
+    lb.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeLightbox();
+  });
+
+  // ── 6. Focus CTA ──────────────────────────────────────────────────────────
+  function focusAddProject(e) {
+    e.preventDefault();
+    const el = document.getElementById('add-project');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+      setTimeout(() => {
+        const titleInput = document.getElementById('id_title');
+        if (titleInput) titleInput.focus();
+      }, 500);
+    }
+  }
+</script>
 {% endblock %}

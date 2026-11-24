@@ -26,10 +26,10 @@
   }
   .gf-title-icon {
     width: 40px; height: 40px; border-radius: 11px;
-    background: rgba(139,92,246,.12);
-    border: 1px solid rgba(139,92,246,.2);
+    background: rgba(79, 70, 229, .12);
+    border: 1px solid rgba(79, 70, 229, .2);
     display: flex; align-items: center; justify-content: center;
-    color: #8b5cf6; font-size: 1rem; flex-shrink: 0;
+    color: #4F46E5; font-size: 1rem; flex-shrink: 0;
   }
   .gf-sub { color: var(--text-2); font-size: 0.9rem; margin-bottom: 28px; }
 
@@ -82,8 +82,8 @@
   }
   .gf-control:focus, .gf-textarea:focus, .gf-select:focus {
     outline: none;
-    border-color: #8b5cf6;
-    box-shadow: 0 0 0 3px rgba(139,92,246,.12);
+    border-color: #4F46E5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, .12);
   }
   .gf-textarea { resize: vertical; }
   .gf-help { font-size: 0.78rem; color: var(--text-3); margin-top: 5px; }
@@ -231,6 +231,21 @@
           <label class="gf-label">Application Deadline</label>
           {{ form.deadline }}
         </div>
+      </div>
+
+      {# External Application URL (optional) #}
+      <div class="gf-group" style="background: rgba(6,182,212,.04); border: 1px dashed rgba(6,182,212,.3); border-radius: var(--r-lg); padding: 16px 18px;">
+        <label class="gf-label" style="display:flex;align-items:center;gap:6px;">
+          <i class="fas fa-external-link-alt" style="color:#06B6D4;"></i>
+          <span>External Application URL</span>
+          <span style="font-weight:400;color:var(--text-3);font-size:0.8rem;">(Optional)</span>
+        </label>
+        {{ form.external_url }}
+        <div class="gf-help" style="color:var(--text-2);margin-top:6px;line-height:1.5;">
+          <strong>Have an external job link?</strong> Enter the full URL here (e.g., <code>https://company.com/careers/apply</code>). Applicants will be directed to apply on your website instead of within TradeLink NG.
+          <br><span style="color:var(--text-3);">Leave this field empty if you want digital workers to submit their proposals directly through this platform.</span>
+        </div>
+        {% if form.external_url.errors %}<div class="gf-error">{{ form.external_url.errors.0 }}</div>{% endif %}
       </div>
 
       {# Status #}

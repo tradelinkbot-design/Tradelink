@@ -1,0 +1,462 @@
+{% extends "base.html" %}
+{% comment %}
+  digital_skills/dg_base.html
+  ───────────────────────────
+  Shared shell for every Digital Skills page. Sits on top of base.html and
+  reuses its tokens (amber platform, Fraunces + Outfit, light/dark theme).
+  Violet is the section accent. Every class here is prefixed dg- so nothing
+  collides with base.html (its <style> loads AFTER extra_head, so any
+  un-prefixed class such as .btn-sm or .form-control would be overridden).
+
+  Child templates override:
+    {% block title %}       page title
+    {% block dg_head %}     page-specific <style>
+    {% block dg_content %}  page body (inside <main class="dg">)
+    {% block dg_scripts %}  page-specific <script>
+{% endcomment %}
+
+{% block extra_head %}
+<style>
+/* =====================================================================
+   TOKENS
+   ===================================================================== */
+.dg {
+  --dg-ink:        #0F172A;
+  --dg-ink-2:      #1E293B;
+  --dg-v:          #4F46E5;
+  --dg-v-hover:    #4338CA;
+  --dg-v-soft:     rgba(79,70,229,.10);
+  --dg-v-line:     rgba(79,70,229,.28);
+  --dg-on-ink:     #F7F3FF;
+  --dg-on-ink-2:   rgba(247,243,255,.76);
+  --dg-on-ink-3:   rgba(247,243,255,.52);
+  --dg-glass:      rgba(255,255,255,.08);
+  --dg-glass-line: rgba(255,255,255,.2);
+  --dg-red:        #DC2626;
+  --dg-danger-bg:  #DC2626;
+  --dg-danger-fg:  #FFFFFF;
+
+  --st-pending-fg:     #92400E; --st-pending-bg:     rgba(217,119,6,.13);
+  --st-shortlisted-fg: #075985; --st-shortlisted-bg: rgba(2,132,199,.12);
+  --st-hired-fg:       #065F46; --st-hired-bg:       rgba(5,150,105,.13);
+  --st-rejected-fg:    #991B1B; --st-rejected-bg:    rgba(220,38,38,.10);
+  --st-withdrawn-fg:   #57534E; --st-withdrawn-bg:   rgba(120,113,108,.14);
+
+  position: relative;
+  z-index: 1;
+  padding-top: var(--nav-h);
+  min-height: 70vh;
+  color: var(--text-1);
+}
+[data-theme="dark"] .dg {
+  --dg-ink:        #0B0F19;
+  --dg-ink-2:      #111827;
+  --dg-v:          #818CF8;
+  --dg-v-hover:    #A5B4FC;
+  --dg-v-soft:     rgba(129,140,248,.14);
+  --dg-v-line:     rgba(129,140,248,.32);
+  --dg-red:        #F87171;
+  --dg-danger-bg:  #F87171;
+  --dg-danger-fg:  #1C0505;
+
+  --st-pending-fg:     #FCD34D; --st-pending-bg:     rgba(245,158,11,.15);
+  --st-shortlisted-fg: #7DD3FC; --st-shortlisted-bg: rgba(56,189,248,.14);
+  --st-hired-fg:       #6EE7B7; --st-hired-bg:       rgba(16,185,129,.15);
+  --st-rejected-fg:    #FCA5A5; --st-rejected-bg:    rgba(248,113,113,.14);
+  --st-withdrawn-fg:   #A8A29E; --st-withdrawn-bg:   rgba(168,162,158,.15);
+}
+
+/* Anchors in base.html are un-reset; :where() keeps this at zero specificity
+   so .btn / .btn-primary colours still win. */
+:where(.dg) a { color: inherit; text-decoration: none; }
+:where(.dg) ul, :where(.dg) ol { list-style: none; }
+.dg button { font: inherit; color: inherit; }
+.dg :focus-visible { outline: 2px solid var(--dg-v); outline-offset: 2px; }
+
+.dg-sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* =====================================================================
+   MASTHEAD  — the one loud element. Deep violet ink under the nav,
+   everything below it stays quiet paper.
+   ===================================================================== */
+.dg-mast {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--dg-ink);
+  color: var(--dg-on-ink);
+}
+.dg-mast::before {                       /* faint pixel grid: it's a digital craft */
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background-image: radial-gradient(rgba(255,255,255,.15) 1px, transparent 1.3px);
+  background-size: 22px 22px;
+  -webkit-mask-image: linear-gradient(115deg, transparent 25%, #000 95%);
+          mask-image: linear-gradient(115deg, transparent 25%, #000 95%);
+}
+.dg-mast::after {                        /* one soft glow, top right */
+  content: ''; position: absolute; z-index: -1;
+  right: -8%; top: -70%; width: min(640px, 80vw); height: min(640px, 80vw);
+  background: radial-gradient(closest-side, rgba(79,70,229,.42), transparent);
+  pointer-events: none;
+}
+.dg-mast-inner {
+  max-width: 1200px; margin: 0 auto;
+  padding: clamp(28px,5vw,56px) clamp(16px,4vw,48px) clamp(32px,5vw,56px);
+}
+.dg-mast--tight .dg-mast-inner { padding-block: clamp(24px,4vw,40px); }
+.dg-mast h1 {
+  font-family: 'Fraunces', serif; font-weight: 800; letter-spacing: -.02em;
+  line-height: 1.1; font-size: clamp(1.8rem, 4.6vw, 3rem);
+  color: var(--dg-on-ink); margin-bottom: 12px; text-wrap: balance;
+}
+.dg-mast--tight h1 { font-size: clamp(1.6rem, 3.6vw, 2.3rem); margin-bottom: 8px; }
+.dg-lead {
+  color: var(--dg-on-ink-2); font-size: clamp(.95rem, 1.8vw, 1.08rem);
+  line-height: 1.65; max-width: 58ch;
+}
+.dg-mast-row {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  flex-wrap: wrap; gap: 20px 28px;
+}
+.dg-mast-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.dg-crumb {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  font-size: .84rem; color: var(--dg-on-ink-3); margin-bottom: 20px;
+}
+.dg-crumb a { color: var(--dg-on-ink-2); }
+.dg-crumb a:hover { color: #fff; }
+.dg-crumb i { font-size: .6rem; }
+
+/* Buttons that live on the ink (base .btn-primary works there as-is) */
+.btn.dg-btn-glass {
+  background: var(--dg-glass); color: var(--dg-on-ink);
+  border: 1px solid var(--dg-glass-line);
+}
+.btn.dg-btn-glass:hover { background: rgba(255,255,255,.16); border-color: rgba(255,255,255,.34); }
+.btn.dg-btn-danger { background: var(--dg-danger-bg); color: var(--dg-danger-fg); }
+.btn.dg-btn-danger:hover { filter: brightness(1.08); }
+.btn.dg-btn-quiet-danger {
+  background: transparent; color: var(--dg-red);
+  border: 1px solid var(--border-subtle);
+}
+.btn.dg-btn-quiet-danger:hover { border-color: var(--dg-red); background: rgba(220,38,38,.07); }
+
+/* =====================================================================
+   LAYOUT PRIMITIVES
+   ===================================================================== */
+.dg-wrap { max-width: 1200px; margin: 0 auto; padding: 0 clamp(16px,4vw,48px); }
+.dg-body { padding-block: clamp(24px,4vw,40px) clamp(48px,8vw,96px); }
+
+.dg-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl);
+  min-width: 0;
+}
+.dg-panel-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 18px clamp(16px,3vw,24px);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.dg-panel-title {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Fraunces', serif; font-size: 1.08rem; font-weight: 700;
+  letter-spacing: -.01em; color: var(--text-1);
+}
+.dg-panel-title i { color: var(--dg-v); font-size: .88rem; }
+.dg-panel-body { padding: clamp(16px,3vw,24px); }
+.dg-link { color: var(--dg-v); font-size: .85rem; font-weight: 600; }
+.dg-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* =====================================================================
+   SMALL PARTS
+   ===================================================================== */
+.dg-chip {
+  display: inline-flex; align-items: center;
+  padding: 5px 13px; border-radius: var(--r-pill);
+  background: var(--dg-v-soft); border: 1px solid var(--dg-v-line);
+  color: var(--dg-v); font-size: .82rem; font-weight: 600; line-height: 1.3;
+}
+.dg-avatar {
+  --s: 48px;
+  width: var(--s); height: var(--s); flex-shrink: 0; border-radius: 50%;
+  object-fit: cover; display: grid; place-items: center;
+  background: linear-gradient(140deg, #4F46E5, #06B6D4);
+  color: #fff; font-family: 'Fraunces', serif; font-weight: 700;
+  font-size: calc(var(--s) * .42); line-height: 1;
+}
+.dg-status {
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  padding: 4px 11px; border-radius: var(--r-pill);
+  font-size: .76rem; font-weight: 600;
+  color: var(--st-fg); background: var(--st-bg);
+}
+.dg-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.dg-status--pending     { --st-fg: var(--st-pending-fg);     --st-bg: var(--st-pending-bg); }
+.dg-status--shortlisted { --st-fg: var(--st-shortlisted-fg); --st-bg: var(--st-shortlisted-bg); }
+.dg-status--hired       { --st-fg: var(--st-hired-fg);       --st-bg: var(--st-hired-bg); }
+.dg-status--rejected    { --st-fg: var(--st-rejected-fg);    --st-bg: var(--st-rejected-bg); }
+.dg-status--withdrawn   { --st-fg: var(--st-withdrawn-fg);   --st-bg: var(--st-withdrawn-bg); }
+
+.dg-avail { display: inline-flex; align-items: center; gap: 8px; font-size: .82rem; font-weight: 600; color: var(--text-2); }
+.dg-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--av); box-shadow: 0 0 0 3px var(--av-ring); flex-shrink: 0; }
+.dg-avail--available   { --av: #059669; --av-ring: rgba(5,150,105,.2); }
+.dg-avail--soon        { --av: #D97706; --av-ring: rgba(217,119,6,.2); }
+.dg-avail--busy        { --av: #EA580C; --av-ring: rgba(234,88,12,.2); }
+.dg-avail--unavailable { --av: #78716C; --av-ring: rgba(120,113,108,.2); }
+.dg-mast .dg-avail { color: var(--dg-on-ink); }
+
+/* Progress ring (SVG, pathLength=100 so the % maps straight to the dash) */
+.dg-ring { position: relative; width: var(--ring, 112px); height: var(--ring, 112px); flex-shrink: 0; }
+.dg-ring svg { display: block; width: 100%; height: 100%; transform: rotate(-90deg); }
+.dg-ring circle { fill: none; stroke-width: 8; }
+.dg-ring .track { stroke: var(--ring-track, rgba(255,255,255,.16)); }
+.dg-ring .bar { stroke: var(--ring-bar, #FBBF24); stroke-linecap: round; animation: dgRing 1.1s var(--ease) .15s both; }
+.dg-ring-num {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-family: 'Fraunces', serif; font-weight: 800; letter-spacing: -.02em;
+  font-size: calc(var(--ring, 112px) * .26); color: var(--ring-ink, var(--dg-on-ink));
+}
+@keyframes dgRing { from { stroke-dasharray: 0 100; } }
+
+/* Empty state */
+.dg-empty { text-align: center; padding: clamp(36px,7vw,64px) 24px; }
+.dg-empty-ico {
+  width: 64px; height: 64px; margin: 0 auto 18px; border-radius: 20px;
+  display: grid; place-items: center; font-size: 1.5rem;
+  background: var(--dg-v-soft); border: 1px solid var(--dg-v-line); color: var(--dg-v);
+}
+.dg-empty h2, .dg-empty h3 { font-family: 'Fraunces', serif; font-size: 1.28rem; font-weight: 700; margin-bottom: 6px; }
+.dg-empty p { color: var(--text-2); max-width: 42ch; margin: 0 auto 20px; font-size: .95rem; }
+
+/* Pagination */
+.dg-pager { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 32px; }
+.dg-page {
+  min-width: 40px; height: 40px; padding: 0 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border-subtle); border-radius: var(--r-md);
+  background: var(--bg-card); color: var(--text-2);
+  font-size: .88rem; font-weight: 600; transition: var(--t);
+}
+a.dg-page:hover { border-color: var(--dg-v-line); color: var(--dg-v); background: var(--dg-v-soft); }
+.dg-page.is-current { background: var(--dg-v); border-color: var(--dg-v); color: #fff; }
+[data-theme="dark"] .dg-page.is-current { color: #1B1033; }
+
+/* =====================================================================
+   FORMS
+   ===================================================================== */
+.dg-field { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.dg-label { display: flex; align-items: baseline; gap: 8px; font-size: .86rem; font-weight: 600; color: var(--text-1); }
+.dg-req { color: var(--dg-red); }
+.dg-opt { font-size: .76rem; font-weight: 400; color: var(--text-3); }
+.dg-help { font-size: .8rem; color: var(--text-3); line-height: 1.5; }
+.dg-error { display: flex; align-items: flex-start; gap: 6px; font-size: .8rem; color: var(--dg-red); line-height: 1.45; }
+.dg-error i { margin-top: 3px; font-size: .75rem; }
+
+.dg-input, .dg-field select, .dg-select {
+  width: 100%; min-width: 0; padding: 12px 14px;
+  background: var(--bg-base); color: var(--text-1);
+  border: 1px solid var(--border-subtle); border-radius: var(--r-md);
+  font: inherit; font-size: .95rem; line-height: 1.4;
+  transition: border-color .2s, box-shadow .2s;
+  outline: none; -webkit-appearance: none; appearance: none;
+}
+textarea.dg-input { resize: vertical; min-height: 120px; line-height: 1.6; }
+.dg-input::placeholder { color: var(--text-3); }
+.dg-input:hover, .dg-field select:hover, .dg-select:hover { border-color: var(--border-strong); }
+.dg-input:focus, .dg-field select:focus, .dg-select:focus {
+  border-color: var(--dg-v); box-shadow: 0 0 0 3px var(--dg-v-soft);
+}
+.dg-field.has-error .dg-input, .dg-field.has-error select { border-color: var(--dg-red); }
+
+.dg-field select, .dg-select {
+  padding-right: 40px; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%237C6040' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center;
+}
+[data-theme="dark"] .dg-field select, [data-theme="dark"] .dg-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23BFB29A' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.dg-field select option { color: #1C1009; background: #fff; }
+[data-theme="dark"] .dg-field select option { color: #FAF5EB; background: #181410; }
+
+.dg-field input[type="file"] {
+  width: 100%; padding: 10px; font: inherit; font-size: .88rem; color: var(--text-2);
+  background: var(--bg-base); border: 1px dashed var(--border-strong); border-radius: var(--r-md); cursor: pointer;
+}
+.dg-field input[type="file"]::file-selector-button {
+  margin-right: 12px; padding: 7px 14px; border: 0; border-radius: var(--r-sm);
+  background: var(--dg-v-soft); color: var(--dg-v); font: inherit; font-weight: 600; cursor: pointer;
+}
+
+.dg-affix { position: relative; display: block; }
+.dg-affix > span { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-3); font-weight: 600; pointer-events: none; }
+.dg-affix .dg-input { padding-left: 34px; }
+
+.dg-switch {
+  position: relative; display: flex; align-items: flex-start; gap: 14px;
+  padding: 14px 16px; background: var(--bg-base);
+  border: 1px solid var(--border-subtle); border-radius: var(--r-lg);
+  cursor: pointer; transition: border-color .2s;
+}
+.dg-switch:hover { border-color: var(--border-strong); }
+.dg-switch input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.dg-switch-track {
+  position: relative; flex-shrink: 0; width: 42px; height: 24px; margin-top: 1px;
+  border-radius: 99px; background: var(--border-strong); transition: background .2s;
+}
+.dg-switch-track::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px;
+  border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .2s var(--ease);
+}
+.dg-switch input:checked + .dg-switch-track { background: var(--dg-v); }
+.dg-switch input:checked + .dg-switch-track::after { transform: translateX(18px); }
+.dg-switch input:focus-visible + .dg-switch-track { outline: 2px solid var(--dg-v); outline-offset: 2px; }
+.dg-switch-text strong { display: block; font-size: .9rem; font-weight: 600; color: var(--text-1); line-height: 1.35; }
+.dg-switch-text small { display: block; margin-top: 2px; font-size: .8rem; color: var(--text-3); line-height: 1.45; }
+
+.dg-alert {
+  display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; margin-bottom: 20px;
+  border-radius: var(--r-lg); font-size: .9rem; line-height: 1.5;
+  background: rgba(220,38,38,.08); border: 1px solid rgba(220,38,38,.25); color: var(--text-1);
+}
+.dg-alert i { color: var(--dg-red); margin-top: 3px; }
+
+/* =====================================================================
+   TOASTS  (Django messages)
+   ===================================================================== */
+.dg-toasts {
+  position: fixed; z-index: 950;
+  top: calc(var(--nav-h) + 12px); right: clamp(12px,3vw,28px);
+  width: min(380px, calc(100vw - 24px));
+  display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+}
+.dg-toast {
+  --tc: var(--sky);
+  pointer-events: auto; display: flex; align-items: flex-start; gap: 12px;
+  padding: 13px 12px 13px 14px; font-size: .9rem; line-height: 1.5;
+  background: var(--bg-card); color: var(--text-1);
+  border: 1px solid var(--border-subtle); border-left: 4px solid var(--tc);
+  border-radius: var(--r-lg); box-shadow: var(--shadow-md);
+  animation: dgToastIn .38s var(--ease) both;
+}
+.dg-toast--success { --tc: var(--emerald); }
+.dg-toast--warning { --tc: var(--amber); }
+.dg-toast--error   { --tc: var(--dg-red); }
+.dg-toast > i { color: var(--tc); margin-top: 3px; }
+.dg-toast > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.dg-toast-x {
+  flex-shrink: 0; width: 26px; height: 26px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--text-3); cursor: pointer; transition: var(--t);
+}
+.dg-toast-x:hover { background: var(--surface-1); color: var(--text-1); }
+.dg-toast.is-leaving { opacity: 0; transform: translateX(16px); transition: opacity .25s, transform .25s; }
+@keyframes dgToastIn { from { opacity: 0; transform: translateY(-8px) scale(.98); } }
+
+/* =====================================================================
+   DIALOGS  (delete / withdraw confirmation, lightbox)
+   ===================================================================== */
+.dg-dialog {
+  width: calc(100% - 32px); max-width: 440px; padding: 0; margin: auto;
+  background: var(--bg-card); color: var(--text-1);
+  border: 1px solid var(--border-subtle); border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg);
+}
+.dg-dialog::backdrop { background: rgba(18,10,36,.6); backdrop-filter: blur(3px); }
+.dg-dialog-box { padding: 28px 26px 22px; }
+.dg-dialog-ico {
+  width: 48px; height: 48px; margin-bottom: 16px; border-radius: 14px;
+  display: grid; place-items: center; font-size: 1.1rem;
+  background: rgba(220,38,38,.1); color: var(--dg-red);
+}
+.dg-dialog h2 { font-family: 'Fraunces', serif; font-size: 1.25rem; font-weight: 700; margin-bottom: 6px; }
+.dg-dialog p { color: var(--text-2); font-size: .92rem; line-height: 1.6; }
+.dg-dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+
+@media (max-width: 480px) {
+  .dg-dialog-actions .btn { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dg *, .dg *::before, .dg *::after { animation-duration: .01ms !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
+}
+</style>
+{% block dg_head %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<main class="dg" id="main">
+
+  {% if messages %}
+    <div class="dg-toasts" role="region" aria-live="polite" aria-label="Notifications">
+      {% for message in messages %}
+        <div class="dg-toast dg-toast--{{ message.level_tag }}" role="status">
+          <i class="fas {% if message.level_tag == 'success' %}fa-circle-check{% elif message.level_tag == 'error' %}fa-circle-exclamation{% elif message.level_tag == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}" aria-hidden="true"></i>
+          <span>{{ message|cut:"✅ " }}</span>
+          <button type="button" class="dg-toast-x" aria-label="Dismiss"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% block dg_content %}{% endblock %}
+
+  {# One shared confirmation dialog. Any button with data-dg-confirm opens it. #}
+  <dialog class="dg-dialog" id="dgConfirm" aria-labelledby="dgConfirmTitle">
+    <form method="post" id="dgConfirmForm" class="dg-dialog-box">
+      {% csrf_token %}
+      <div class="dg-dialog-ico" aria-hidden="true"><i class="fas fa-triangle-exclamation"></i></div>
+      <h2 id="dgConfirmTitle">Are you sure?</h2>
+      <p id="dgConfirmMsg"></p>
+      <div class="dg-dialog-actions">
+        <button type="button" class="btn btn-ghost" data-dg-close>Cancel</button>
+        <button type="submit" class="btn dg-btn-danger" id="dgConfirmGo">Confirm</button>
+      </div>
+    </form>
+  </dialog>
+
+</main>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  // Toasts: dismiss on click, auto-hide everything except errors.
+  document.querySelectorAll('.dg-toast').forEach(function (t, i) {
+    function hide() { t.classList.add('is-leaving'); setTimeout(function () { t.remove(); }, 260); }
+    var x = t.querySelector('.dg-toast-x');
+    if (x) x.addEventListener('click', hide);
+    if (!t.classList.contains('dg-toast--error')) setTimeout(hide, 6500 + i * 600);
+  });
+
+  // Shared confirm dialog.
+  var dlg = document.getElementById('dgConfirm');
+  if (!dlg) return;
+  var form = document.getElementById('dgConfirmForm');
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-dg-confirm]');
+    if (b) {
+      e.preventDefault();
+      var action = b.getAttribute('data-action');
+      var title  = b.getAttribute('data-title')   || 'Are you sure?';
+      var msg    = b.getAttribute('data-message') || '';
+      var label  = b.getAttribute('data-label')   || 'Confirm';
+      form.setAttribute('action', action);
+      if (typeof dlg.showModal !== 'function') {          // very old browsers
+        if (window.confirm(title + (msg ? '\n\n' + msg : ''))) form.submit();
+        return;
+      }
+      document.getElementById('dgConfirmTitle').textContent = title;
+      document.getElementById('dgConfirmMsg').textContent   = msg;
+      document.getElementById('dgConfirmGo').textContent    = label;
+      dlg.showModal();
+      return;
+    }
+    if (e.target.closest('[data-dg-close]') || e.target === dlg) dlg.close();
+  });
+})();
+</script>
+{% block dg_scripts %}{% endblock %}
+{% endblock %}

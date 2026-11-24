@@ -49,7 +49,7 @@
     display: inline-block; padding: 3px 11px;
     border-radius: 999px; font-size: 0.75rem; font-weight: 600;
   }
-  .gd-badge-purple { background: rgba(139,92,246,.1); color: #8b5cf6; border: 1px solid rgba(139,92,246,.2); }
+  .gd-badge-purple { background: rgba(79, 70, 229, .1); color: #4F46E5; border: 1px solid rgba(79, 70, 229, .2); }
   .gd-badge-green  { background: rgba(5,150,105,.1);  color: var(--emerald); }
   .gd-badge-sky    { background: rgba(2,132,199,.1);  color: var(--sky); }
   .gd-badge-amber  { background: rgba(217,119,6,.1);  color: var(--amber); }
@@ -83,9 +83,9 @@
   }
   .gd-skill-chip {
     padding: 4px 13px; border-radius: 999px;
-    background: rgba(139,92,246,.08);
-    border: 1px solid rgba(139,92,246,.2);
-    color: #8b5cf6; font-size: 0.82rem; font-weight: 600;
+    background: rgba(79, 70, 229, .08);
+    border: 1px solid rgba(79, 70, 229, .2);
+    color: #4F46E5; font-size: 0.82rem; font-weight: 600;
   }
 
   /* Alert banners */
@@ -130,8 +130,8 @@
   }
   .gd-control:focus {
     outline: none;
-    border-color: #8b5cf6;
-    box-shadow: 0 0 0 3px rgba(139,92,246,.12);
+    border-color: #4F46E5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, .12);
   }
   .gd-help { font-size: 0.78rem; color: var(--text-3); margin-top: 4px; }
   .gd-error { font-size: 0.78rem; color: var(--orange); margin-top: 4px; }
@@ -225,6 +225,17 @@
     <span>{{ gig.title|truncatechars:40 }}</span>
   </nav>
 
+  {% if messages %}
+    <div style="margin-bottom: 20px;">
+      {% for msg in messages %}
+        <div class="gd-alert {% if msg.tags == 'error' %}gd-alert-muted{% elif msg.tags == 'success' %}gd-alert-success{% else %}gd-alert-info{% endif %}" style="margin-bottom:10px;{% if msg.tags == 'error' %}border-color:rgba(239,68,68,0.4);background:rgba(239,68,68,0.08);color:#EF4444;{% endif %}">
+          <i class="fas {% if msg.tags == 'error' %}fa-exclamation-circle{% elif msg.tags == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %}"></i>
+          <div>{{ msg }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
   <div class="gd-grid">
 
     {# ── Main content ─── #}
@@ -244,6 +255,15 @@
             <span class="gd-badge gd-badge-amber">Hybrid</span>
           {% endif %}
           <span class="gd-badge gd-badge-plain">{{ gig.get_budget_type_display }}</span>
+          {% if gig.is_external %}
+            <span class="gd-badge" style="background: rgba(6,182,212,.12); color: #06B6D4; border: 1px solid rgba(6,182,212,.25);">
+              <i class="fas fa-external-link-alt" style="margin-right:3px;"></i>External Job
+            </span>
+          {% else %}
+            <span class="gd-badge" style="background: rgba(16,185,129,.1); color: var(--emerald); border: 1px solid rgba(16,185,129,.2);">
+              <i class="fas fa-bolt" style="margin-right:3px;"></i>Direct Apply
+            </span>
+          {% endif %}
         </div>
 
         <h1 class="gd-title">{{ gig.title }}</h1>
@@ -272,7 +292,20 @@
       </div>
 
       {# Application section #}
-      {% if user.is_authenticated and user.account_type == 'digital_worker' %}
+      {% if gig.is_external %}
+        <div class="gd-apply-card" style="border-left: 4px solid #06B6D4;">
+          <div class="gd-apply-title" style="color:var(--text-1);">
+            <i class="fas fa-external-link-alt" style="color:#06B6D4;"></i> Apply on Company Website
+          </div>
+          <p style="font-size:0.9rem;color:var(--text-2);line-height:1.65;margin-bottom:20px;">
+            This job is hosted externally. You will be redirected to the employer's website to submit your application directly to them.
+          </p>
+          <a href="{{ gig.external_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px;font-size:0.92rem;padding:12px 22px;">
+            <span>Apply on Company Website</span>
+            <i class="fas fa-external-link-alt" style="font-size:0.75rem;"></i>
+          </a>
+        </div>
+      {% elif user.is_authenticated and user.account_type == 'digital_worker' %}
         {% if has_applied %}
           <div class="gd-alert gd-alert-success">
             <i class="fas fa-check-circle"></i>
@@ -311,6 +344,14 @@
           <i class="fas fa-info-circle"></i>
           <div><a href="{% url 'signin' %}?next={{ request.path }}">Sign in</a> as a Digital Worker to apply.</div>
         </div>
+      {% elif user.account_type == 'worker' %}
+        <div class="gd-alert gd-alert-muted" style="border-left: 4px solid var(--amber);">
+          <i class="fas fa-info-circle" style="color:var(--amber);"></i>
+          <div>
+            This gig is for <strong>Digital Skilled Workers</strong>. You are currently logged in with an <strong>Artisan / Technician</strong> account ({{ user.username }}).
+            <br><span style="color:var(--text-3);font-size:0.84rem;">To submit proposals for digital gigs, please <a href="{% url 'register' %}">create a Digital Worker account</a> or <a href="{% url 'signin' %}?next={{ request.path }}">sign in with a Digital Worker account</a>.</span>
+          </div>
+        </div>
       {% elif user.account_type == 'employer' %}
         <div class="gd-alert gd-alert-muted">
           <i class="fas fa-briefcase"></i>
@@ -347,6 +388,16 @@
             <span class="gd-detail-val gd-deadline-val">{{ gig.deadline|date:"M j, Y" }}</span>
           </div>
         {% endif %}
+        <div class="gd-detail-row">
+          <span class="gd-detail-key">Apply Method</span>
+          <span class="gd-detail-val">
+            {% if gig.is_external %}
+              <span style="color:#06B6D4;"><i class="fas fa-external-link-alt" style="margin-right:3px;font-size:0.75rem;"></i>External Website</span>
+            {% else %}
+              <span style="color:var(--emerald);"><i class="fas fa-bolt" style="margin-right:3px;font-size:0.75rem;"></i>On Platform</span>
+            {% endif %}
+          </span>
+        </div>
       </div>
 
       {% if user.is_authenticated %}

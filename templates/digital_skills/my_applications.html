@@ -1,285 +1,193 @@
-{% extends "base.html" %}
-{% load static %}
+{% extends "digital_skills/dg_base.html" %}
+{% load humanize %}
 
-{% block title %}My Applications — TradeLink NG{% endblock %}
+{% block title %}My applications — TradeLink NG{% endblock %}
 
-{% block extra_head %}
+{% block dg_head %}
 <style>
-  .apps-wrap {
-    max-width: 900px;
-    margin: 0 auto 80px;
-    padding: calc(var(--nav-h) + 32px) 16px 0;
+  /* Filter tabs */
+  .ap-tabs {
+    display: flex; gap: 8px; margin-bottom: 24px; padding-bottom: 4px;
+    overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
   }
-  .page-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 28px;
-    flex-wrap: wrap;
-    gap: 12px;
+  .ap-tabs::-webkit-scrollbar { display: none; }
+  .ap-tab {
+    flex-shrink: 0; padding: 8px 18px; border-radius: var(--r-pill);
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    font-size: .88rem; font-weight: 600; color: var(--text-2); transition: var(--t);
   }
-  .page-header h1 {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--text-1);
-    margin: 0;
+  .ap-tab:hover { border-color: var(--dg-v-line); color: var(--dg-v); }
+  .ap-tab.is-active { background: var(--dg-v); border-color: var(--dg-v); color: #fff; }
+  [data-theme="dark"] .ap-tab.is-active { color: #1B1033; }
+
+  .ap-list { display: flex; flex-direction: column; gap: 14px; }
+
+  .ap-card { padding: clamp(16px,3vw,24px); transition: border-color .2s; }
+  .ap-card:hover { border-color: var(--dg-v-line); }
+  .ap-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px 16px; }
+  .ap-title { font-family: 'Fraunces', serif; font-size: clamp(1.05rem,2.4vw,1.2rem); font-weight: 700; letter-spacing: -.01em; line-height: 1.3; overflow-wrap: anywhere; }
+  .ap-title a:hover { color: var(--dg-v); }
+  .ap-meta { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 8px; font-size: .84rem; color: var(--text-3); }
+  .ap-meta i { margin-right: 6px; color: var(--dg-v); }
+
+  .ap-note {
+    margin-top: 16px; padding: 2px 0 2px 16px; border-left: 3px solid var(--dg-v-line);
+    font-size: .9rem; line-height: 1.65; color: var(--text-2);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
 
-  /* Filter bar */
-  .filter-bar {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
+  /* Progress tracker: Applied, Shortlisted, Hired is a real sequence */
+  .ap-track { display: flex; align-items: flex-start; margin-top: 22px; }
+  .ap-track li { position: relative; flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; font-size: .78rem; font-weight: 600; color: var(--text-3); }
+  .ap-track li:last-child { flex: 0 0 auto; }
+  .ap-track li::before {                     /* the node */
+    content: ''; position: relative; z-index: 1; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--bg-card); border: 2px solid var(--border-strong);
   }
-  .filter-pill {
-    padding: 6px 16px;
-    border-radius: 20px;
-    border: 1px solid var(--border-subtle);
-    color: var(--text-3);
-    font-size: 0.8rem;
-    cursor: pointer;
-    text-decoration: none;
-    transition: all .2s;
+  .ap-track li::after {                      /* the line to the next node */
+    content: ''; position: absolute; top: 6px; left: 14px; right: 0; height: 2px; background: var(--border-subtle);
   }
-  .filter-pill.active,
-  .filter-pill:hover {
-    background: rgba(139,92,246,.15);
-    border-color: #8b5cf6;
-    color: #a78bfa;
-  }
+  .ap-track li:last-child::after { display: none; }
+  .ap-track li.is-done { color: var(--text-1); }
+  .ap-track li.is-done::before { background: var(--dg-v); border-color: var(--dg-v); }
+  .ap-track li.is-done::after  { background: var(--dg-v); }
+  .ap-track li.is-now::before  { box-shadow: 0 0 0 4px var(--dg-v-soft); }
+  .ap-track--hired li.is-done::before { background: var(--emerald); border-color: var(--emerald); }
+  .ap-track--hired li.is-done::after  { background: var(--emerald); }
+  .ap-track--rejected li.is-done::before, .ap-track--withdrawn li.is-done::before { background: var(--text-3); border-color: var(--text-3); }
+  .ap-track--rejected li.is-done::after,  .ap-track--withdrawn li.is-done::after  { background: var(--border-strong); }
+  .ap-track--rejected li:not(.is-done), .ap-track--withdrawn li:not(.is-done) { opacity: .55; }
 
-  /* Application cards */
-  .app-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 14px;
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
-    transition: border-color .2s;
+  .ap-end {
+    margin-top: 14px; font-size: .84rem; color: var(--text-3);
   }
-  .app-card:hover { border-color: rgba(139,92,246,.4); }
-  .app-status-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    margin-top: 6px;
-    flex-shrink: 0;
+  .ap-foot {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 20px;
+    margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-subtle);
   }
-  .dot-pending  { background: #f59e0b; }
-  .dot-accepted { background: #34d399; }
-  .dot-rejected { background: #f87171; }
-  .dot-withdrawn { background: var(--border-subtle); }
-  .app-body { flex: 1; min-width: 0; }
-  .app-gig-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-1);
-    text-decoration: none;
-    display: inline-block;
-    margin-bottom: 4px;
-  }
-  .app-gig-title:hover { color: #8b5cf6; }
-  .app-employer {
-    font-size: 0.8rem;
-    color: var(--text-3);
-    margin-bottom: 8px;
-  }
-  .app-cover-note {
-    font-size: 0.85rem;
-    color: var(--text-3);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    margin-bottom: 10px;
-  }
-  .app-meta {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    font-size: 0.78rem;
-    color: var(--text-3);
-  }
-  .app-meta span { display: flex; align-items: center; gap: 5px; }
-  .status-badge {
-    padding: 3px 10px;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: .05em;
-    text-transform: uppercase;
-  }
-  .badge-pending  { background: rgba(245,158,11,.15); color: #f59e0b; }
-  .badge-accepted { background: rgba(52,211,153,.15); color: #34d399; }
-  .badge-rejected { background: rgba(248,113,113,.15); color: #f87171; }
-  .badge-withdrawn { background: rgba(107,114,128,.15); color: #9ca3af; }
+  .ap-facts { display: flex; flex-wrap: wrap; gap: 4px 22px; font-size: .84rem; color: var(--text-2); }
+  .ap-facts b { font-weight: 700; color: var(--text-1); }
+  .ap-facts span { color: var(--text-3); margin-right: 5px; }
 
-  /* Withdraw button */
-  .btn-withdraw {
-    padding: 5px 12px;
-    border-radius: 6px;
-    background: transparent;
-    border: 1px solid rgba(248,113,113,.3);
-    color: #f87171;
-    font-size: 0.75rem;
-    cursor: pointer;
-    transition: background .2s;
-    margin-left: auto;
-    white-space: nowrap;
-  }
-  .btn-withdraw:hover { background: rgba(248,113,113,.12); }
-
-  .empty-state {
-    text-align: center;
-    padding: 70px 20px;
-    color: var(--text-3);
-  }
-  .empty-state i { font-size: 2.5rem; display: block; margin-bottom: 14px; color: var(--border-subtle); }
-
-  /* Pagination */
-  .pagination-wrap {
-    display: flex;
-    justify-content: center;
-    gap: 6px;
-    margin-top: 32px;
-  }
-  .page-btn {
-    padding: 7px 14px;
-    border-radius: 8px;
-    border: 1px solid var(--border-subtle);
-    color: var(--text-3);
-    font-size: 0.82rem;
-    text-decoration: none;
-    transition: all .2s;
-  }
-  .page-btn:hover, .page-btn.current {
-    background: rgba(139,92,246,.15);
-    border-color: #8b5cf6;
-    color: #a78bfa;
+  @media (max-width: 560px) {
+    .ap-top { flex-direction: column-reverse; gap: 10px; }
+    .ap-foot .btn { width: 100%; }
+    .ap-foot form { width: 100%; }
   }
 </style>
 {% endblock %}
 
-{% block content %}
-<div class="apps-wrap">
-  <div class="page-header">
-    <h1>
-      <i class="fas fa-file-alt" style="color:#8b5cf6;margin-right:8px;"></i>
-      My Applications
-    </h1>
-    <a href="{% url 'digital:gig_list' %}" style="color:var(--text-3);font-size:.85rem;">
-      <i class="fas fa-search"></i> Browse Gigs
-    </a>
+{% block dg_content %}
+<header class="dg-mast dg-mast--tight">
+  <div class="dg-mast-inner">
+    <div class="dg-mast-row">
+      <div>
+        <h1>My applications</h1>
+        <p class="dg-lead">Every gig you have applied to, and where each one stands.</p>
+      </div>
+      <div class="dg-mast-actions">
+        <a href="{% url 'digital:gig_list' %}" class="btn btn-primary"><i class="fas fa-magnifying-glass" aria-hidden="true"></i> Browse gigs</a>
+        <a href="{% url 'digital:dashboard' %}" class="btn dg-btn-glass">Dashboard</a>
+      </div>
+    </div>
   </div>
+</header>
 
-  {% if messages %}
-    {% for msg in messages %}
-      <div class="alert alert-{{ msg.tags }}" style="margin-bottom:16px;">{{ msg }}</div>
-    {% endfor %}
-  {% endif %}
+<div class="dg-wrap dg-body">
 
-  {# ── Status filter ───────────────────────────────────────────── #}
-  <div class="filter-bar">
-    <a href="?" class="filter-pill {% if not current_status %}active{% endif %}">All</a>
-    <a href="?status=pending"   class="filter-pill {% if current_status == 'pending'   %}active{% endif %}">Pending</a>
-    <a href="?status=accepted"  class="filter-pill {% if current_status == 'accepted'  %}active{% endif %}">Accepted</a>
-    <a href="?status=rejected"  class="filter-pill {% if current_status == 'rejected'  %}active{% endif %}">Rejected</a>
-    <a href="?status=withdrawn" class="filter-pill {% if current_status == 'withdrawn' %}active{% endif %}">Withdrawn</a>
-  </div>
+  <nav class="ap-tabs" aria-label="Filter by status">
+    <a href="?" class="ap-tab{% if not current_status %} is-active{% endif %}"{% if not current_status %} aria-current="page"{% endif %}>All</a>
+    <a href="?status=pending"     class="ap-tab{% if current_status == 'pending' %} is-active{% endif %}">Pending</a>
+    <a href="?status=shortlisted" class="ap-tab{% if current_status == 'shortlisted' %} is-active{% endif %}">Shortlisted</a>
+    <a href="?status=hired"       class="ap-tab{% if current_status == 'hired' %} is-active{% endif %}">Hired</a>
+    <a href="?status=rejected"    class="ap-tab{% if current_status == 'rejected' %} is-active{% endif %}">Rejected</a>
+    <a href="?status=withdrawn"   class="ap-tab{% if current_status == 'withdrawn' %} is-active{% endif %}">Withdrawn</a>
+  </nav>
 
-  {# ── Application list ────────────────────────────────────────── #}
-  {% if page_obj %}
-    {% for app in page_obj %}
-      <div class="app-card">
-        <div class="app-status-dot dot-{{ app.status }}"></div>
+  {% if page_obj.object_list %}
+    <div class="ap-list">
+      {% for app in page_obj %}
+        <article class="dg-panel ap-card">
 
-        <div class="app-body">
-          <a href="{% url 'digital:gig_detail' app.gig.pk %}" class="app-gig-title">
-            {{ app.gig.title }}
-          </a>
-          <div class="app-employer">
-            <i class="fas fa-building" style="margin-right:4px;"></i>
-            {{ app.gig.employer.company_name|default:app.gig.employer.user.get_full_name }}
-            &nbsp;·&nbsp;
-            <i class="fas fa-map-marker-alt" style="margin-right:3px;"></i>
-            {{ app.gig.location }}
+          <div class="ap-top">
+            <h2 class="ap-title"><a href="{% url 'digital:gig_detail' app.gig.pk %}">{{ app.gig.title }}</a></h2>
+            <span class="dg-status dg-status--{{ app.status }}">{{ app.get_status_display }}</span>
           </div>
 
-          {% if app.cover_note %}
-            <div class="app-cover-note">"{{ app.cover_note }}"</div>
+          <ul class="ap-meta">
+            <li><i class="fas fa-building" aria-hidden="true"></i>{{ app.gig.employer.company_name|default:app.gig.employer.user.get_full_name|default:app.gig.employer.user.username }}</li>
+            <li><i class="fas fa-laptop-house" aria-hidden="true"></i>{{ app.gig.get_work_type_display }}</li>
+            {% if app.gig.state %}<li><i class="fas fa-location-dot" aria-hidden="true"></i>{{ app.gig.get_state_display }}</li>{% endif %}
+            {% if app.gig.category %}<li><i class="fas fa-tag" aria-hidden="true"></i>{{ app.gig.category.name }}</li>{% endif %}
+          </ul>
+
+          {% if app.cover_note %}<blockquote class="ap-note">{{ app.cover_note }}</blockquote>{% endif %}
+
+          <ol class="ap-track ap-track--{{ app.status }}" aria-label="Application progress">
+            <li class="is-done{% if app.status == 'pending' %} is-now{% endif %}">Applied</li>
+            <li class="{% if app.status == 'shortlisted' or app.status == 'hired' %}is-done{% endif %}{% if app.status == 'shortlisted' %} is-now{% endif %}">Shortlisted</li>
+            <li class="{% if app.status == 'hired' %}is-done is-now{% endif %}">Hired</li>
+          </ol>
+          {% if app.status == 'rejected' %}
+            <p class="ap-end">The employer chose another applicant for this gig.</p>
+          {% elif app.status == 'withdrawn' %}
+            <p class="ap-end">You withdrew this application.</p>
           {% endif %}
 
-          <div class="app-meta">
-            <span>
-              <i class="fas fa-clock"></i>
-              Applied {{ app.created|timesince }} ago
-            </span>
-            {% if app.proposed_rate %}
-              <span>
-                <i class="fas fa-money-bill-wave"></i>
-                ₦{{ app.proposed_rate|floatformat:0 }}
-              </span>
+          <div class="ap-foot">
+            <div class="ap-facts">
+              <div><span>Applied</span><b>{{ app.created|naturaltime }}</b></div>
+              {% if app.proposed_rate %}<div><span>Your rate</span><b>₦{{ app.proposed_rate|floatformat:0|intcomma }}</b></div>{% endif %}
+              <div><span>Gig budget</span><b>{{ app.gig.budget_display }}</b></div>
+            </div>
+            {% if app.status == 'pending' %}
+              <button type="button" class="btn btn-sm dg-btn-quiet-danger"
+                      data-dg-confirm
+                      data-action="{% url 'digital:withdraw_application' app.pk %}"
+                      data-title="Withdraw this application?"
+                      data-message="The employer will no longer see your pitch for “{{ app.gig.title|truncatechars:60 }}”. You cannot undo this."
+                      data-label="Withdraw">
+                <i class="fas fa-rotate-left" aria-hidden="true"></i> Withdraw
+              </button>
             {% endif %}
-            <span>
-              <span class="status-badge badge-{{ app.status }}">{{ app.get_status_display }}</span>
-            </span>
           </div>
-        </div>
 
-        {% if app.status == 'pending' %}
-          <form method="post" action="{% url 'digital:withdraw_application' app.pk %}"
-                onsubmit="return confirm('Withdraw this application?')">
-            {% csrf_token %}
-            <button type="submit" class="btn-withdraw">
-              <i class="fas fa-times"></i> Withdraw
-            </button>
-          </form>
-        {% endif %}
-      </div>
-    {% endfor %}
+        </article>
+      {% endfor %}
+    </div>
 
-    {# Pagination #}
     {% if page_obj.has_other_pages %}
-      <div class="pagination-wrap">
+      <nav class="dg-pager" aria-label="Pagination">
         {% if page_obj.has_previous %}
-          <a href="?page={{ page_obj.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}"
-             class="page-btn">
-            <i class="fas fa-chevron-left"></i>
-          </a>
+          <a class="dg-page" rel="prev" href="?page={{ page_obj.previous_page_number }}{% if current_status %}&amp;status={{ current_status }}{% endif %}"><i class="fas fa-chevron-left" aria-hidden="true"></i><span class="dg-sr">Previous page</span></a>
         {% endif %}
-
         {% for n in page_obj.paginator.page_range %}
           {% if n == page_obj.number %}
-            <span class="page-btn current">{{ n }}</span>
-          {% elif n >= page_obj.number|add:-2 and n <= page_obj.number|add:2 %}
-            <a href="?page={{ n }}{% if current_status %}&status={{ current_status }}{% endif %}"
-               class="page-btn">{{ n }}</a>
+            <span class="dg-page is-current" aria-current="page">{{ n }}</span>
+          {% elif n >= page_obj.number|add:'-2' and n <= page_obj.number|add:'2' %}
+            <a class="dg-page" href="?page={{ n }}{% if current_status %}&amp;status={{ current_status }}{% endif %}">{{ n }}</a>
           {% endif %}
         {% endfor %}
-
         {% if page_obj.has_next %}
-          <a href="?page={{ page_obj.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}"
-             class="page-btn">
-            <i class="fas fa-chevron-right"></i>
-          </a>
+          <a class="dg-page" rel="next" href="?page={{ page_obj.next_page_number }}{% if current_status %}&amp;status={{ current_status }}{% endif %}"><i class="fas fa-chevron-right" aria-hidden="true"></i><span class="dg-sr">Next page</span></a>
         {% endif %}
-      </div>
+      </nav>
     {% endif %}
 
   {% else %}
-    <div class="empty-state">
-      <i class="fas fa-inbox"></i>
-      <p style="font-size:1rem;font-weight:600;color:var(--text-1);margin-bottom:6px;">No applications yet</p>
-      <p>Start applying to digital gigs to track them here.</p>
-      <a href="{% url 'digital:gig_list' %}"
-         style="display:inline-block;margin-top:16px;padding:10px 24px;background:#8b5cf6;color:#fff;border-radius:8px;font-weight:600;text-decoration:none;">
-        <i class="fas fa-search"></i> Browse Gigs
-      </a>
+    <div class="dg-panel dg-empty">
+      <div class="dg-empty-ico" aria-hidden="true"><i class="fas fa-inbox"></i></div>
+      {% if current_status %}
+        <h2>Nothing here</h2>
+        <p>You have no applications with this status.</p>
+        <a href="{% url 'digital:my_applications' %}" class="btn btn-ghost">Show all applications</a>
+      {% else %}
+        <h2>No applications yet</h2>
+        <p>When you apply for a gig, it shows up here so you can follow it from pitch to hire.</p>
+        <a href="{% url 'digital:gig_list' %}" class="btn btn-primary"><i class="fas fa-magnifying-glass" aria-hidden="true"></i> Browse gigs</a>
+      {% endif %}
     </div>
   {% endif %}
+
 </div>
 {% endblock %}

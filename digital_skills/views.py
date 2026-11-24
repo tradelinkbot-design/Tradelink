@@ -77,7 +77,10 @@ class DigitalWorkerRequiredMixin(LoginRequiredMixin):
                 request,
                 'This section is only available to Digital Skilled Worker accounts.',
             )
-            return redirect('jobs:home')
+            pk = kwargs.get('pk')
+            if pk:
+                return redirect('digital:gig_detail', pk=pk)
+            return redirect('home')
         return super().dispatch(request, *args, **kwargs)
 
     @property
@@ -99,7 +102,7 @@ class EmployerRequiredMixin(LoginRequiredMixin):
             return redirect('digital:gig_list')
         if not hasattr(request.user, 'employer_profile'):
             messages.warning(request, 'Please complete your employer profile first.')
-            return redirect('jobs:employer_profile_edit')
+            return redirect('marketplace:employer_profile_edit')
         return super().dispatch(request, *args, **kwargs)
 
     @property
@@ -276,8 +279,12 @@ class DigitalGigDetailView(View):
             'gig':         gig,
             'has_applied': has_applied,
             'is_saved':    is_saved,
-            'apply_form':  DigitalApplicationForm() if not has_applied else None,
+            'apply_form':  DigitalApplicationForm() if not has_applied and not gig.is_external else None,
         })
+
+    def post(self, request, pk):
+        """Allow submitting application form directly to the gig detail URL."""
+        return DigitalApplyView.as_view()(request, pk=pk)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -292,15 +299,44 @@ class DigitalWorkerDashboardView(DigitalWorkerRequiredMixin, View):
         profile = self.digital_profile
         recent_apps = DigitalApplication.objects.filter(
             worker=profile
-        ).select_related('gig', 'gig__category').order_by('-created')[:10]
+        ).select_related('gig', 'gig__category', 'gig__employer', 'gig__employer__user').order_by('-created')[:10]
+
         recent_gigs = DigitalGig.objects.filter(
             status=DigitalGig.Status.ACTIVE
-        ).order_by('-created')[:6]
+        ).select_related('category', 'employer', 'employer__user').prefetch_related('required_sub_skills').order_by('-created')[:6]
+
+        portfolio_items = profile.portfolio_items.all().order_by('display_order', '-created')[:6]
+
+        saved_gigs = SavedDigitalGig.objects.filter(
+            user=request.user
+        ).select_related('gig', 'gig__category').order_by('-created')[:4]
+
+        reviews = profile.reviews.filter(
+            is_public=True
+        ).select_related('reviewer').order_by('-created')[:5]
+        rating_agg = reviews.aggregate(avg=Avg('rating'))
+        avg_rating = round(rating_agg['avg'], 1) if rating_agg['avg'] else None
+        review_count = reviews.count()
+
+        unread_count = 0
+        try:
+            from jobs.models import Notification
+            unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+        except Exception:
+            pass
 
         return render(request, self.template_name, {
-            'profile':     profile,
-            'recent_apps': recent_apps,
-            'recent_gigs': recent_gigs,
+            'profile':              profile,
+            'recent_apps':          recent_apps,
+            'recent_gigs':          recent_gigs,
+            'portfolio_items':      portfolio_items,
+            'saved_gigs':           saved_gigs,
+            'reviews':              reviews,
+            'avg_rating':           avg_rating,
+            'review_count':         review_count,
+            'unread_count':         unread_count,
+            'has_employer_profile': hasattr(request.user, 'employer_profile'),
+            'verification_profile': getattr(request.user, 'verification_profile', None),
         })
 
 
@@ -336,24 +372,58 @@ class DigitalProfileEditView(DigitalWorkerRequiredMixin, View):
     template_name = 'digital_skills/profile_edit.html'
 
     def get(self, request):
-        form = DigitalWorkerProfileForm(instance=self.digital_profile)
+        profile = self.digital_profile
+        form    = DigitalWorkerProfileForm(instance=profile)
+        current_sub_skill_ids = list(
+            profile.digitalworkersubskill_set.values_list('sub_skill_id', flat=True)
+        )
         return render(request, self.template_name, {
-            'form':    form,
-            'profile': self.digital_profile,
-            'categories': DigitalSkillCategory.objects.filter(is_active=True).prefetch_related('sub_skills'),
+            'form':                  form,
+            'profile':               profile,
+            'categories':            DigitalSkillCategory.objects.filter(is_active=True).prefetch_related('sub_skills'),
+            'current_sub_skill_ids': [str(sid) for sid in current_sub_skill_ids],
         })
 
     def post(self, request):
         profile = self.digital_profile
         form    = DigitalWorkerProfileForm(request.POST, instance=profile)
         if form.is_valid():
-            form.save()
+            saved_profile = form.save()
+
+            # Sync sub-skills selection
+            sub_skill_ids = request.POST.getlist('sub_skills')
+            if sub_skill_ids:
+                from .models import DigitalWorkerSubSkill, DigitalSubSkill
+                valid_skills = DigitalSubSkill.objects.filter(id__in=sub_skill_ids)
+                current_map = {str(ws.sub_skill_id): ws for ws in saved_profile.digitalworkersubskill_set.all()}
+                selected_ids = {str(s.id) for s in valid_skills}
+
+                # Remove unselected
+                for sid, ws in list(current_map.items()):
+                    if sid not in selected_ids:
+                        ws.delete()
+
+                # Add newly selected
+                for skill in valid_skills:
+                    if str(skill.id) not in current_map:
+                        DigitalWorkerSubSkill.objects.create(worker=saved_profile, sub_skill=skill)
+            else:
+                # If cleared all
+                saved_profile.digitalworkersubskill_set.all().delete()
+
+            # Recalculate profile completion score
+            saved_profile.profile_completion = saved_profile.compute_completion()
+            saved_profile.save(update_fields=['profile_completion'])
+
             messages.success(request, '✅ Profile updated successfully.')
             return redirect('digital:public_profile', username=request.user.username)
+
+        current_sub_skill_ids = request.POST.getlist('sub_skills')
         return render(request, self.template_name, {
-            'form':    form,
-            'profile': profile,
-            'categories': DigitalSkillCategory.objects.filter(is_active=True).prefetch_related('sub_skills'),
+            'form':                  form,
+            'profile':               profile,
+            'categories':            DigitalSkillCategory.objects.filter(is_active=True).prefetch_related('sub_skills'),
+            'current_sub_skill_ids': [str(sid) for sid in current_sub_skill_ids],
         })
 
 
@@ -361,11 +431,16 @@ class DigitalSubSkillsAjaxView(View):
     """Returns sub-skills for a given category as JSON (for dynamic form dropdowns)."""
 
     def get(self, request):
-        cat_slug = request.GET.get('category', '')
-        sub_skills = DigitalSubSkill.objects.filter(
-            category__slug=cat_slug, is_active=True
-        ).values('id', 'name', 'slug')
-        return JsonResponse({'sub_skills': list(sub_skills)})
+        cat_query = request.GET.get('category', '').strip()
+        sub_skills = DigitalSubSkill.objects.filter(is_active=True)
+        if cat_query:
+            import uuid
+            try:
+                cat_uuid = uuid.UUID(cat_query)
+                sub_skills = sub_skills.filter(category_id=cat_uuid)
+            except ValueError:
+                sub_skills = sub_skills.filter(category__slug=cat_query)
+        return JsonResponse({'sub_skills': list(sub_skills.values('id', 'name', 'slug'))})
 
 
 class DigitalPortfolioView(DigitalWorkerRequiredMixin, View):
@@ -373,12 +448,13 @@ class DigitalPortfolioView(DigitalWorkerRequiredMixin, View):
     template_name = 'digital_skills/portfolio.html'
 
     def get(self, request):
-        items = DigitalPortfolioItem.objects.filter(worker=self.digital_profile).order_by('display_order')
+        items = DigitalPortfolioItem.objects.filter(worker=self.digital_profile).order_by('display_order', '-created')
         form  = DigitalPortfolioItemForm()
         return render(request, self.template_name, {
-            'items':   items,
-            'form':    form,
-            'profile': self.digital_profile,
+            'items':           items,
+            'portfolio_items': items,
+            'form':            form,
+            'profile':         self.digital_profile,
         })
 
     def post(self, request):
@@ -388,13 +464,14 @@ class DigitalPortfolioView(DigitalWorkerRequiredMixin, View):
             item        = form.save(commit=False)
             item.worker = profile
             item.save()
-            messages.success(request, '✅ Portfolio item added.')
+            messages.success(request, '✅ Portfolio item added successfully!')
             return redirect('digital:portfolio')
-        items = DigitalPortfolioItem.objects.filter(worker=profile).order_by('display_order')
+        items = DigitalPortfolioItem.objects.filter(worker=profile).order_by('display_order', '-created')
         return render(request, self.template_name, {
-            'items':   items,
-            'form':    form,
-            'profile': profile,
+            'items':           items,
+            'portfolio_items': items,
+            'form':            form,
+            'profile':         profile,
         })
 
 
@@ -411,6 +488,9 @@ class DigitalApplyView(DigitalWorkerRequiredMixin, View):
 
     def post(self, request, pk):
         gig = get_object_or_404(DigitalGig, pk=pk, status=DigitalGig.Status.ACTIVE)
+        if gig.is_external:
+            messages.warning(request, 'This is an external job. Please apply via the employer\'s website.')
+            return redirect('digital:gig_detail', pk=pk)
         profile = self.digital_profile
 
         if DigitalApplication.objects.filter(gig=gig, worker=profile).exists():
@@ -428,8 +508,13 @@ class DigitalApplyView(DigitalWorkerRequiredMixin, View):
             messages.success(request, '✅ Application submitted! The employer will be in touch.')
             return redirect('digital:gig_detail', pk=pk)
 
-        messages.error(request, 'Please fix the errors below.')
-        return redirect('digital:gig_detail', pk=pk)
+        messages.error(request, 'Please fix the errors in your proposal below.')
+        return render(request, 'digital_skills/gigs/gig_detail.html', {
+            'gig':         gig,
+            'has_applied': False,
+            'is_saved':    SavedDigitalGig.objects.filter(user=request.user, gig=gig).exists(),
+            'apply_form':  form,
+        })
 
 
 class DigitalMyApplicationsView(DigitalWorkerRequiredMixin, View):

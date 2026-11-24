@@ -6,7 +6,7 @@ from django.contrib.auth import login, logout
 from django.contrib.auth import views as auth_views
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 
@@ -14,6 +14,30 @@ from .forms import RegisterForm, LoginForm
 from core.ratelimit import rate_limit
 
 logger = logging.getLogger(__name__)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Dashboard routing helper
+# ─────────────────────────────────────────────────────────────────────────────
+
+def get_dashboard_url_for_user(user) -> str:
+    """
+    Returns the correct dashboard URL string for a given user based on their
+    account_type.
+
+    Routing table:
+      digital_worker → /digital/dashboard/     (DigitalWorkerDashboardView)
+      employer       → /dashboard/employer/    (EmployerDashboardView)
+      worker         → /dashboard/             (DashboardRedirectView → worker or choose_role)
+      fallback       → /dashboard/
+    """
+    account_type = getattr(user, 'account_type', 'worker')
+    if account_type == 'digital_worker':
+        return reverse('digital:dashboard')
+    if account_type == 'employer':
+        return reverse('marketplace:employer_dashboard')
+    # workers and any unknown type go through the existing DashboardRedirectView
+    return reverse('marketplace:dashboard')
 
 FLW_BASE = 'https://api.flutterwave.com/v3'
 
@@ -50,7 +74,7 @@ class RegisterView(View):
 
     def get(self, request):
         if request.user.is_authenticated:
-            return redirect('/')
+            return redirect(get_dashboard_url_for_user(request.user))
 
         form = RegisterForm()
         return render(request, self.template_name, {'form': form})
@@ -58,17 +82,19 @@ class RegisterView(View):
     @rate_limit(key='register:{ip}', limit=5, window=3600, message='Too many registration attempts. Please try again later.')
     def post(self, request):
         if request.user.is_authenticated:
-            return redirect('/')
+            return redirect(get_dashboard_url_for_user(request.user))
 
         form = RegisterForm(request.POST)
 
         if form.is_valid():
-            form.save()
+            user = form.save()
+            # Automatically log the new user in and take them straight to their account-specific dashboard
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             messages.success(
                 request,
-                'Your account has been created! Sign in to get started.'
+                f'Welcome to TradeLink NG, {user.first_name or user.username}! Your account has been created.'
             )
-            return redirect('signin')
+            return redirect(get_dashboard_url_for_user(user))
 
         return render(request, self.template_name, {'form': form})
 
@@ -79,7 +105,13 @@ class SignInView(View):
 
     GET  → render the empty login form.
     POST → validate credentials; on success log the user in and redirect to
-           the 'next' param (or home); on failure re-render with errors.
+           the correct dashboard for the user's account_type (or ?next= param);
+           on failure re-render with errors.
+
+    Dashboard routing by account_type:
+      digital_worker → /digital/dashboard/     (DigitalWorkerDashboardView)
+      employer       → /dashboard/employer/    (EmployerDashboardView)
+      worker         → /dashboard/             (DashboardRedirectView)
 
     'Remember me' behaviour:
         Checked   → session persists for 2 weeks (SESSION_COOKIE_AGE default).
@@ -90,7 +122,7 @@ class SignInView(View):
 
     def get(self, request):
         if request.user.is_authenticated:
-            return redirect('marketplace:dashboard')
+            return redirect(get_dashboard_url_for_user(request.user))
 
         form = LoginForm()
         return render(request, self.template_name, {'form': form})
@@ -98,7 +130,7 @@ class SignInView(View):
     @rate_limit(key='signin:{ip}', limit=10, window=600, message='Too many login attempts. Please try again in 10 minutes.')
     def post(self, request):
         if request.user.is_authenticated:
-            return redirect('marketplace:dashboard')
+            return redirect(get_dashboard_url_for_user(request.user))
 
         form = LoginForm(request.POST)
 
@@ -114,8 +146,11 @@ class SignInView(View):
             messages.success(request, f'Welcome back, {user.username}!')
 
             # Honour the ?next= redirect set by @login_required, etc.
-            next_url = request.GET.get('next') or request.POST.get('next') or 'marketplace:dashboard'
-            return redirect(next_url)
+            # Fall back to the account-type-specific dashboard.
+            next_url = request.GET.get('next') or request.POST.get('next')
+            if next_url:
+                return redirect(next_url)
+            return redirect(get_dashboard_url_for_user(user))
 
         # Invalid credentials — re-render with form errors
         return render(request, self.template_name, {'form': form})

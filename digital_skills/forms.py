@@ -80,6 +80,21 @@ class DigitalWorkerProfileForm(forms.ModelForm):
             'twitter_url': forms.URLInput(attrs={
                 'placeholder': 'https://twitter.com/yourhandle', 'class': 'form-control',
             }),
+            'lga': forms.TextInput(attrs={
+                'placeholder': 'e.g. Ikeja, Eti-Osa, Abuja Municipal', 'class': 'form-control',
+            }),
+            'years_experience': forms.NumberInput(attrs={
+                'class': 'form-control', 'min': '0', 'max': '50', 'placeholder': '0',
+            }),
+            'notice_period': forms.TextInput(attrs={
+                'placeholder': 'e.g. Immediately, 2 weeks notice', 'class': 'form-control',
+            }),
+            'remote_ok': forms.CheckboxInput(attrs={
+                'class': 'form-check-input',
+            }),
+            'open_to_employment': forms.CheckboxInput(attrs={
+                'class': 'form-check-input', 'id': 'id_open_to_employment',
+            }),
         }
 
     def clean_whatsapp_number(self):
@@ -99,12 +114,25 @@ class DigitalPortfolioItemForm(forms.ModelForm):
         model  = DigitalPortfolioItem
         fields = ['item_type', 'title', 'description', 'image', 'external_url', 'display_order']
         widgets = {
-            'item_type':    forms.Select(attrs={'class': 'form-select'}),
-            'title':        forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Project title'}),
-            'description':  forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'external_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://...'}),
-            'display_order': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'item_type':    forms.Select(attrs={'class': 'form-select', 'id': 'id_item_type'}),
+            'title':        forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Fintech Mobile App UI/UX Design'}),
+            'description':  forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Briefly describe what you built, your role, tools used, and key outcomes.'}),
+            'external_url': forms.URLInput(attrs={'class': 'form-control', 'id': 'id_external_url', 'placeholder': 'https://behance.net/..., https://github.com/..., https://youtu.be/...'}),
+            'display_order': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'placeholder': '0'}),
         }
+
+    def clean(self):
+        cleaned = super().clean()
+        item_type = cleaned.get('item_type')
+        image = cleaned.get('image')
+        external_url = cleaned.get('external_url')
+
+        if item_type == DigitalPortfolioItem.ItemType.IMAGE and not image and not external_url:
+            self.add_error('image', 'Please upload an image file or provide an external link.')
+        elif item_type in [DigitalPortfolioItem.ItemType.LINK, DigitalPortfolioItem.ItemType.VIDEO] and not external_url and not image:
+            self.add_error('external_url', 'Please provide a valid URL for your project link or video.')
+
+        return cleaned
 
 
 # ── Digital Gig Create / Edit Form (Employer) ─────────────────────────────────
@@ -116,6 +144,7 @@ class DigitalGigForm(forms.ModelForm):
             'title', 'description', 'category', 'required_sub_skills',
             'budget_type', 'budget_min', 'budget_max',
             'work_type', 'state', 'deadline', 'status',
+            'external_url',
         ]
         widgets = {
             'title':              forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Design a logo for my fintech startup'}),
@@ -129,6 +158,10 @@ class DigitalGigForm(forms.ModelForm):
             'state':              forms.Select(attrs={'class': 'form-select'}),
             'deadline':           forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'status':             forms.Select(attrs={'class': 'form-select'}),
+            'external_url':       forms.URLInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'https://company.com/jobs/apply  (leave blank for on-platform applications)',
+            }),
         }
 
     def clean(self):

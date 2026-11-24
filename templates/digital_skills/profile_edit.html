@@ -1,358 +1,1275 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static humanize %}
 
-{% block title %}Edit Digital Worker Profile — TradeLink NG{% endblock %}
+{% block title %}Edit Profile — TradeLink NG Digital{% endblock %}
 
 {% block extra_head %}
 <style>
-  .edit-wrap {
-    max-width: 760px;
-    margin: 0 auto 80px;
-    padding: calc(var(--nav-h) + 32px) 16px 0;
+  :root {
+    --pe-indigo:       #4F46E5;
+    --pe-indigo-hover: #4338CA;
+    --pe-indigo-soft:  rgba(79, 70, 229, 0.08);
+    --pe-indigo-line:  rgba(79, 70, 229, 0.22);
+    --pe-cyan:         #06B6D4;
+    --pe-cyan-soft:    rgba(6, 182, 212, 0.08);
+    --pe-cyan-line:    rgba(6, 182, 212, 0.22);
+    --pe-emerald:      #10B981;
+    --pe-emerald-soft: rgba(16, 185, 129, 0.1);
+    --pe-amber:        #F59E0B;
+    --pe-rose:         #F43F5E;
   }
-  .page-header {
+
+  .pe-layout {
+    position: relative;
+    z-index: 1;
+    padding: calc(var(--nav-h) + clamp(24px, 4vw, 44px)) 0 clamp(64px, 8vw, 110px);
+  }
+
+  .pe-container {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 0 clamp(16px, 4vw, 36px);
+  }
+
+  /* ── Breadcrumb ─── */
+  .pe-crumb {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 24px;
+    gap: 8px;
+    font-size: 0.84rem;
+    color: var(--text-3);
+    margin-bottom: 22px;
     flex-wrap: wrap;
-    gap: 12px;
   }
-  .page-header h1 {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--text-1);
-    margin: 0;
-  }
-  .edit-card {
+  .pe-crumb a { color: var(--text-3); text-decoration: none; transition: color 0.15s ease; }
+  .pe-crumb a:hover { color: var(--pe-indigo); }
+  .pe-crumb i { font-size: 0.68rem; opacity: 0.6; }
+
+  /* ── Header Banner ─── */
+  .pe-header {
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
-    border-radius: 16px;
-    padding: 32px;
-    margin-bottom: 20px;
-  }
-  .section-title {
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: var(--text-3);
-    margin-bottom: 20px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--border-subtle);
-  }
-  .form-group { margin-bottom: 18px; }
-  .form-label {
-    display: block;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-1);
-    margin-bottom: 6px;
-  }
-  .form-control {
-    width: 100%;
-    padding: 10px 14px;
-    background: var(--bg-base);
-    border: 1px solid var(--border-subtle);
-    border-radius: 8px;
-    color: var(--text-1);
-    font-size: 0.9rem;
-    transition: border-color .2s;
-  }
-  .form-control:focus {
-    outline: none;
-    border-color: #8b5cf6;
-    box-shadow: 0 0 0 3px rgba(139,92,246,.15);
-  }
-  .form-row-2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-  .skill-chip-wrap {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 8px;
-  }
-  .skill-chip {
-    padding: 6px 14px;
-    border-radius: 20px;
-    border: 1px solid var(--border-subtle);
-    background: transparent;
-    color: var(--text-3);
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: all .2s;
-  }
-  .skill-chip.active {
-    background: rgba(139,92,246,.15);
-    border-color: #8b5cf6;
-    color: #a78bfa;
-  }
-  .help-text {
-    font-size: 0.78rem;
-    color: var(--text-3);
-    margin-top: 4px;
-  }
-  .field-error {
-    font-size: 0.78rem;
-    color: #f87171;
-    margin-top: 4px;
-  }
-  .completion-bar-wrap {
-    background: var(--border-subtle);
-    border-radius: 999px;
-    height: 8px;
-    margin-bottom: 24px;
+    border-radius: var(--r-xl);
+    padding: clamp(24px, 4vw, 32px);
+    margin-bottom: 28px;
+    position: relative;
     overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
   }
-  .completion-bar {
-    height: 100%;
-    background: linear-gradient(90deg, #8b5cf6, #6d28d9);
+
+  .pe-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--pe-indigo), var(--pe-cyan));
+  }
+
+  .pe-header-inner {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .pe-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: var(--pe-indigo-soft);
+    border: 1px solid var(--pe-indigo-line);
     border-radius: 999px;
-    transition: width .4s ease;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--pe-indigo);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 10px;
   }
-  .completion-label {
-    font-size: 0.82rem;
-    color: var(--text-3);
-    margin-bottom: 8px;
+
+  .pe-title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.5rem, 3.2vw, 2.1rem);
+    font-weight: 800;
+    color: var(--text-1);
+    margin: 0 0 6px;
+    line-height: 1.25;
   }
-  .btn-save {
+
+  .pe-subtitle {
+    font-size: 0.92rem;
+    color: var(--text-2);
+    margin: 0;
+    max-width: 650px;
+    line-height: 1.6;
+  }
+
+  .pe-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .pe-btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 12px 32px;
-    background: #8b5cf6;
-    color: #fff;
+    padding: 10px 18px;
+    border-radius: var(--r-md);
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     border: none;
-    border-radius: 8px;
-    font-size: 0.95rem;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  .pe-btn-primary {
+    background: linear-gradient(135deg, var(--pe-indigo), #3730A3);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.28);
+  }
+  .pe-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(79, 70, 229, 0.38);
+    color: #ffffff;
+  }
+
+  .pe-btn-secondary {
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-1);
+  }
+  .pe-btn-secondary:hover {
+    background: var(--surface-2);
+    border-color: var(--border-strong);
+    color: var(--text-1);
+  }
+
+  /* ── 2-Column Main Layout ─── */
+  .pe-grid {
+    display: grid;
+    grid-template-columns: 290px 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+
+  /* ── Sidebar Column ─── */
+  .pe-sidebar {
+    position: sticky;
+    top: calc(var(--nav-h) + 20px);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .pe-side-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: 22px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+  }
+
+  .pe-score-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .pe-score-title {
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--text-1);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .pe-score-val {
+    font-family: 'Fraunces', serif;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--pe-indigo);
+  }
+
+  .pe-progress-track {
+    height: 8px;
+    background: var(--surface-2);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .pe-progress-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--pe-indigo), var(--pe-cyan));
+    transition: width 0.6s ease;
+  }
+
+  /* Checklist items */
+  .pe-checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  .pe-check-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 0.8rem;
+    color: var(--text-2);
+  }
+  .pe-check-item.done { color: var(--text-1); font-weight: 600; }
+  .pe-check-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.62rem;
+    flex-shrink: 0;
+  }
+  .pe-check-item.done .pe-check-icon {
+    background: var(--pe-emerald-soft);
+    color: var(--pe-emerald);
+  }
+  .pe-check-item:not(.done) .pe-check-icon {
+    background: var(--surface-2);
+    color: var(--text-3);
+  }
+
+  /* Section Jump Nav */
+  .pe-nav-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .pe-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: var(--r-md);
+    color: var(--text-2);
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s ease;
+  }
+  .pe-nav-item i { width: 16px; text-align: center; color: var(--text-3); font-size: 0.85rem; }
+  .pe-nav-item:hover {
+    background: var(--surface-1);
+    color: var(--text-1);
+  }
+  .pe-nav-item:hover i { color: var(--pe-indigo); }
+  .pe-nav-item.active {
+    background: var(--pe-indigo-soft);
+    color: var(--pe-indigo);
+    font-weight: 700;
+  }
+  .pe-nav-item.active i { color: var(--pe-indigo); }
+
+  /* ── Section Cards in Main Column ─── */
+  .pe-section-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    padding: clamp(22px, 3.5vw, 34px);
+    margin-bottom: 24px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.02);
+    position: relative;
+    scroll-margin-top: calc(var(--nav-h) + 24px);
+  }
+
+  .pe-sec-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 16px;
+    margin-bottom: 22px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .pe-sec-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--pe-indigo-soft);
+    border: 1px solid var(--pe-indigo-line);
+    color: var(--pe-indigo);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .pe-sec-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text-1);
+    margin: 0 0 2px;
+  }
+  .pe-sec-sub {
+    font-size: 0.82rem;
+    color: var(--text-3);
+    margin: 0;
+  }
+
+  /* ── Form Controls & Layout ─── */
+  .pe-form-group {
+    margin-bottom: 20px;
+  }
+  .pe-form-group:last-child { margin-bottom: 0; }
+
+  .pe-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  .pe-row-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+
+  .pe-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--text-1);
+    margin-bottom: 7px;
+  }
+  .pe-label span.req { color: var(--pe-rose); margin-left: 2px; }
+  .pe-label span.opt { color: var(--text-3); font-weight: 400; font-size: 0.78rem; }
+  .pe-char-count { font-size: 0.75rem; color: var(--text-3); font-weight: 400; }
+
+  .pe-control {
+    width: 100%;
+    padding: 11px 14px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    color: var(--text-1);
+    font-size: 0.9rem;
+    font-family: 'Outfit', sans-serif;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .pe-control:focus {
+    outline: none;
+    border-color: var(--pe-indigo);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+  }
+
+  /* Prefix input (₦) */
+  .pe-prefix-box {
+    display: flex;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: var(--bg-base);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .pe-prefix-box:focus-within {
+    border-color: var(--pe-indigo);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+  }
+  .pe-prefix-tag {
+    padding: 11px 14px;
+    background: var(--surface-1);
+    border-right: 1px solid var(--border-subtle);
+    color: var(--text-2);
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    user-select: none;
+  }
+  .pe-prefix-box input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 11px 14px;
+    background: transparent;
+    color: var(--text-1);
+    font-size: 0.9rem;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  /* Help & Error */
+  .pe-help {
+    font-size: 0.78rem;
+    color: var(--text-3);
+    margin-top: 5px;
+    line-height: 1.45;
+  }
+  .pe-error {
+    font-size: 0.78rem;
+    color: var(--pe-rose);
+    margin-top: 4px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* Interactive Sub-Skills Chips */
+  .pe-skills-container {
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    padding: 18px;
+  }
+  .pe-skills-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .pe-skills-count-tag {
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--pe-indigo-soft);
+    color: var(--pe-indigo);
+  }
+  .pe-chips-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 48px;
+    align-items: center;
+  }
+  .pe-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 15px;
+    border-radius: 999px;
+    font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background .2s;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-2);
+    transition: all 0.18s ease;
+    user-select: none;
   }
-  .btn-save:hover { background: #7c3aed; }
-  @media(max-width:600px){
-    .edit-card { padding: 20px 16px; }
-    .form-row-2 { grid-template-columns: 1fr; }
+  .pe-chip:hover {
+    border-color: var(--pe-indigo-line);
+    color: var(--text-1);
+    transform: translateY(-1px);
+  }
+  .pe-chip.selected {
+    background: var(--pe-indigo);
+    border-color: var(--pe-indigo);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+  }
+  .pe-chip i { font-size: 0.7rem; }
+
+  /* Interactive Toggle Cards */
+  .pe-toggle-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+  }
+  .pe-toggle-card:hover {
+    border-color: var(--pe-indigo-line);
+  }
+  .pe-toggle-card.active {
+    background: var(--pe-indigo-soft);
+    border-color: var(--pe-indigo-line);
+  }
+  .pe-toggle-body { flex: 1; }
+  .pe-toggle-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-1);
+    margin-bottom: 2px;
+  }
+  .pe-toggle-desc {
+    font-size: 0.78rem;
+    color: var(--text-3);
+  }
+
+  /* Switch widget */
+  .pe-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .pe-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .pe-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    transition: .25s;
+    border-radius: 24px;
+  }
+  .pe-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background: #ffffff;
+    transition: .25s;
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+  .pe-switch input:checked + .pe-slider {
+    background: var(--pe-indigo);
+    border-color: var(--pe-indigo);
+  }
+  .pe-switch input:checked + .pe-slider:before {
+    transform: translateX(20px);
+  }
+
+  /* Conditional full-time drawer */
+  .pe-drawer {
+    display: none;
+    margin-top: 16px;
+    padding: 16px;
+    background: var(--bg-card);
+    border: 1px dashed var(--pe-indigo-line);
+    border-radius: var(--r-lg);
+  }
+  .pe-drawer.open { display: block; }
+
+  /* ── Floating Actions Bottom Bar ─── */
+  .pe-actions-bar {
+    position: sticky;
+    bottom: 20px;
+    z-index: 100;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--r-xl);
+    padding: 14px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    margin-top: 32px;
+  }
+
+  .pe-actions-text {
+    font-size: 0.86rem;
+    color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pe-actions-btns {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* ── Responsive rules ─── */
+  @media (max-width: 992px) {
+    .pe-grid { grid-template-columns: 1fr; }
+    .pe-sidebar { position: static; }
+    .pe-nav-card { display: none; }
+  }
+
+  @media (max-width: 680px) {
+    .pe-header-inner { flex-direction: column; }
+    .pe-header-actions { width: 100%; }
+    .pe-header-actions .pe-btn { flex: 1; text-align: center; }
+    .pe-row-2, .pe-row-3 { grid-template-columns: 1fr; }
+    .pe-actions-bar { flex-direction: column; align-items: stretch; text-align: center; bottom: 12px; }
+    .pe-actions-btns { width: 100%; }
+    .pe-actions-btns .pe-btn { flex: 1; }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="edit-wrap">
-  <div class="page-header">
-    <h1><i class="fas fa-user-edit" style="color:#8b5cf6;margin-right:8px;"></i> Edit Profile</h1>
-    <a href="{% url 'digital:public_profile' profile.user.username %}"
-       style="font-size:.85rem; color:var(--text-3);">
-      <i class="fas fa-eye"></i> View public profile
-    </a>
-  </div>
+<div class="pe-layout">
+<div class="pe-container">
 
-  {% if profile.profile_completion < 80 %}
-  <div class="edit-card" style="padding:20px;">
-    <div class="completion-label">
-      Profile completion: <strong>{{ profile.profile_completion }}%</strong>
-      — a complete profile gets 5× more views
+  {# ── Breadcrumb ─── #}
+  <nav class="pe-crumb" aria-label="Breadcrumb">
+    <a href="{% url 'digital:dashboard' %}"><i class="fas fa-th-large" style="margin-right:4px;"></i> Dashboard</a>
+    <i class="fas fa-chevron-right"></i>
+    <a href="{% url 'digital:public_profile' profile.user.username %}">Profile</a>
+    <i class="fas fa-chevron-right"></i>
+    <span style="color:var(--text-1);font-weight:600;">Edit Profile</span>
+  </nav>
+
+  {# ── Flash Messages ─── #}
+  {% if messages %}
+    <div style="margin-bottom: 24px;">
+      {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert"
+             style="border-radius:var(--r-md);font-size:0.9rem;border-left:4px solid {% if msg.tags == 'success' %}#10B981{% elif msg.tags == 'error' %}#EF4444{% else %}#4F46E5{% endif %};">
+          <i class="fas {% if msg.tags == 'success' %}fa-check-circle{% elif msg.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}" style="margin-right:8px;"></i>
+          {{ msg }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
     </div>
-    <div class="completion-bar-wrap">
-      <div class="completion-bar" style="width:{{ profile.profile_completion }}%;"></div>
-    </div>
-  </div>
   {% endif %}
 
-  <form method="post" enctype="multipart/form-data" novalidate>
+  {# ── Header Banner ─── #}
+  <div class="pe-header">
+    <div class="pe-header-inner">
+      <div>
+        <div class="pe-badge">
+          <i class="fas fa-user-edit"></i> Profile Editor
+        </div>
+        <h1 class="pe-title">Edit Digital Profile</h1>
+        <p class="pe-subtitle">
+          Keep your skills, portfolio links, and rates up to date so Nigerian and global employers can match with you quickly.
+        </p>
+      </div>
+
+      <div class="pe-header-actions">
+        <a href="{% url 'digital:public_profile' profile.user.username %}" target="_blank" class="pe-btn pe-btn-secondary" title="View live profile">
+          <i class="fas fa-eye"></i> View Live Profile
+        </a>
+        <a href="{% url 'digital:portfolio' %}" class="pe-btn pe-btn-secondary" title="Manage your project showcase">
+          <i class="fas fa-images"></i> Manage Portfolio
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {# ── Form & Sidebar Layout ─── #}
+  <form method="post" novalidate id="profileEditForm">
     {% csrf_token %}
 
-    {# ── Identity & Bio ─────────────────────────────────────────── #}
-    <div class="edit-card">
-      <div class="section-title">Identity &amp; Bio</div>
+    <div class="pe-grid">
 
-      <div class="form-group">
-        <label class="form-label">Professional Headline <span style="color:#f87171;">*</span></label>
-        <input type="text" name="{{ form.headline.html_name }}"
-               class="form-control"
-               value="{{ form.headline.value|default:'' }}"
-               placeholder="e.g. Full-Stack Developer | React &amp; Django Expert"
-               maxlength="180">
-        {% for err in form.headline.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
-      </div>
+      {# ── Left Sticky Sidebar ─── #}
+      <aside class="pe-sidebar">
+        {# Profile Strength Card #}
+        <div class="pe-side-card">
+          <div class="pe-score-head">
+            <span class="pe-score-title"><i class="fas fa-shield-alt" style="color:var(--pe-indigo);"></i> Profile Strength</span>
+            <span class="pe-score-val">{{ profile.profile_completion }}%</span>
+          </div>
+          <div class="pe-progress-track">
+            <div class="pe-progress-fill" style="width: {{ profile.profile_completion }}%;"></div>
+          </div>
 
-      <div class="form-group">
-        <label class="form-label">Bio / About Me</label>
-        <textarea name="{{ form.bio.html_name }}" class="form-control" rows="5"
-                  placeholder="Tell clients about your background and what makes you stand out.">{{ form.bio.value|default:'' }}</textarea>
-        {% for err in form.bio.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
-      </div>
-
-      <div class="form-row-2">
-        <div class="form-group">
-          <label class="form-label">Years of Experience</label>
-          <input type="number" name="{{ form.years_experience.html_name }}"
-                 class="form-control"
-                 value="{{ form.years_experience.value|default:'' }}"
-                 min="0" max="60">
-          {% for err in form.years_experience.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
+          <div class="pe-checklist">
+            <div class="pe-check-item {% if profile.headline %}done{% endif %}">
+              <span class="pe-check-icon"><i class="fas {% if profile.headline %}fa-check{% else %}fa-circle{% endif %}"></i></span>
+              <span>Professional Headline (+15%)</span>
+            </div>
+            <div class="pe-check-item {% if profile.bio %}done{% endif %}">
+              <span class="pe-check-icon"><i class="fas {% if profile.bio %}fa-check{% else %}fa-circle{% endif %}"></i></span>
+              <span>Profile Bio (+20%)</span>
+            </div>
+            <div class="pe-check-item {% if profile.primary_category %}done{% endif %}">
+              <span class="pe-check-icon"><i class="fas {% if profile.primary_category %}fa-check{% else %}fa-circle{% endif %}"></i></span>
+              <span>Category &amp; Skills (+25%)</span>
+            </div>
+            <div class="pe-check-item {% if profile.hourly_rate or profile.project_rate %}done{% endif %}">
+              <span class="pe-check-icon"><i class="fas {% if profile.hourly_rate or profile.project_rate %}fa-check{% else %}fa-circle{% endif %}"></i></span>
+              <span>Pricing &amp; Rates (+10%)</span>
+            </div>
+            <div class="pe-check-item {% if profile.state %}done{% endif %}">
+              <span class="pe-check-icon"><i class="fas {% if profile.state %}fa-check{% else %}fa-circle{% endif %}"></i></span>
+              <span>Location (+10%)</span>
+            </div>
+            <div class="pe-check-item {% if profile.portfolio_url %}done{% endif %}">
+              <span class="pe-check-icon"><i class="fas {% if profile.portfolio_url %}fa-check{% else %}fa-circle{% endif %}"></i></span>
+              <span>External Portfolio (+10%)</span>
+            </div>
+            <div class="pe-check-item {% if profile.whatsapp_number or profile.linkedin_url %}done{% endif %}">
+              <span class="pe-check-icon"><i class="fas {% if profile.whatsapp_number or profile.linkedin_url %}fa-check{% else %}fa-circle{% endif %}"></i></span>
+              <span>Direct Contact Info (+10%)</span>
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Location (State / City)</label>
-          <input type="text" name="{{ form.location.html_name }}"
-                 class="form-control"
-                 value="{{ form.location.value|default:'' }}"
-                 placeholder="Lagos, Nigeria">
-          {% for err in form.location.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
+
+        {# Section Jump Nav #}
+        <div class="pe-side-card pe-nav-card" style="padding: 16px;">
+          <div style="font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);padding:0 8px 10px;">
+            Jump to Section
+          </div>
+          <nav class="pe-nav-list">
+            <a href="#sec-identity" class="pe-nav-item active"><i class="fas fa-id-badge"></i> Identity &amp; Bio</a>
+            <a href="#sec-skills" class="pe-nav-item"><i class="fas fa-laptop-code"></i> Skills &amp; Category</a>
+            <a href="#sec-experience" class="pe-nav-item"><i class="fas fa-award"></i> Experience &amp; Rates</a>
+            <a href="#sec-location" class="pe-nav-item"><i class="fas fa-map-marker-alt"></i> Location &amp; Remote</a>
+            <a href="#sec-availability" class="pe-nav-item"><i class="fas fa-clock"></i> Availability &amp; Job Type</a>
+            <a href="#sec-contact" class="pe-nav-item"><i class="fas fa-address-book"></i> Links &amp; Contact</a>
+          </nav>
         </div>
+      </aside>
+
+      {# ── Main Form Column ─── #}
+      <div>
+
+        {# ── SECTION 1: Identity & Bio ─── #}
+        <section class="pe-section-card" id="sec-identity">
+          <div class="pe-sec-head">
+            <div class="pe-sec-icon"><i class="fas fa-id-badge"></i></div>
+            <div>
+              <h2 class="pe-sec-title">1. Professional Identity &amp; Bio</h2>
+              <p class="pe-sec-sub">The first impression employers see when reviewing candidates.</p>
+            </div>
+          </div>
+
+          {# Headline #}
+          <div class="pe-form-group">
+            <label class="pe-label" for="id_headline">
+              <span>Professional Headline <span class="req">*</span></span>
+              <span class="pe-char-count" id="headlineCount">0 / 200</span>
+            </label>
+            {{ form.headline }}
+            <div class="pe-help">
+              A concise summary of your core title and expertise. E.g., <em>"Senior React &amp; Django Engineer | 5+ Yrs Exp | FinTech Specialist"</em>
+            </div>
+            {% if form.headline.errors %}
+              <div class="pe-error"><i class="fas fa-exclamation-circle"></i> {{ form.headline.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          {# Bio #}
+          <div class="pe-form-group">
+            <label class="pe-label" for="id_bio">
+              <span>About You / Executive Bio <span class="req">*</span></span>
+            </label>
+            {{ form.bio }}
+            <div class="pe-help">
+              Share your story, technical proficiencies, past project results, and work methodology. This text is embedded directly by our AI matching engine.
+            </div>
+            {% if form.bio.errors %}
+              <div class="pe-error"><i class="fas fa-exclamation-circle"></i> {{ form.bio.errors.0 }}</div>
+            {% endif %}
+          </div>
+        </section>
+
+        {# ── SECTION 2: Skills & Category ─── #}
+        <section class="pe-section-card" id="sec-skills">
+          <div class="pe-sec-head">
+            <div class="pe-sec-icon"><i class="fas fa-laptop-code"></i></div>
+            <div>
+              <h2 class="pe-sec-title">2. Category &amp; Specialized Skills</h2>
+              <p class="pe-sec-sub">Select your primary discipline and up to 10 sub-skills to appear in targeted searches.</p>
+            </div>
+          </div>
+
+          {# Primary Category #}
+          <div class="pe-form-group">
+            <label class="pe-label" for="id_primary_category">
+              <span>Primary Discipline / Category <span class="req">*</span></span>
+            </label>
+            <select name="primary_category" id="id_primary_category" class="pe-control" onchange="onCategoryChange(this.value)">
+              <option value="">— Select Primary Category —</option>
+              {% for cat in categories %}
+                <option value="{{ cat.pk }}" {% if form.primary_category.value == cat.pk|stringformat:'s' %}selected{% endif %}>
+                  {{ cat.name }}
+                </option>
+              {% endfor %}
+            </select>
+            {% if form.primary_category.errors %}
+              <div class="pe-error"><i class="fas fa-exclamation-circle"></i> {{ form.primary_category.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          {# Sub-Skills Multi-Select Chips #}
+          <div class="pe-form-group">
+            <div class="pe-skills-container">
+              <div class="pe-skills-head">
+                <label class="pe-label" style="margin-bottom:0;">
+                  <span>Specialized Sub-Skills</span>
+                </label>
+                <span class="pe-skills-count-tag" id="skillCounter">0 / 10 selected</span>
+              </div>
+              <div class="pe-help" style="margin-bottom:12px;">Click chips to toggle your specialties:</div>
+
+              <div class="pe-chips-wrap" id="chipsWrapper">
+                <span style="color:var(--text-3);font-size:0.84rem;"><i class="fas fa-spinner fa-spin"></i> Loading sub-skills...</span>
+              </div>
+
+              {# Hidden multiselect that posts with form #}
+              <select name="sub_skills" id="id_sub_skills" multiple style="display:none;"></select>
+            </div>
+          </div>
+        </section>
+
+        {# ── SECTION 3: Experience & Rates ─── #}
+        <section class="pe-section-card" id="sec-experience">
+          <div class="pe-sec-head">
+            <div class="pe-sec-icon"><i class="fas fa-award"></i></div>
+            <div>
+              <h2 class="pe-sec-title">3. Experience Level &amp; Rates</h2>
+              <p class="pe-sec-sub">Define your seniority level and baseline pricing in Nigerian Naira.</p>
+            </div>
+          </div>
+
+          <div class="pe-row-2 pe-form-group">
+            <div>
+              <label class="pe-label" for="id_experience_level">
+                <span>Experience Level <span class="req">*</span></span>
+              </label>
+              {{ form.experience_level }}
+              {% if form.experience_level.errors %}
+                <div class="pe-error"><i class="fas fa-exclamation-circle"></i> {{ form.experience_level.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div>
+              <label class="pe-label" for="id_years_experience">
+                <span>Years of Experience</span>
+              </label>
+              {{ form.years_experience }}
+              {% if form.years_experience.errors %}
+                <div class="pe-error"><i class="fas fa-exclamation-circle"></i> {{ form.years_experience.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="pe-row-2 pe-form-group">
+            <div>
+              <label class="pe-label" for="id_hourly_rate">
+                <span>Hourly Rate (₦)</span>
+                <span class="opt">Optional</span>
+              </label>
+              <div class="pe-prefix-box">
+                <span class="pe-prefix-tag">₦</span>
+                {{ form.hourly_rate }}
+              </div>
+              <div class="pe-help">E.g., 5,000 / hr for hourly consulting or freelance dev.</div>
+              {% if form.hourly_rate.errors %}
+                <div class="pe-error"><i class="fas fa-exclamation-circle"></i> {{ form.hourly_rate.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div>
+              <label class="pe-label" for="id_project_rate">
+                <span>Starting Project Fee (₦)</span>
+                <span class="opt">Optional</span>
+              </label>
+              <div class="pe-prefix-box">
+                <span class="pe-prefix-tag">₦</span>
+                {{ form.project_rate }}
+              </div>
+              <div class="pe-help">Minimum project price you accept for fixed-scope tasks.</div>
+              {% if form.project_rate.errors %}
+                <div class="pe-error"><i class="fas fa-exclamation-circle"></i> {{ form.project_rate.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </section>
+
+        {# ── SECTION 4: Location & Remote ─── #}
+        <section class="pe-section-card" id="sec-location">
+          <div class="pe-sec-head">
+            <div class="pe-sec-icon"><i class="fas fa-map-marker-alt"></i></div>
+            <div>
+              <h2 class="pe-sec-title">4. Location &amp; Work Format</h2>
+              <p class="pe-sec-sub">Help employers know where you're located and if you work remotely.</p>
+            </div>
+          </div>
+
+          <div class="pe-row-2 pe-form-group">
+            <div>
+              <label class="pe-label" for="id_state">
+                <span>State (Nigeria)</span>
+              </label>
+              {{ form.state }}
+              {% if form.state.errors %}
+                <div class="pe-error"><i class="fas fa-exclamation-circle"></i> {{ form.state.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div>
+              <label class="pe-label" for="id_lga">
+                <span>Local Govt Area (LGA) / City</span>
+              </label>
+              {{ form.lga }}
+              {% if form.lga.errors %}
+                <div class="pe-error"><i class="fas fa-exclamation-circle"></i> {{ form.lga.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="pe-form-group">
+            <label class="pe-toggle-card {% if form.remote_ok.value %}active{% endif %}" id="remoteToggleCard">
+              <div class="pe-toggle-body">
+                <div class="pe-toggle-title"><i class="fas fa-globe-africa" style="color:var(--pe-cyan);margin-right:6px;"></i> Open to Fully Remote Work</div>
+                <div class="pe-toggle-desc">Showcase that you can successfully collaborate and deliver work remotely anywhere in Nigeria or internationally.</div>
+              </div>
+              <label class="pe-switch">
+                {{ form.remote_ok }}
+                <span class="pe-slider"></span>
+              </label>
+            </label>
+          </div>
+        </section>
+
+        {# ── SECTION 5: Availability & Employment ─── #}
+        <section class="pe-section-card" id="sec-availability">
+          <div class="pe-sec-head">
+            <div class="pe-sec-icon"><i class="fas fa-clock"></i></div>
+            <div>
+              <h2 class="pe-sec-title">5. Availability &amp; Employment Preference</h2>
+              <p class="pe-sec-sub">Signal your current workload status and whether you are open to full-time roles.</p>
+            </div>
+          </div>
+
+          <div class="pe-row-2 pe-form-group">
+            <div>
+              <label class="pe-label" for="id_availability">
+                <span>Availability Status <span class="req">*</span></span>
+              </label>
+              {{ form.availability }}
+              {% if form.availability.errors %}
+                <div class="pe-error"><i class="fas fa-exclamation-circle"></i> {{ form.availability.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div>
+              <label class="pe-label" for="id_employment_preference">
+                <span>Work Engagement Type</span>
+              </label>
+              {{ form.employment_preference }}
+              {% if form.employment_preference.errors %}
+                <div class="pe-error"><i class="fas fa-exclamation-circle"></i> {{ form.employment_preference.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          {# Open to Full-time Toggle Card #}
+          <div class="pe-form-group">
+            <label class="pe-toggle-card {% if form.open_to_employment.value %}active{% endif %}" id="openWorkToggleCard">
+              <div class="pe-toggle-body">
+                <div class="pe-toggle-title"><i class="fas fa-briefcase" style="color:var(--pe-emerald);margin-right:6px;"></i> Display "Open to Work" Badge</div>
+                <div class="pe-toggle-desc">Display a prominent hiring badge on directory cards to let recruiters know you are actively seeking employment opportunities.</div>
+              </div>
+              <label class="pe-switch">
+                {{ form.open_to_employment }}
+                <span class="pe-slider"></span>
+              </label>
+            </label>
+
+            {# Conditional Drawer for Full-Time seekers #}
+            <div class="pe-drawer {% if form.open_to_employment.value %}open{% endif %}" id="fullTimeDrawer">
+              <div class="pe-row-2">
+                <div>
+                  <label class="pe-label" for="id_expected_monthly_salary">
+                    <span>Expected Monthly Salary (₦)</span>
+                  </label>
+                  <div class="pe-prefix-box">
+                    <span class="pe-prefix-tag">₦</span>
+                    {{ form.expected_monthly_salary }}
+                  </div>
+                  <div class="pe-help">Target monthly take-home salary.</div>
+                </div>
+
+                <div>
+                  <label class="pe-label" for="id_notice_period">
+                    <span>Notice Period / Start Date</span>
+                  </label>
+                  {{ form.notice_period }}
+                  <div class="pe-help">E.g., "Available immediately" or "1 month notice".</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {# ── SECTION 6: Links & Contact ─── #}
+        <section class="pe-section-card" id="sec-contact">
+          <div class="pe-sec-head">
+            <div class="pe-sec-icon"><i class="fas fa-address-book"></i></div>
+            <div>
+              <h2 class="pe-sec-title">6. Online Links &amp; Direct Contact</h2>
+              <p class="pe-sec-sub">Make it seamless for employers to review your work and contact you.</p>
+            </div>
+          </div>
+
+          <div class="pe-row-2 pe-form-group">
+            <div>
+              <label class="pe-label" for="id_portfolio_url">
+                <span>External Portfolio / Website</span>
+              </label>
+              {{ form.portfolio_url }}
+              <div class="pe-help">Personal website, Behance profile, or GitHub URL.</div>
+              {% if form.portfolio_url.errors %}
+                <div class="pe-error"><i class="fas fa-exclamation-circle"></i> {{ form.portfolio_url.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div>
+              <label class="pe-label" for="id_whatsapp_number">
+                <span>WhatsApp Phone Number</span>
+              </label>
+              {{ form.whatsapp_number }}
+              <div class="pe-help">Only revealed to verified employers hiring you.</div>
+              {% if form.whatsapp_number.errors %}
+                <div class="pe-error"><i class="fas fa-exclamation-circle"></i> {{ form.whatsapp_number.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="pe-row-2 pe-form-group">
+            <div>
+              <label class="pe-label" for="id_linkedin_url">
+                <span>LinkedIn Profile URL</span>
+              </label>
+              {{ form.linkedin_url }}
+              {% if form.linkedin_url.errors %}
+                <div class="pe-error"><i class="fas fa-exclamation-circle"></i> {{ form.linkedin_url.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div>
+              <label class="pe-label" for="id_twitter_url">
+                <span>Twitter / X Profile URL</span>
+              </label>
+              {{ form.twitter_url }}
+              {% if form.twitter_url.errors %}
+                <div class="pe-error"><i class="fas fa-exclamation-circle"></i> {{ form.twitter_url.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </section>
+
+        {# ── Floating Bottom Action Bar ─── #}
+        <div class="pe-actions-bar">
+          <div class="pe-actions-text">
+            <i class="fas fa-info-circle" style="color:var(--pe-cyan);"></i>
+            <span>All updates will reflect immediately on your public profile card.</span>
+          </div>
+
+          <div class="pe-actions-btns">
+            <a href="{% url 'digital:public_profile' profile.user.username %}" class="pe-btn pe-btn-secondary" style="color:#ffffff;border-color:rgba(255,255,255,0.25);">
+              Cancel
+            </a>
+            <button type="submit" class="pe-btn pe-btn-primary" id="saveBtn">
+              <i class="fas fa-check"></i> Save Profile Changes
+            </button>
+          </div>
+        </div>
+
       </div>
+
     </div>
-
-    {# ── Skills ─────────────────────────────────────────────────── #}
-    <div class="edit-card">
-      <div class="section-title">Skills &amp; Category</div>
-
-      <div class="form-group">
-        <label class="form-label">Primary Skill Category <span style="color:#f87171;">*</span></label>
-        <select name="{{ form.primary_category.html_name }}" class="form-control"
-                id="cat-select" onchange="loadSubSkills(this.value)">
-          <option value="">— Select a category —</option>
-          {% for cat in categories %}
-            <option value="{{ cat.pk }}"
-              {% if form.primary_category.value == cat.pk|stringformat:'s' %}selected{% endif %}>
-              {{ cat.name }}
-            </option>
-          {% endfor %}
-        </select>
-        {% for err in form.primary_category.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Sub-Skills (up to 10)</label>
-        <div id="sub-skills-wrap" class="skill-chip-wrap">
-          <!-- Populated by JS on load -->
-          <span class="help-text">Loading current sub-skills…</span>
-        </div>
-        <select name="{{ form.sub_skills.html_name }}" id="id_sub_skills" multiple style="display:none;">
-          {% for opt in form.sub_skills %}{{ opt }}{% endfor %}
-        </select>
-        {% for err in form.sub_skills.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
-      </div>
-    </div>
-
-    {# ── Rates & Availability ────────────────────────────────────── #}
-    <div class="edit-card">
-      <div class="section-title">Rates &amp; Availability</div>
-      <div class="form-row-2">
-        <div class="form-group">
-          <label class="form-label">Hourly Rate (₦)</label>
-          <input type="number" name="{{ form.hourly_rate.html_name }}"
-                 class="form-control"
-                 value="{{ form.hourly_rate.value|default:'' }}"
-                 min="0" step="100" placeholder="5000">
-          {% for err in form.hourly_rate.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
-        </div>
-        <div class="form-group">
-          <label class="form-label">Availability</label>
-          {{ form.availability }}
-          {% for err in form.availability.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
-        </div>
-      </div>
-    </div>
-
-    {# ── Online Presence ─────────────────────────────────────────── #}
-    <div class="edit-card">
-      <div class="section-title">Online Presence</div>
-      <div class="form-row-2">
-        <div class="form-group">
-          <label class="form-label">Portfolio / Website</label>
-          <input type="url" name="{{ form.website_url.html_name }}" class="form-control"
-                 value="{{ form.website_url.value|default:'' }}"
-                 placeholder="https://yourportfolio.com">
-        </div>
-        <div class="form-group">
-          <label class="form-label">LinkedIn</label>
-          <input type="url" name="{{ form.linkedin_url.html_name }}" class="form-control"
-                 value="{{ form.linkedin_url.value|default:'' }}"
-                 placeholder="https://linkedin.com/in/yourname">
-        </div>
-      </div>
-      <div class="form-row-2">
-        <div class="form-group">
-          <label class="form-label">GitHub</label>
-          <input type="url" name="{{ form.github_url.html_name }}" class="form-control"
-                 value="{{ form.github_url.value|default:'' }}"
-                 placeholder="https://github.com/yourhandle">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Twitter / X</label>
-          <input type="url" name="{{ form.twitter_url.html_name }}" class="form-control"
-                 value="{{ form.twitter_url.value|default:'' }}"
-                 placeholder="https://twitter.com/yourhandle">
-        </div>
-      </div>
-    </div>
-
-    <button type="submit" class="btn-save">
-      <i class="fas fa-save"></i> Save Changes
-    </button>
   </form>
+
+</div>
 </div>
 
 <script>
-  const SUB_SKILLS_URL = "{% url 'digital:ajax_sub_skills' %}";
-  const CURRENT_SUB_SKILLS = [{% for ws in profile.digitalworkersubskill_set.all %}"{{ ws.sub_skill_id }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+  // ── Global Context & Initial Sub-Skills ──────────────────────────────────
+  const AJAX_SUB_SKILLS_URL = "{% url 'digital:ajax_sub_skills' %}";
+  const SELECTED_SUB_SKILL_IDS = new Set([
+    {% for sid in current_sub_skill_ids %}"{{ sid }}"{% if not forloop.last %},{% endif %}{% endfor %}
+  ]);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // 1. Live character counter for Headline
+    const headlineInput = document.getElementById('id_headline');
+    const counterEl = document.getElementById('headlineCount');
+    if (headlineInput && counterEl) {
+      const updateCount = () => {
+        counterEl.textContent = `${headlineInput.value.length} / 200`;
+      };
+      headlineInput.addEventListener('input', updateCount);
+      updateCount();
+    }
+
+    // 2. Initial sub-skills load
+    const catSelect = document.getElementById('id_primary_category');
+    if (catSelect && catSelect.value) {
+      loadSubSkills(catSelect.value);
+    } else {
+      document.getElementById('chipsWrapper').innerHTML =
+        '<span style="color:var(--text-3);font-size:0.84rem;">Please select a primary category above to view available sub-skills.</span>';
+    }
+
+    // 3. Open to Work toggle drawer
+    const openWorkCheckbox = document.getElementById('id_open_to_employment');
+    const drawer = document.getElementById('fullTimeDrawer');
+    const card = document.getElementById('openWorkToggleCard');
+    if (openWorkCheckbox && drawer && card) {
+      openWorkCheckbox.addEventListener('change', () => {
+        if (openWorkCheckbox.checked) {
+          drawer.classList.add('open');
+          card.classList.add('active');
+        } else {
+          drawer.classList.remove('open');
+          card.classList.remove('active');
+        }
+      });
+    }
+
+    // 4. Remote toggle card highlight
+    const remoteCheckbox = document.querySelector('input[name="remote_ok"]');
+    const remoteCard = document.getElementById('remoteToggleCard');
+    if (remoteCheckbox && remoteCard) {
+      remoteCheckbox.addEventListener('change', () => {
+        if (remoteCheckbox.checked) {
+          remoteCard.classList.add('active');
+        } else {
+          remoteCard.classList.remove('active');
+        }
+      });
+    }
+
+    // 5. Scroll spy for sidebar section nav
+    const sections = document.querySelectorAll('.pe-section-card');
+    const navItems = document.querySelectorAll('.pe-nav-item');
+
+    window.addEventListener('scroll', () => {
+      let currentSecId = '';
+      const scrollPos = window.scrollY + 160;
+
+      sections.forEach(sec => {
+        if (sec.offsetTop <= scrollPos) {
+          currentSecId = sec.getAttribute('id');
+        }
+      });
+
+      if (currentSecId) {
+        navItems.forEach(item => {
+          if (item.getAttribute('href') === `#${currentSecId}`) {
+            item.classList.add('active');
+          } else {
+            item.classList.remove('active');
+          }
+        });
+      }
+    });
+  });
+
+  // ── Sub-Skills Dynamic Loader ─────────────────────────────────────────────
+  async function onCategoryChange(categoryId) {
+    SELECTED_SUB_SKILL_IDS.clear();
+    await loadSubSkills(categoryId);
+  }
 
   async function loadSubSkills(categoryId) {
-    const wrap = document.getElementById('sub-skills-wrap');
-    const select = document.getElementById('id_sub_skills');
+    const wrap = document.getElementById('chipsWrapper');
+    const hiddenSelect = document.getElementById('id_sub_skills');
     if (!categoryId) {
-      wrap.innerHTML = '<span class="help-text">Select a category to see sub-skills.</span>';
+      wrap.innerHTML = '<span style="color:var(--text-3);font-size:0.84rem;">Please select a primary category above to view available sub-skills.</span>';
+      hiddenSelect.innerHTML = '';
+      updateSkillCounter();
       return;
     }
-    wrap.innerHTML = '<span class="help-text"><i class="fas fa-spinner fa-spin"></i> Loading…</span>';
+
+    wrap.innerHTML = '<span style="color:var(--text-3);font-size:0.84rem;"><i class="fas fa-spinner fa-spin"></i> Fetching matching sub-skills…</span>';
+
     try {
-      const res = await fetch(`${SUB_SKILLS_URL}?category=${categoryId}`);
+      const res = await fetch(`${AJAX_SUB_SKILLS_URL}?category=${encodeURIComponent(categoryId)}`);
       const data = await res.json();
-      const selectedVals = CURRENT_SUB_SKILLS.map(String);
       wrap.innerHTML = '';
-      select.innerHTML = '';
+      hiddenSelect.innerHTML = '';
+
+      if (!data.sub_skills || data.sub_skills.length === 0) {
+        wrap.innerHTML = '<span style="color:var(--text-3);font-size:0.84rem;">No sub-skills found for this category.</span>';
+        updateSkillCounter();
+        return;
+      }
+
       data.sub_skills.forEach(skill => {
-        const isActive = selectedVals.includes(String(skill.id));
-        // chip
-        const chip = document.createElement('span');
-        chip.className = 'skill-chip' + (isActive ? ' active' : '');
-        chip.textContent = skill.name;
-        chip.dataset.id = skill.id;
-        chip.onclick = () => toggleChip(chip, skill.id);
+        const isSelected = SELECTED_SUB_SKILL_IDS.has(String(skill.id));
+
+        // Create chip
+        const chip = document.createElement('div');
+        chip.className = 'pe-chip' + (isSelected ? ' selected' : '');
+        chip.id = `chip-${skill.id}`;
+        chip.innerHTML = `<span>${skill.name}</span><i class="fas ${isSelected ? 'fa-check' : 'fa-plus'}"></i>`;
+        chip.onclick = () => toggleSkill(skill.id, skill.name, chip);
         wrap.appendChild(chip);
-        // option
+
+        // Create option in hidden select
         const opt = document.createElement('option');
         opt.value = skill.id;
         opt.textContent = skill.name;
-        opt.selected = isActive;
-        select.appendChild(opt);
+        opt.selected = isSelected;
+        hiddenSelect.appendChild(opt);
       });
-    } catch {
-      wrap.innerHTML = '<span class="help-text" style="color:#f87171;">Failed to load. Try refreshing.</span>';
+
+      updateSkillCounter();
+    } catch (err) {
+      wrap.innerHTML = '<span style="color:var(--pe-rose);font-size:0.84rem;"><i class="fas fa-exclamation-triangle"></i> Failed to load sub-skills. Please retry.</span>';
     }
   }
 
-  function toggleChip(chip, skillId) {
-    const select = document.getElementById('id_sub_skills');
-    const opt = select.querySelector(`option[value="${skillId}"]`);
-    if (!opt) return;
-    if (!chip.classList.contains('active') &&
-        document.querySelectorAll('#sub-skills-wrap .skill-chip.active').length >= 10) {
-      alert('You can select up to 10 sub-skills.');
+  function toggleSkill(skillId, skillName, chip) {
+    const strId = String(skillId);
+    const hiddenSelect = document.getElementById('id_sub_skills');
+    const isCurrentlySelected = SELECTED_SUB_SKILL_IDS.has(strId);
+
+    if (!isCurrentlySelected && SELECTED_SUB_SKILL_IDS.size >= 10) {
+      alert('You can select a maximum of 10 specialized sub-skills.');
       return;
     }
-    chip.classList.toggle('active');
-    opt.selected = chip.classList.contains('active');
+
+    let opt = hiddenSelect.querySelector(`option[value="${skillId}"]`);
+    if (!opt) {
+      opt = document.createElement('option');
+      opt.value = skillId;
+      opt.textContent = skillName;
+      hiddenSelect.appendChild(opt);
+    }
+
+    if (isCurrentlySelected) {
+      SELECTED_SUB_SKILL_IDS.delete(strId);
+      chip.classList.remove('selected');
+      chip.querySelector('i').className = 'fas fa-plus';
+      opt.selected = false;
+    } else {
+      SELECTED_SUB_SKILL_IDS.add(strId);
+      chip.classList.add('selected');
+      chip.querySelector('i').className = 'fas fa-check';
+      opt.selected = true;
+    }
+
+    updateSkillCounter();
   }
 
-  // On page load, trigger sub-skill load for current category
-  window.addEventListener('DOMContentLoaded', () => {
-    const sel = document.getElementById('cat-select');
-    if (sel && sel.value) loadSubSkills(sel.value);
-  });
+  function updateSkillCounter() {
+    const counter = document.getElementById('skillCounter');
+    if (counter) {
+      counter.textContent = `${SELECTED_SUB_SKILL_IDS.size} / 10 selected`;
+      if (SELECTED_SUB_SKILL_IDS.size >= 10) {
+        counter.style.background = 'rgba(244, 63, 94, 0.15)';
+        counter.style.color = 'var(--pe-rose)';
+      } else {
+        counter.style.background = 'var(--pe-indigo-soft)';
+        counter.style.color = 'var(--pe-indigo)';
+      }
+    }
+  }
 </script>
 {% endblock %}

@@ -83,8 +83,8 @@
   .gigs-field input:focus,
   .gigs-field select:focus {
     outline: none;
-    border-color: #8b5cf6;
-    box-shadow: 0 0 0 3px rgba(139,92,246,.12);
+    border-color: #4F46E5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, .12);
   }
 
   /* Mobile filter toggle */
@@ -139,7 +139,7 @@
     font-size: 0.72rem;
     font-weight: 600;
   }
-  .gig-badge-purple { background: rgba(139,92,246,.1); color: #8b5cf6; border: 1px solid rgba(139,92,246,.2); }
+  .gig-badge-purple { background: rgba(79, 70, 229, .1); color: #4F46E5; border: 1px solid rgba(79, 70, 229, .2); }
   .gig-badge-green  { background: rgba(5,150,105,.1); color: var(--emerald); }
   .gig-badge-sky    { background: rgba(2,132,199,.1); color: var(--sky); }
   .gig-badge-amber  { background: rgba(217,119,6,.1); color: var(--amber); }
@@ -205,9 +205,9 @@
     transition: all .2s;
   }
   .gigs-page-btn:hover, .gigs-page-btn.current {
-    background: rgba(139,92,246,.1);
-    border-color: rgba(139,92,246,.3);
-    color: #8b5cf6;
+    background: rgba(79, 70, 229, .1);
+    border-color: rgba(79, 70, 229, .3);
+    color: #4F46E5;
     text-decoration: none;
   }
 
@@ -242,7 +242,7 @@
   <div class="gigs-hero">
     <div>
       <h1 class="gigs-title">
-        <i class="fas fa-briefcase" style="color:#8b5cf6;margin-right:8px;"></i>Digital Gigs
+        <i class="fas fa-briefcase" style="color:#4F46E5;margin-right:8px;"></i>Digital Gigs
       </h1>
       <p class="gigs-sub">Short-term digital projects posted by businesses across Nigeria.</p>
     </div>
@@ -351,6 +351,15 @@
                   <span class="gig-badge gig-badge-amber">Hybrid</span>
                 {% endif %}
                 <span class="gig-badge gig-badge-plain">{{ gig.get_budget_type_display }}</span>
+                {% if gig.is_external %}
+                  <span class="gig-badge" style="background: rgba(6,182,212,.12); color: #06B6D4; border: 1px solid rgba(6,182,212,.25);">
+                    <i class="fas fa-external-link-alt" style="margin-right:3px;font-size:0.65rem;"></i>External
+                  </span>
+                {% else %}
+                  <span class="gig-badge" style="background: rgba(16,185,129,.1); color: var(--emerald); border: 1px solid rgba(16,185,129,.2);">
+                    <i class="fas fa-bolt" style="margin-right:3px;font-size:0.65rem;"></i>Direct Apply
+                  </span>
+                {% endif %}
               </div>
               <div class="gig-title">{{ gig.title }}</div>
               <div class="gig-meta">
@@ -364,7 +373,11 @@
             </div>
             <div class="gig-card-side">
               <span class="gig-budget">{{ gig.budget_display }}</span>
-              <span class="gig-apps"><i class="fas fa-users" style="margin-right:3px;"></i>{{ gig.applications_count }} applied</span>
+              {% if gig.is_external %}
+                <span class="gig-apps" style="color: #06B6D4;font-weight:600;"><i class="fas fa-external-link-alt" style="margin-right:3px;"></i>Apply on Site</span>
+              {% else %}
+                <span class="gig-apps"><i class="fas fa-users" style="margin-right:3px;"></i>{{ gig.applications_count }} applied</span>
+              {% endif %}
               {% if gig.deadline %}
                 <span class="gig-apps" style="color:var(--orange);"><i class="fas fa-calendar-alt" style="margin-right:3px;"></i>{{ gig.deadline|date:"M j" }}</span>
               {% endif %}
